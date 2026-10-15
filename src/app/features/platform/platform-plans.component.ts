@@ -1,0 +1,131 @@
+import { CurrencyPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { FEATURES } from '../../core/models/rbac.model';
+import { ModeName, PlanDto, SavePlanRequest } from '../../core/models/subscription.model';
+import { toApiError } from '../../core/services/api.util';
+import { PlatformApi, PlatformAuthService } from '../../core/services/subscription.services';
+import { PLATFORM_PERMISSIONS } from '../../core/models/support.model';
+import { DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
+
+const MODULES = Object.values(FEATURES) as string[];
+
+const blank = (): SavePlanRequest => ({
+  code: '', name: '', description: '', priceMinor: 0, currencyCode: 'USD', interval: 'Monthly', maxBranches: null, maxStaff: null, maxMonthlyOrders: null,
+  trialDays: 14, warningDays: 3, graceDays: 7, restrictionPolicy: 'LockedExceptBilling', isActive: true, isPublic: true, sortOrder: 10, features: [], rowVersion: null
+});
+
+/** Plans are configuration, not code: price, interval, modules, limits, reminder/grace timing and the restriction policy. Saving updates every company on the plan. */
+@Component({
+  selector: 'zp-platform-plans',
+  standalone: true,
+  imports: [CurrencyPipe, FormsModule, DialogComponent, StatusBadgeComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div class="mb-4 flex items-center justify-between"><h1 class="text-2xl font-bold">Plans</h1>@if (platform.can(perms.BILLING_MANAGE)) { <button type="button" class="btn-primary" data-testid="new-plan" (click)="openPlan(null)">New plan</button> }</div>
+    @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert">{{ error() }}</p> }
+    <div class="app-card overflow-x-auto p-0"><table class="app-table" data-testid="plans-table"><thead><tr><th>Plan</th><th class="text-right">Price</th><th>Limits (branches / staff / orders)</th><th>Timing</th><th>Modules</th><th></th></tr></thead>
+      <tbody>@for (p of plans(); track p.id) {
+        <tr [attr.data-testid]="'plan-row-' + p.code"><td class="font-medium">{{ p.name }}<span class="block text-xs font-normal text-ink/60">{{ p.code }}</span> @if (!p.isActive) { <zp-status-badge tone="danger">Inactive</zp-status-badge> }@if (!p.isPublic) { <zp-status-badge tone="warning">Hidden</zp-status-badge> }</td>
+          <td class="text-right">{{ p.priceMinor / 100 | currency: p.currencyCode }}<span class="block text-xs text-ink/60">per {{ p.interval === 'Yearly' ? 'year' : 'month' }}</span></td>
+          <td class="text-sm">{{ p.maxBranches ?? '&infin;' }} / {{ p.maxStaff ?? '&infin;' }} / {{ p.maxMonthlyOrders ?? '&infin;' }}</td>
+          <td class="text-sm">trial {{ p.trialDays }}d, remind {{ p.warningDays }}d, grace {{ p.graceDays }}d<span class="block text-xs text-ink/60">{{ p.restrictionPolicy === 'PerModule' ? 'per-module restriction' : 'locked except billing' }}</span></td>
+          <td class="text-sm">{{ p.features.length }} of {{ allModules.length }}</td>
+          <td class="text-right">@if (platform.can(perms.BILLING_MANAGE)) { <button type="button" class="btn-outline px-2 py-1 text-sm" [attr.data-testid]="'edit-plan-' + p.code" (click)="openPlan(p)">Edit</button> }</td></tr> }</tbody></table></div>
+
+    <zp-dialog [open]="open()" [title]="editingId() ? 'Edit plan' : 'New plan'" [wide]="true" (closed)="open.set(false)">
+      <form class="space-y-4" (submit)="$event.preventDefault(); save()">
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div><label class="app-label" for="p-code">Code</label><input id="p-code" class="app-input" data-testid="plan-code" [disabled]="!!editingId()" [ngModel]="f().code" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ code: $event })" />@if (fe()['code']) { <p class="app-error" role="alert">{{ fe()['code'] }}</p> }</div>
+          <div class="sm:col-span-2"><label class="app-label" for="p-name">Name</label><input id="p-name" class="app-input" data-testid="plan-name" [ngModel]="f().name" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ name: $event })" /></div>
+          <div class="sm:col-span-3"><label class="app-label" for="p-desc">Description</label><input id="p-desc" class="app-input" [ngModel]="f().description" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ description: $event })" /></div>
+          <div><label class="app-label" for="p-price">Price (minor units, e.g. cents)</label><input id="p-price" type="number" min="0" class="app-input" data-testid="plan-price" [ngModel]="f().priceMinor" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ priceMinor: +$event })" /></div>
+          <div><label class="app-label" for="p-cur">Currency</label><input id="p-cur" class="app-input uppercase" maxlength="3" [ngModel]="f().currencyCode" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ currencyCode: $event })" /></div>
+          <div><label class="app-label" for="p-int">Billing interval</label><select id="p-int" class="app-input" [ngModel]="f().interval" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ interval: $event })"><option value="Monthly">Monthly</option><option value="Yearly">Yearly</option></select></div>
+          <div><label class="app-label" for="p-mb">Max branches (blank = unlimited)</label><input id="p-mb" type="number" min="1" class="app-input" [ngModel]="f().maxBranches" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ maxBranches: $event ? +$event : null })" /></div>
+          <div><label class="app-label" for="p-ms">Max staff</label><input id="p-ms" type="number" min="1" class="app-input" [ngModel]="f().maxStaff" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ maxStaff: $event ? +$event : null })" /></div>
+          <div><label class="app-label" for="p-mo">Max orders a month</label><input id="p-mo" type="number" min="1" class="app-input" [ngModel]="f().maxMonthlyOrders" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ maxMonthlyOrders: $event ? +$event : null })" /></div>
+          <div><label class="app-label" for="p-td">Trial days</label><input id="p-td" type="number" min="0" class="app-input" [ngModel]="f().trialDays" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ trialDays: +$event })" /></div>
+          <div><label class="app-label" for="p-wd">Reminder days before due</label><input id="p-wd" type="number" min="0" class="app-input" data-testid="plan-warning" [ngModel]="f().warningDays" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ warningDays: +$event })" /></div>
+          <div><label class="app-label" for="p-gd">Grace days after due</label><input id="p-gd" type="number" min="0" class="app-input" data-testid="plan-grace" [ngModel]="f().graceDays" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ graceDays: +$event })" /></div>
+          <div class="sm:col-span-2"><label class="app-label" for="p-rp">When restricted</label><select id="p-rp" class="app-input" data-testid="plan-policy" [ngModel]="f().restrictionPolicy" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ restrictionPolicy: $event })"><option value="LockedExceptBilling">Everything locked except subscription and payment</option><option value="PerModule">Each module follows its own restricted mode</option></select></div>
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" [checked]="f().isActive" (change)="patch({ isActive: !f().isActive })" /> Active</label>
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" [checked]="f().isPublic" (change)="patch({ isPublic: !f().isPublic })" /> Shown to customers</label>
+        </div>
+        <fieldset class="rounded-lg border border-ink/15 p-3"><legend class="px-1 text-sm font-semibold">Modules in this plan</legend>
+          <div class="grid gap-2 sm:grid-cols-2">
+            @for (m of allModules; track m) {
+              <div class="flex items-center justify-between gap-2 text-sm">
+                <label class="flex items-center gap-2"><input type="checkbox" [attr.data-testid]="'plan-module-' + m" [checked]="has(m)" (change)="toggle(m)" /> {{ m }}</label>
+                @if (has(m) && f().restrictionPolicy === 'PerModule') { <select class="app-input w-auto py-0.5 text-xs" [ngModel]="modeOf(m)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setMode(m, $event)"><option value="None">locked when restricted</option><option value="ReadOnly">read-only when restricted</option></select> }
+              </div>
+            }
+          </div></fieldset>
+        @if (saveError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="plan-error">{{ saveError() }}</p> }
+        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="open.set(false)">Cancel</button><button type="submit" class="btn-primary" data-testid="plan-save" [disabled]="busy()">Save plan</button></div>
+      </form>
+    </zp-dialog>
+  `
+})
+export class PlatformPlansComponent implements OnInit {
+  private readonly api = inject(PlatformApi);
+  protected readonly platform = inject(PlatformAuthService);
+  protected readonly perms = PLATFORM_PERMISSIONS;
+  private readonly toast = inject(ToastService);
+
+  protected readonly allModules = MODULES;
+  protected readonly plans = signal<readonly PlanDto[]>([]);
+  protected readonly open = signal(false);
+  protected readonly editingId = signal<string | null>(null);
+  protected readonly f = signal<SavePlanRequest>(blank());
+  protected readonly error = signal<string | null>(null);
+  protected readonly saveError = signal<string | null>(null);
+  protected readonly fe = signal<Readonly<Record<string, string>>>({});
+  protected readonly busy = signal(false);
+
+  ngOnInit(): void {
+    void this.load();
+  }
+
+  private async load(): Promise<void> {
+    try { this.plans.set(await firstValueFrom(this.api.plans())); } catch (err) { this.error.set(toApiError(err).message); }
+  }
+
+  protected patch(p: Partial<SavePlanRequest>): void { this.f.update((v) => ({ ...v, ...p })); }
+  protected has(key: string): boolean { return this.f().features.some((x) => x.featureKey === key); }
+  protected modeOf(key: string): ModeName { return this.f().features.find((x) => x.featureKey === key)?.modeWhenRestricted ?? 'None'; }
+
+  protected toggle(key: string): void {
+    this.f.update((v) => ({ ...v, features: v.features.some((x) => x.featureKey === key) ? v.features.filter((x) => x.featureKey !== key) : [...v.features, { featureKey: key, modeWhenRestricted: 'None' as ModeName }] }));
+  }
+
+  protected setMode(key: string, mode: ModeName): void {
+    this.f.update((v) => ({ ...v, features: v.features.map((x) => (x.featureKey === key ? { ...x, modeWhenRestricted: mode } : x)) }));
+  }
+
+  protected openPlan(p: PlanDto | null): void {
+    this.saveError.set(null);
+    this.fe.set({});
+    this.editingId.set(p?.id ?? null);
+    this.f.set(p ? { ...p, features: p.features.map((x) => ({ ...x })), rowVersion: p.rowVersion } : blank());
+    this.open.set(true);
+  }
+
+  protected async save(): Promise<void> {
+    this.busy.set(true);
+    this.saveError.set(null);
+    this.fe.set({});
+    try {
+      await firstValueFrom(this.api.savePlan(this.editingId(), { ...this.f(), currencyCode: this.f().currencyCode.toUpperCase() }));
+      this.open.set(false);
+      this.toast.success('Plan saved. Companies on it have been updated.');
+      await this.load();
+    } catch (err) {
+      const e = toApiError(err);
+      this.fe.set(Object.fromEntries(Object.entries(e.fieldErrors).map(([k, v]) => [k, v[0] ?? ''])));
+      this.saveError.set(e.message);
+    } finally { this.busy.set(false); }
+  }
+}

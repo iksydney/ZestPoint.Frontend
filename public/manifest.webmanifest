@@ -1,0 +1,10 @@
+{
+  "name": "ZestPoint POS",
+  "short_name": "ZestPoint",
+  "display": "standalone",
+  "orientation": "landscape",
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#0f766e",
+  "icons": []
+}

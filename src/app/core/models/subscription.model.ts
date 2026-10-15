@@ -1,0 +1,208 @@
+/**
+ * Subscription, entitlement and platform-administration contracts. These MIRROR the backend view models
+ * (ZestPoint.Data/ViewModel/SubscriptionModels.cs); change both together (constitution Article 4). Enums travel as names.
+ */
+import { PagedResult } from './staff.model';
+
+export type { PagedResult };
+
+export type BillingInterval = 'Monthly' | 'Yearly';
+export type SubscriptionStatus = 'Trialing' | 'Active' | 'PastDue' | 'Restricted' | 'Cancelled';
+export type RestrictionPolicy = 'LockedExceptBilling' | 'PerModule';
+export type ModeName = 'Full' | 'ReadOnly' | 'None';
+export type EntitlementSource = 'Plan' | 'AddOn' | 'Override';
+export type NotificationLevel = 'Info' | 'Warning' | 'Critical';
+export type LimitKind = 'Branches' | 'Staff' | 'MonthlyOrders';
+export type ActorKind = 'System' | 'Tenant' | 'Platform';
+export type BillingEventStatus = 'Open' | 'Paid' | 'Failed' | 'Void';
+export type BillingEventType = 'Invoice' | 'Payment' | 'Credit' | 'PlanChange';
+
+export type LedgerEventType =
+  | 'TrialStarted' | 'TrialEnded' | 'FeatureActivated' | 'PlanUpgraded' | 'PlanDowngraded' | 'PlanDowngradeScheduled' | 'WarningIssued'
+  | 'GraceStarted' | 'GraceExpired' | 'ModuleRestricted' | 'PaymentReconciled' | 'AccessRestored' | 'AdministrativeOverride'
+  | 'SubscriptionCancelled' | 'SubscriptionResumed' | 'RenewalFailed' | 'Renewed' | 'PeriodExtended';
+
+export interface PlanFeatureDto { featureKey: string; modeWhenRestricted: ModeName }
+
+export interface PlanDto {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  priceMinor: number;
+  currencyCode: string;
+  interval: BillingInterval;
+  maxBranches: number | null;
+  maxStaff: number | null;
+  maxMonthlyOrders: number | null;
+  trialDays: number;
+  warningDays: number;
+  graceDays: number;
+  restrictionPolicy: RestrictionPolicy;
+  isActive: boolean;
+  isPublic: boolean;
+  sortOrder: number;
+  features: PlanFeatureDto[];
+  rowVersion: string;
+}
+
+export interface SavePlanRequest {
+  code: string;
+  name: string;
+  description: string;
+  priceMinor: number;
+  currencyCode: string;
+  interval: BillingInterval;
+  maxBranches: number | null;
+  maxStaff: number | null;
+  maxMonthlyOrders: number | null;
+  trialDays: number;
+  warningDays: number;
+  graceDays: number;
+  restrictionPolicy: RestrictionPolicy;
+  isActive: boolean;
+  isPublic: boolean;
+  sortOrder: number;
+  features: PlanFeatureDto[];
+  rowVersion: string | null;
+}
+
+export interface FeatureModuleDto { key: string; name: string; description: string }
+
+export interface SubscriptionDto {
+  status: SubscriptionStatus;
+  plan: PlanDto;
+  pendingPlan: { code: string; name: string } | null;
+  startedAtUtc: string;
+  currentPeriodStartUtc: string;
+  currentPeriodEndUtc: string;
+  trialEndsAtUtc: string | null;
+  graceEndsAtUtc: string | null;
+  nextPaymentAttemptAtUtc: string | null;
+  cancelAtPeriodEnd: boolean;
+  hasPaymentMethod: boolean;
+  paymentMethodLabel: string | null;
+  billingIsDemo: boolean;
+  billingProvider: string;
+}
+
+export interface ModuleAccessDto {
+  key: string;
+  name: string;
+  mode: ModeName;
+  includedInPlan: boolean;
+  source: EntitlementSource | null;
+  validUntilUtc: string | null;
+  reason: string | null;
+}
+
+export interface LimitUsageDto { kind: LimitKind; limit: number | null; used: number; exceeded: boolean }
+
+export interface BannerDto {
+  level: NotificationLevel;
+  code: string;
+  title: string;
+  message: string;
+  affectedModules: string[];
+  dueAtUtc: string | null;
+  graceEndsAtUtc: string | null;
+  /** "update-payment", "choose-plan", "resume" */
+  actions: string[];
+}
+
+export interface EntitlementStateDto {
+  status: SubscriptionStatus;
+  planCode: string;
+  planName: string;
+  locked: boolean;
+  restricted: boolean;
+  banner: BannerDto | null;
+  modules: ModuleAccessDto[];
+  limits: LimitUsageDto[];
+}
+
+export interface BillingEventDto {
+  id: string;
+  type: BillingEventType;
+  status: BillingEventStatus;
+  amountMinor: number;
+  currencyCode: string;
+  description: string;
+  periodStartUtc: string | null;
+  periodEndUtc: string | null;
+  provider: string;
+  providerReference: string | null;
+  failureReason: string | null;
+  occurredAtUtc: string;
+  isDemo: boolean;
+}
+
+export interface LedgerEntryDto {
+  id: string;
+  type: LedgerEventType;
+  featureKey: string | null;
+  fromMode: ModeName | null;
+  toMode: ModeName | null;
+  fromPlanCode: string | null;
+  toPlanCode: string | null;
+  reason: string;
+  actorKind: ActorKind;
+  actorLabel: string;
+  occurredAtUtc: string;
+}
+
+export interface NotificationDto {
+  id: string;
+  level: NotificationLevel;
+  code: string;
+  title: string;
+  body: string;
+  dateCreated: string;
+  readAtUtc: string | null;
+}
+
+// ---- Platform administration ----------------------------------------------------------------------
+
+export interface PlatformSessionDto {
+  /** The operator's own id (matches ticket assignments and CRM owners). */
+  id: string;
+  accessToken: string;
+  accessTokenExpiresAtUtc: string;
+  displayName: string;
+  email: string;
+  role: 'SupportAgent' | 'SupportLead' | 'Admin';
+  /** What this operator may do; decides what the screens show. The server checks every request again. */
+  permissions: string[];
+}
+
+export interface PlatformTenantListItemDto {
+  id: string;
+  name: string;
+  slug: string;
+  enterpriseType: string;
+  countryCode: string;
+  businessEmail: string;
+  dateCreated: string;
+  planCode: string | null;
+  status: SubscriptionStatus | null;
+  currentPeriodEndUtc: string | null;
+}
+
+export interface PlatformTenantDetailDto {
+  tenant: PlatformTenantListItemDto;
+  subscription: SubscriptionDto | null;
+  entitlements: EntitlementStateDto | null;
+  branches: number;
+  staff: number;
+  ordersThisMonth: number;
+  billing: BillingEventDto[];
+  ledger: LedgerEntryDto[];
+}
+
+export interface PlatformOverviewDto {
+  totalTenants: number;
+  byStatus: Record<string, number>;
+  byPlan: Record<string, number>;
+  mrrMinorByCurrency: Record<string, number>;
+  needingAttention: PlatformTenantListItemDto[];
+}

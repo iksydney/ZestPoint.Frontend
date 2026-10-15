@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+
+# build output and caches
+/dist/
+/out-tsc/
+/.angular/
+/tmp/
+
+# test output
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/coverage/
+
+# logs
+*.log
+npm-debug.log*
+
+# local temp configs and editor/OS files
+playwright.verify.config.ts
+.vs/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.suo
+*.user
