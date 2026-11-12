@@ -7,6 +7,7 @@ import { ApiEnvelope } from '../../core/models/api.model';
 import { SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { APP_NAV, NavDefinition, permissionsOf } from '../../core/navigation/app-nav';
 import { toApiError } from '../../core/services/api.util';
+import { AccessService } from '../../core/services/access.service';
 import { AuthService } from '../../core/services/auth.service';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
@@ -91,13 +92,14 @@ interface DashboardSummary {
 export class DashboardComponent implements OnInit {
   private readonly http = inject(HttpClient);
   protected readonly auth = inject(AuthService);
+  private readonly access = inject(AccessService);
   protected readonly summary = signal<DashboardSummary | null>(null);
   protected readonly error = signal<string | null>(null);
   protected readonly progress = this.auth.onboarding;
   protected readonly firstName = computed(() => (this.auth.membership()?.displayName ?? '').split(' ')[0] || 'there');
   /** Screens flagged for quick access in the navigation list, limited to what this person may open (permission and module). */
   protected readonly quickAccess = computed<NavDefinition[]>(() => APP_NAV.filter((n) => n.quickAccess && this.auth.hasAnyPermission(permissionsOf(n))
-    && (!n.feature || this.auth.accessModeFor(n.feature) !== 'locked') && !this.auth.locked()));
+    && this.access.canShow(n) && !this.auth.locked()));
   protected readonly canSetUp = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.SETTINGS_COMPANY_MANAGE));
 
   async ngOnInit(): Promise<void> {

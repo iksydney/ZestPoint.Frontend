@@ -60,13 +60,19 @@ const LEDGER_LABEL: Record<string, string> = {
 
       <section id="payment" class="app-card mb-4" aria-label="Payment method">
         <h2 class="font-semibold">Payment method</h2>
+        <!-- REAL MONEY FLOW COMES LATER (FND-027). Owner decision 2026-11-12: the development-billing wording is hidden for now. Four places on this
+             screen: this caution note, the provider's own "Development test card" label (just below), the "Payment token" label, and the "Demo" tags in the
+             billing history. Restore the commented originals when the real provider is connected. The saving, paying and billing behaviour is unchanged.
         <p class="mt-1 text-sm" data-testid="payment-method">{{ s.hasPaymentMethod ? s.paymentMethodLabel : 'No payment method saved.' }}</p>
         @if (s.billingIsDemo) {
           <p class="sys-alert sys-alert-warning mt-2" role="status" data-testid="billing-demo-note">Development billing adapter: no real money moves and no card details are handled. Use the token <code>tok_ok</code> for a method that works or <code>tok_fail</code> for one that always declines.</p>
         }
+        -->
+        <p class="mt-1 text-sm" data-testid="payment-method">{{ s.hasPaymentMethod ? (s.billingIsDemo ? 'Payment method saved.' : s.paymentMethodLabel) : 'No payment method saved.' }}</p>
         @if (canManage()) {
           <form class="mt-3 flex flex-wrap items-end gap-2" (submit)="$event.preventDefault(); saveMethod()">
-            <div><label class="app-label" for="pm-token">{{ s.billingIsDemo ? 'Payment token' : 'Payment method' }}</label>
+            <!-- <div><label class="app-label" for="pm-token">{{ s.billingIsDemo ? 'Payment token' : 'Payment method' }}</label> (real money flow later, FND-027) -->
+            <div><label class="app-label" for="pm-token">Payment method</label>
               <input id="pm-token" class="app-input w-64" data-testid="pm-token" autocomplete="off" [ngModel]="token()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="token.set($event)" /></div>
             <button type="submit" class="btn-outline" data-testid="pm-save" [disabled]="busy() || !token().trim()">Save payment method</button>
           </form>
@@ -129,7 +135,7 @@ const LEDGER_LABEL: Record<string, string> = {
 
     <section class="mb-6"><h2 class="mb-2 text-lg font-semibold">Billing history</h2>
       <div class="app-card overflow-x-auto p-0"><table class="app-table" data-testid="billing-table"><thead><tr><th>Date</th><th>Description</th><th class="text-right">Amount</th><th>Status</th></tr></thead>
-        <tbody>@for (b of billing(); track b.id) { <tr><td class="whitespace-nowrap">{{ b.occurredAtUtc | tenantTime }}</td><td>{{ b.description }} @if (b.isDemo) { <zp-status-badge tone="warning">Demo</zp-status-badge> }@if (b.failureReason) { <span class="block text-xs text-danger">{{ b.failureReason }}</span> }</td>
+        <tbody>@for (b of billing(); track b.id) { <tr><td class="whitespace-nowrap">{{ b.occurredAtUtc | tenantTime }}</td><td>{{ b.description }} <!-- @if (b.isDemo) { <zp-status-badge tone="warning">Demo</zp-status-badge> } (real money flow later, FND-027) -->@if (b.failureReason) { <span class="block text-xs text-danger">{{ b.failureReason }}</span> }</td>
           <td class="text-right">{{ b.amountMinor / 100 | currency: b.currencyCode }}</td><td><zp-status-badge [tone]="b.status === 'Paid' ? 'success' : b.status === 'Failed' ? 'danger' : 'primary'">{{ b.status }}</zp-status-badge></td></tr> }
           @empty { <tr><td colspan="4" class="py-6 text-center text-ink/70">No billing activity yet.</td></tr> }</tbody></table></div></section>
 

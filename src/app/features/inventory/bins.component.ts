@@ -13,6 +13,7 @@ import { BinApi } from '../../core/services/purchasing.services';
 import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { BranchPickerComponent } from '../../shared/ui/ops-chrome.components';
 import { ZpIconComponent } from '../../shared/ui/zp-icon.component';
+import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 
 const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
 
@@ -25,7 +26,7 @@ interface BinForm { id: string | null; code: string; name: string; isHighSecurit
 @Component({
   selector: 'zp-bins',
   standalone: true,
-  imports: [DecimalPipe, FormsModule, BranchPickerComponent, DialogComponent, ZpIconComponent],
+  imports: [EntitledActionDirective, DecimalPipe, FormsModule, BranchPickerComponent, DialogComponent, ZpIconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex flex-col gap-4 font-jakarta" data-testid="bins">
@@ -34,7 +35,7 @@ interface BinForm { id: string | null; code: string; name: string; isHighSecurit
       @if (!branches.activeId()) { <p class="sys-alert sys-alert-warning" role="status">You are not assigned to a branch yet.</p> }
 
       <section class="app-card overflow-hidden p-0" aria-label="Bins">
-        <div class="flex items-center justify-between bg-ink/5 px-4 py-2"><h2 class="font-syne text-lg font-semibold">Bins at this branch</h2>@if (canManage()) { <button type="button" class="btn-primary" data-testid="bin-new" (click)="openForm(null)"><zp-icon name="plus" [size]="16" /> New bin</button> }</div>
+        <div class="flex items-center justify-between bg-ink/5 px-4 py-2"><h2 class="font-syne text-lg font-semibold">Bins at this branch</h2>@if (canManage()) { <button type="button" class="btn-primary" data-testid="bin-new" zpAction="inventory.bins.manage" (click)="openForm(null)"><zp-icon name="plus" [size]="16" /> New bin</button> }</div>
         <div class="overflow-x-auto"><table class="app-table min-w-[36rem]" data-testid="bin-table"><thead><tr><th>Code</th><th>Name</th><th>Security</th><th class="text-right">Items held</th><th>Status</th><th></th></tr></thead>
           <tbody>@for (b of bins(); track b.id) {
             <tr [attr.data-testid]="'bin-row-' + b.code"><td class="font-data font-semibold">{{ b.code }}</td><td>{{ b.name }}</td>
@@ -57,7 +58,7 @@ interface BinForm { id: string | null; code: string; name: string; isHighSecurit
           <tbody>@for (r of stock(); track $index) {
             <tr [attr.data-testid]="'stock-row-' + r.binCode + '-' + (r.sku ?? r.itemName)"><td><span class="font-semibold">{{ r.itemName }}</span> <span class="font-data text-[11px] text-ink/60">{{ r.sku }}</span></td>
               <td class="font-data text-xs" [class]="r.isHighSecurity ? 'text-primary font-semibold' : r.binId ? '' : 'text-ink/60'">{{ r.binCode }}{{ r.isHighSecurity ? ' (secure)' : '' }}</td><td class="text-right font-data font-bold">{{ r.quantity | number: '1.0-4' }} {{ unit(r.unit) }}</td>
-              @if (canMove()) { <td class="text-right"><button type="button" class="btn-ghost text-sm" [attr.data-testid]="'move-' + r.binCode + '-' + (r.sku ?? r.itemName)" (click)="openMove(r)">Move</button></td> }</tr> }
+              @if (canMove()) { <td class="text-right"><button type="button" class="btn-ghost text-sm" [attr.data-testid]="'move-' + r.binCode + '-' + (r.sku ?? r.itemName)" (click)="openMove(r)" zpAction="inventory.stock.adjust">Move</button></td> }</tr> }
             @empty { <tr><td colspan="4" class="py-8 text-center text-ink/70">{{ loadingStock() ? 'Loading...' : 'Nothing found.' }}</td></tr> }</tbody></table></div>
       </section>
 
@@ -85,7 +86,7 @@ interface BinForm { id: string | null; code: string; name: string; isHighSecurit
           <label class="flex items-start gap-2 text-sm"><input type="checkbox" class="mt-1" data-testid="bin-secure" [ngModel]="f.isHighSecurity" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchForm({ isHighSecurity: $event })" /> <span><strong>High security</strong><span class="block text-ink/70">Goods going in need a second person, signed in on their own device, to confirm them before they count as stock.</span></span></label>
           @if (f.id) { <label class="flex items-center gap-2 text-sm"><input type="checkbox" [ngModel]="f.isActive" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchForm({ isActive: $event })" /> In use</label> }
           @if (formError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="bin-form-error">{{ formError() }}</p> }
-          <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="form.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="bin-save" [disabled]="busy() || f.code.trim().length === 0 || f.name.trim().length === 0">Save bin</button></div>
+          <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="form.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="bin-save" zpAction="inventory.bins.manage" [disabled]="busy() || f.code.trim().length === 0 || f.name.trim().length === 0">Save bin</button></div>
         </form>
       }
     </zp-dialog>
@@ -98,7 +99,7 @@ interface BinForm { id: string | null; code: string; name: string; isHighSecurit
           <div><label class="app-label" for="mv-qty">Quantity</label><input id="mv-qty" type="number" min="0" step="any" class="app-input font-data" data-testid="move-qty" [ngModel]="mv.qty" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchMove({ qty: +$event })" /></div>
           <div><label class="app-label" for="mv-why">Reason (optional)</label><input id="mv-why" class="app-input" maxlength="300" data-testid="move-reason" [ngModel]="mv.reason" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchMove({ reason: $event })" /></div>
           @if (moveError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="move-error">{{ moveError() }}</p> }
-          <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="move.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="move-confirm" [disabled]="busy() || !mv.to || mv.qty <= 0">Move</button></div>
+          <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="move.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="move-confirm" zpAction="inventory.stock.adjust" [disabled]="busy() || !mv.to || mv.qty <= 0">Move</button></div>
         </form>
       }
     </zp-dialog>

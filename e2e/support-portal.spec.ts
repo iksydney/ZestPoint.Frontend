@@ -129,7 +129,7 @@ test.describe('Support, customer records, people and operators on the platform c
     await expect(agent.page.getByTestId('nav-customers')).toBeVisible();
     await expect(agent.page.getByTestId('nav-users')).toBeVisible();
     await expect(agent.page.getByTestId('nav-operators')).toHaveCount(0);
-    // Typing the address in the bar reloads the app and drops the in-memory session, so ask the router for it instead.
+    // Ask the router for the address (no page load), so this checks the permission guard rather than the session restore.
     await agent.page.evaluate(() => { history.pushState({}, '', '/platform/operators'); window.dispatchEvent(new PopStateEvent('popstate')); });
     await expect(agent.page).toHaveURL(/\/platform\/overview$/);
     await agent.page.getByTestId('nav-plans').click();

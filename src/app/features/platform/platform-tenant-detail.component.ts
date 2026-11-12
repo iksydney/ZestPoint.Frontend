@@ -1,25 +1,27 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { ModeName, PlanDto, PlatformTenantDetailDto } from '../../core/models/subscription.model';
+import { PlanDto, PlatformTenantDetailDto } from '../../core/models/subscription.model';
 import { toApiError } from '../../core/services/api.util';
 import { PlatformApi, PlatformAuthService } from '../../core/services/subscription.services';
 import { PLATFORM_PERMISSIONS } from '../../core/models/support.model';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
+import { AccessTreeComponent } from './access/access-tree.component';
 
-type Action = 'plan' | 'extend' | 'reconcile' | 'restrict' | 'override' | null;
+type Action = 'plan' | 'extend' | 'reconcile' | 'restrict' | null;
 
 /**
- * One company as the operator sees it: subscription, access per module, usage, billing and the full entitlement ledger, with the
- * administrative actions. Every action needs a written reason; the reason and the operator's name go to the company's ledger and audit log.
+ * One company as the operator sees it: subscription, access (modules, screens and buttons, with one-click grants), usage, billing and the full
+ * entitlement ledger, with the administrative actions. Every action needs a written reason; the reason and the operator's name go to the
+ * company's ledger and audit log.
  */
 @Component({
   selector: 'zp-platform-tenant-detail',
   standalone: true,
-  imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent],
+  imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent, AccessTreeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a routerLink="/platform/tenants" class="text-sm underline">&larr; Companies</a>
@@ -52,21 +54,7 @@ type Action = 'plan' | 'extend' | 'reconcile' | 'restrict' | 'override' | null;
         </section>
       }
 
-      @if (v.entitlements; as e) {
-        <section class="app-card mb-4"><h2 class="font-semibold">Modules</h2>
-          <ul class="mt-2 divide-y divide-ink/10 text-sm" data-testid="detail-modules">
-            @for (m of e.modules; track m.key) {
-              <li class="flex flex-wrap items-center justify-between gap-2 py-2" [attr.data-testid]="'mod-' + m.key">
-                <div><p class="font-medium">{{ m.name }}</p>@if (m.source === 'Override') { <p class="text-xs text-ink/70">Override by {{ m.reason }}</p> }</div>
-                <div class="flex items-center gap-2"><zp-status-badge [tone]="m.mode === 'Full' ? 'success' : m.mode === 'ReadOnly' ? 'warning' : 'danger'">{{ m.mode }}</zp-status-badge>
-                  @if (platform.can(perms.BILLING_MANAGE)) {
-                    @if (m.source === 'Override') { <button type="button" class="btn-ghost px-2 py-0.5 text-xs" [attr.data-testid]="'clear-' + m.key" (click)="openOverride(m.key, true)">Clear override</button> }
-                    <button type="button" class="btn-outline px-2 py-0.5 text-xs" [attr.data-testid]="'override-' + m.key" (click)="openOverride(m.key, false)">Override</button>
-                  }</div>
-              </li>
-            }
-          </ul></section>
-      }
+      <zp-access-tree [tenantId]="v.tenant.id" [canManage]="platform.can(perms.BILLING_MANAGE)" (changed)="load()" />
 
       <section class="mb-4"><h2 class="mb-2 text-lg font-semibold">Billing</h2>
         <div class="app-card overflow-x-auto p-0"><table class="app-table"><thead><tr><th>Date (UTC)</th><th>Description</th><th class="text-right">Amount</th><th>Status</th><th>Provider</th></tr></thead>
@@ -85,15 +73,10 @@ type Action = 'plan' | 'extend' | 'reconcile' | 'restrict' | 'override' | null;
           @case ('plan') { <div><label class="app-label" for="a-plan">Plan</label><select id="a-plan" class="app-input" data-testid="action-plan" [ngModel]="planCode()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="planCode.set($event)">@for (p of plans(); track p.id) { <option [value]="p.code">{{ p.name }}</option> }</select>
             <p class="mt-1 text-xs text-ink/70">Assigning a plan puts the company in good standing. No payment is taken.</p></div> }
           @case ('extend') { <div><label class="app-label" for="a-days">Days to add</label><input id="a-days" type="number" min="1" max="365" class="app-input" data-testid="action-days" [ngModel]="days()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="days.set(+$event)" /></div> }
-          @case ('override') {
-            <div class="grid grid-cols-2 gap-3"><div><label class="app-label" for="a-mode">Access</label><select id="a-mode" class="app-input" data-testid="action-mode" [ngModel]="mode()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="mode.set($event)"><option value="Full">Full</option><option value="ReadOnly">Read-only</option><option value="None">None (withdraw)</option></select></div>
-              <div><label class="app-label" for="a-until">Until (optional)</label><input id="a-until" type="date" class="app-input" data-testid="action-until" [ngModel]="until()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="until.set($event)" /></div></div>
-            <p class="text-sm">Module: <strong>{{ overrideKey() }}</strong></p>
-          }
         }
         <div><label class="app-label" for="a-reason">Reason (kept in the company's ledger)</label><input id="a-reason" class="app-input" data-testid="action-reason" [ngModel]="reason()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="reason.set($event)" /></div>
         @if (actionError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="action-error">{{ actionError() }}</p> }
-        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="action.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="action-confirm" [disabled]="busy() || reason().trim().length < 3">{{ clearing() ? 'Remove override' : 'Apply' }}</button></div>
+        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="action.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="action-confirm" [disabled]="busy() || reason().trim().length < 3">Apply</button></div>
       </form>
     </zp-dialog>
   `
@@ -105,6 +88,8 @@ export class PlatformTenantDetailComponent implements OnInit {
   protected readonly platform = inject(PlatformAuthService);
   protected readonly perms = PLATFORM_PERMISSIONS;
 
+  private readonly accessTree = viewChild(AccessTreeComponent);
+
   protected readonly d = signal<PlatformTenantDetailDto | null>(null);
   protected readonly plans = signal<readonly PlanDto[]>([]);
   protected readonly error = signal<string | null>(null);
@@ -114,13 +99,9 @@ export class PlatformTenantDetailComponent implements OnInit {
   protected readonly reason = signal('');
   protected readonly planCode = signal('');
   protected readonly days = signal(7);
-  protected readonly mode = signal<ModeName>('Full');
-  protected readonly until = signal('');
-  protected readonly overrideKey = signal('');
-  protected readonly clearing = signal(false);
 
   protected readonly actionTitle = computed(() => ({
-    plan: 'Set plan', extend: 'Extend the period', reconcile: 'Reconcile a payment', restrict: 'Restrict the company', override: this.clearing() ? 'Remove module override' : 'Override a module', null: ''
+    plan: 'Set plan', extend: 'Extend the period', reconcile: 'Reconcile a payment', restrict: 'Restrict the company', null: ''
   } as Record<string, string>)[String(this.action())]);
 
   private get id(): string { return this.route.snapshot.paramMap.get('id')!; }
@@ -134,26 +115,16 @@ export class PlatformTenantDetailComponent implements OnInit {
     return s === 'Active' ? 'success' : s === 'Trialing' ? 'primary' : s === 'PastDue' ? 'warning' : 'danger';
   }
 
-  private async load(): Promise<void> {
+  /** Reloads the company (ledger, billing, subscription). Also called when the access tree changed something. */
+  protected async load(): Promise<void> {
     try { this.d.set(await firstValueFrom(this.api.tenant(this.id))); } catch (err) { this.error.set(toApiError(err).message); }
   }
 
-  protected open(a: Exclude<Action, null | 'override'>): void {
+  protected open(a: Exclude<Action, null>): void {
     this.reason.set('');
     this.actionError.set(null);
-    this.clearing.set(false);
     this.planCode.set(this.d()?.subscription?.plan.code ?? '');
     this.action.set(a);
-  }
-
-  protected openOverride(key: string, clear: boolean): void {
-    this.reason.set('');
-    this.actionError.set(null);
-    this.overrideKey.set(key);
-    this.clearing.set(clear);
-    this.mode.set('Full');
-    this.until.set('');
-    this.action.set('override');
   }
 
   protected async run(): Promise<void> {
@@ -169,14 +140,11 @@ export class PlatformTenantDetailComponent implements OnInit {
         case 'extend': await firstValueFrom(this.api.extend(id, this.days(), reason)); break;
         case 'reconcile': await firstValueFrom(this.api.reconcile(id, reason)); break;
         case 'restrict': await firstValueFrom(this.api.restrict(id, reason)); break;
-        case 'override':
-          if (this.clearing()) await firstValueFrom(this.api.clearOverride(id, this.overrideKey(), reason));
-          else await firstValueFrom(this.api.setOverride(id, this.overrideKey(), this.mode(), this.until() ? new Date(this.until() + 'T23:59:59Z').toISOString() : null, reason));
-          break;
       }
       this.action.set(null);
       this.toast.success('Done. The change is in the company\'s ledger.');
       await this.load();
+      await this.accessTree()?.load(); // a different plan changes what the company can use
     } catch (err) {
       this.actionError.set(toApiError(err).message);
     } finally { this.busy.set(false); }

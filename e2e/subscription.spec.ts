@@ -37,7 +37,8 @@ test.describe('Subscriptions, entitlements and the platform interface (criteria 
     await expect(page.getByTestId('plan-name')).toHaveText('Enterprise Lounge');
     await expect(page.getByTestId('sub-status')).toHaveText('Free trial');
     await expect(page.getByTestId('period-line')).toContainText('Free trial until');
-    await expect(page.getByTestId('billing-demo-note')).toContainText('no real money');
+    // The development-billing caution is commented out on purpose until the real money flow exists (owner decision 2026-11-12, FND-027).
+    await expect(page.getByTestId('billing-demo-note')).toHaveCount(0);
     await expect(page.getByTestId('module-core_pos')).toContainText('Available');
     await expect(page.getByTestId('module-hotel_pms_room_charging')).toContainText('Available');
     await expect(page.getByTestId('usage')).toContainText('Active branches');
@@ -65,11 +66,12 @@ test.describe('Subscriptions, entitlements and the platform interface (criteria 
 
     await page.getByTestId('pm-token').fill('tok_ok');
     await page.getByTestId('pm-save').click();
-    await expect(page.getByTestId('payment-method')).toContainText('Development test card');
+    await expect(page.getByTestId('payment-method')).toContainText('Payment method saved.');
+    await expect(page.getByTestId('payment-method')).not.toContainText('Development');   // the provider's own label is hidden for now (FND-027)
     // Starting the paid plan now takes the payment through the (development) billing adapter and records it.
     await page.getByTestId('pay-now').click();
     await expect(page.getByTestId('sub-status')).toHaveText('Active');
-    await expect(page.getByTestId('billing-table')).toContainText('Demo');
+    await expect(page.getByTestId('billing-table')).not.toContainText('Demo');            // the "Demo" tag is commented out for now (FND-027)
     await expect(page.getByTestId('billing-table')).toContainText('Paid');
   });
 

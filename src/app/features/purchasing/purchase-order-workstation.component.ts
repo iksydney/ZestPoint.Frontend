@@ -20,6 +20,7 @@ import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/f
 import { ZpIconComponent } from '../../shared/ui/zp-icon.component';
 import { PoPrintSheetComponent } from './po-print-sheet.component';
 import { SupplierFormComponent, SupplierLookupComponent } from './supplier-dialogs.component';
+import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 
 const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
 const TERMS: readonly { days: number; label: string }[] = [
@@ -64,7 +65,7 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
 @Component({
   selector: 'zp-po-workstation',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, SupplierLookupComponent, SupplierFormComponent, PoPrintSheetComponent],
+  imports: [EntitledActionDirective, DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, SupplierLookupComponent, SupplierFormComponent, PoPrintSheetComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="no-print flex flex-col gap-4 font-jakarta" data-testid="po-workstation">
@@ -279,23 +280,23 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
       <section class="app-card sticky bottom-2 z-30 flex flex-wrap items-center justify-between gap-3 p-3 shadow-2xl" aria-label="Actions">
         <div class="flex flex-wrap items-center gap-2">
           <button type="button" class="btn-outline h-11" data-testid="po-print" [disabled]="!doc()" (click)="print()"><zp-icon name="printer" [size]="18" /> Print <span class="po-kbd">F3</span></button>
-          <button type="button" class="btn-outline h-11" data-testid="po-email" [disabled]="!doc()?.actions?.canEmail" [title]="doc()?.actions?.canEmail ? '' : 'Available once the order is approved and the supplier has an e-mail address'" (click)="email()"><zp-icon name="mail" [size]="18" /> E-mail order</button>
+          <button type="button" class="btn-outline h-11" data-testid="po-email" zpAction="inventory.purchase.manage" [disabled]="!doc()?.actions?.canEmail" [title]="doc()?.actions?.canEmail ? '' : 'Available once the order is approved and the supplier has an e-mail address'" (click)="email()"><zp-icon name="mail" [size]="18" /> E-mail order</button>
           <button type="button" class="btn-outline h-11" data-testid="po-tags" [disabled]="lines().length === 0" (click)="shelfTags()"><zp-icon name="tag" [size]="18" /> Print shelf tags</button>
           @if (editable()) { <button type="button" class="inline-flex h-11 items-center gap-2 rounded-lg border border-danger/40 bg-danger/10 px-3 text-sm font-semibold text-danger disabled:opacity-40" data-testid="po-void" [disabled]="selectedCount() === 0" (click)="voidSelected()"><zp-icon name="trash" [size]="18" /> Void selection</button> }
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <button type="button" class="btn-ghost h-11" data-testid="po-cancel" (click)="leave()"><zp-icon name="x" [size]="18" /> Close <span class="po-kbd">Esc</span></button>
-          @if (doc()?.actions?.canReject) { <button type="button" class="btn-outline h-11" data-testid="po-reject" (click)="rejectOpen.set(true)">Send back</button> }
-          @if (doc()?.actions?.canApprove) { <button type="button" class="btn-primary h-11" data-testid="po-approve" [disabled]="busy()" (click)="approve()"><zp-icon name="check" [size]="18" /> Approve</button> }
-          @if (doc()?.actions?.canCloseShort) { <button type="button" class="btn-outline h-11" data-testid="po-close-short" (click)="closeShortOpen.set(true)">Close short</button> }
-          @if (doc()?.actions?.canCancel) { <button type="button" class="btn-ghost h-11 text-danger" data-testid="po-cancel-doc" (click)="cancelDocument()">Cancel document</button> }
-          @if (doc()?.actions?.canPay) { <button type="button" class="btn-outline h-11" data-testid="po-pay" (click)="openPay()"><zp-icon name="wallet" [size]="18" /> Record payment <span class="po-kbd">F5</span></button> }
-          @if (doc()?.actions?.canReceive) { <a class="btn-primary h-11" data-testid="po-receive" [routerLink]="['/app/purchasing/orders', doc()!.id, 'receive']"><zp-icon name="inbox" [size]="18" /> Receive goods</a> }
+          @if (doc()?.actions?.canReject) { <button type="button" class="btn-outline h-11" data-testid="po-reject" zpAction="inventory.purchase.approve" (click)="rejectOpen.set(true)">Send back</button> }
+          @if (doc()?.actions?.canApprove) { <button type="button" class="btn-primary h-11" data-testid="po-approve" zpAction="inventory.purchase.approve" [disabled]="busy()" (click)="approve()"><zp-icon name="check" [size]="18" /> Approve</button> }
+          @if (doc()?.actions?.canCloseShort) { <button type="button" class="btn-outline h-11" data-testid="po-close-short" zpAction="inventory.purchase.approve" (click)="closeShortOpen.set(true)">Close short</button> }
+          @if (doc()?.actions?.canCancel) { <button type="button" class="btn-ghost h-11 text-danger" data-testid="po-cancel-doc" zpAction="inventory.purchase.manage" (click)="cancelDocument()">Cancel document</button> }
+          @if (doc()?.actions?.canPay) { <button type="button" class="btn-outline h-11" data-testid="po-pay" zpAction="purchasing.payments.manage" (click)="openPay()"><zp-icon name="wallet" [size]="18" /> Record payment <span class="po-kbd">F5</span></button> }
+          @if (doc()?.actions?.canReceive) { <a class="btn-primary h-11" data-testid="po-receive" zpAction="purchasing.receive" [routerLink]="['/app/purchasing/orders', doc()!.id, 'receive']"><zp-icon name="inbox" [size]="18" /> Receive goods</a> }
           @if (!doc()?.actions?.canReceive && doc()?.actions?.receiveBlockedReason) { <span class="text-xs text-ink/70" data-testid="po-receive-blocked">{{ doc()!.actions.receiveBlockedReason }}</span> }
           @if (editable()) {
-            <button type="button" class="btn-outline h-11" data-testid="po-save" [disabled]="busy() || !dirty()" (click)="saveDraft()"><zp-icon name="doneall" [size]="18" /> Save draft</button>
-            @if (direct()) { <button type="button" class="btn-primary h-11 px-6" data-testid="po-book" [disabled]="busy()" (click)="openDirect()"><zp-icon name="inbox" [size]="20" /> Book into stock <span class="po-kbd">F2</span></button> }
-            @else { <button type="button" class="btn-primary h-11 px-6 font-syne uppercase tracking-wide" data-testid="po-post" [disabled]="busy()" (click)="post()"><zp-icon name="shield" [size]="20" /> {{ postLabel() }} <span class="po-kbd">F2</span></button> }
+            <button type="button" class="btn-outline h-11" data-testid="po-save" zpAction="inventory.purchase.manage" [disabled]="busy() || !dirty()" (click)="saveDraft()"><zp-icon name="doneall" [size]="18" /> Save draft</button>
+            @if (direct()) { <button type="button" class="btn-primary h-11 px-6" data-testid="po-book" zpAction="purchasing.receive" [disabled]="busy()" (click)="openDirect()"><zp-icon name="inbox" [size]="20" /> Book into stock <span class="po-kbd">F2</span></button> }
+            @else { <button type="button" class="btn-primary h-11 px-6 font-syne uppercase tracking-wide" data-testid="po-post" zpAction="inventory.purchase.manage" [disabled]="busy()" (click)="post()"><zp-icon name="shield" [size]="20" /> {{ postLabel() }} <span class="po-kbd">F2</span></button> }
           }
         </div>
       </section>

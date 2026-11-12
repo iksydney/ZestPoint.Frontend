@@ -1,6 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
+import { APP_NAV } from '../../core/navigation/app-nav';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
@@ -26,12 +28,18 @@ export class ForbiddenComponent {}
   template: `
     <main class="grid min-h-screen place-items-center bg-canvas p-6 text-center text-ink">
       <div class="max-w-md space-y-3" data-testid="upgrade-prompt">
-        <h1 class="text-2xl font-bold">Upgrade required</h1>
-        <p class="text-ink/80">@if (module()) { <strong>{{ module() }}</strong> is } @else { This module is } not part of your current plan{{ plan() ? ' (' + plan() + ')' : '' }}.</p>
-        @if (canManage()) {
+        <h1 class="text-2xl font-bold">{{ screen() ? 'Not included in your plan' : 'Upgrade required' }}</h1>
+        @if (screen()) {
+          <p class="text-ink/80" data-testid="upgrade-screen"><strong>{{ screen() }}</strong> is not available to your organisation{{ plan() ? ' (' + plan() + ')' : '' }}.</p>
+          <p class="text-ink/80">Contact ZestPoint if you need it switched on.</p>
+          @if (canAsk()) { <a routerLink="/app/support" class="btn-primary" data-testid="upgrade-contact-support">Contact support</a> }
+        } @else {
+          <p class="text-ink/80">@if (module()) { <strong>{{ module() }}</strong> is } @else { This module is } not part of your current plan{{ plan() ? ' (' + plan() + ')' : '' }}.</p>
+        }
+        @if (canManage() && !screen()) {
           <p class="text-ink/80">Choose a plan that includes it and it is available straight away.</p>
           <a routerLink="/app/subscription" fragment="plans" class="btn-primary" data-testid="upgrade-choose-plan">See plans</a>
-        } @else {
+        } @else if (!screen()) {
           <p class="text-ink/80">Ask an administrator of your company to upgrade the subscription.</p>
         }
         <div><a routerLink="/app" class="btn-outline mt-2">Back to the dashboard</a></div>
@@ -43,9 +51,16 @@ export class UpgradeRequiredComponent {
   private readonly route = inject(ActivatedRoute);
 
   protected readonly canManage = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.SUBSCRIPTIONS_MANAGE));
+  protected readonly canAsk = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.SUPPORT_VIEW));
   protected readonly plan = computed(() => this.auth.subscription()?.planName ?? '');
+  /** The name of ONE withheld screen when an operator withheld just that screen (not the whole module). */
+  private readonly query = toSignal(this.route.queryParamMap, { initialValue: this.route.snapshot.queryParamMap });
+  protected readonly screen = computed(() => {
+    const key = this.query().get('screen');
+    return key ? (APP_NAV.find((n) => n.key === key)?.label ?? null) : null;
+  });
   protected readonly module = computed(() => {
-    const key = this.route.snapshot.queryParamMap.get('feature');
+    const key = this.query().get('feature');
     return this.auth.subscription()?.modules.find((m) => m.key === key)?.name ?? null;
   });
 }

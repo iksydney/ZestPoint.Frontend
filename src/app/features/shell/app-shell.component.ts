@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 import { APP_NAV, NavDefinition, groupOf, navFor, permissionsOf } from '../../core/navigation/app-nav';
+import { AccessService } from '../../core/services/access.service';
 import { AuthService } from '../../core/services/auth.service';
 import { BrandMarkComponent } from '../../shared/ui/brand-mark.component';
 import { AccountBannerComponent } from '../../shared/ui/account-banner.component';
@@ -71,16 +72,17 @@ import { NavSidebarComponent } from '../../shared/ui/nav-sidebar.component';
 })
 export class AppShellComponent {
   protected readonly auth = inject(AuthService);
+  private readonly access = inject(AccessService);
   private readonly router = inject(Router);
 
   protected readonly branding = this.auth.branding;
   protected readonly drawer = signal(false);
   protected readonly url = toSignal(this.router.events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd), map((e) => e.urlAfterRedirects), startWith(this.router.url)), { initialValue: this.router.url });
 
-  /** The screens this person may use: permission AND module; a locked workspace keeps only the subscription screen. */
+  /** The screens this person may use: permission AND module AND the screen itself (an operator may withhold just one); a locked workspace keeps only the subscription screen. */
   protected readonly items = computed<NavDefinition[]>(() =>
     APP_NAV.filter((n) => this.auth.hasAnyPermission(permissionsOf(n)) && (!this.auth.locked() || n.key === 'subscription' || n.key === 'support')
-      && (!n.feature || this.auth.accessModeFor(n.feature) !== 'locked')));
+      && this.access.canShow(n)));
 
   protected readonly crumbs = computed(() => {
     const here = navFor(this.url());

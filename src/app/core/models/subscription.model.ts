@@ -2,9 +2,13 @@
  * Subscription, entitlement and platform-administration contracts. These MIRROR the backend view models
  * (ZestPoint.Data/ViewModel/SubscriptionModels.cs); change both together (constitution Article 4). Enums travel as names.
  */
+import type { AccessSummaryDto, PlanRuleDto } from './access.model';
 import { PagedResult } from './staff.model';
 
 export type { PagedResult };
+
+/** All: every screen and action of the module is included unless withdrawn. OnlyGranted ("Selective"): the module is on but only individually granted ones work. */
+export type ItemDefault = 'All' | 'OnlyGranted';
 
 export type BillingInterval = 'Monthly' | 'Yearly';
 export type SubscriptionStatus = 'Trialing' | 'Active' | 'PastDue' | 'Restricted' | 'Cancelled';
@@ -20,9 +24,9 @@ export type BillingEventType = 'Invoice' | 'Payment' | 'Credit' | 'PlanChange';
 export type LedgerEventType =
   | 'TrialStarted' | 'TrialEnded' | 'FeatureActivated' | 'PlanUpgraded' | 'PlanDowngraded' | 'PlanDowngradeScheduled' | 'WarningIssued'
   | 'GraceStarted' | 'GraceExpired' | 'ModuleRestricted' | 'PaymentReconciled' | 'AccessRestored' | 'AdministrativeOverride'
-  | 'SubscriptionCancelled' | 'SubscriptionResumed' | 'RenewalFailed' | 'Renewed' | 'PeriodExtended';
+  | 'SubscriptionCancelled' | 'SubscriptionResumed' | 'RenewalFailed' | 'Renewed' | 'PeriodExtended' | 'GrantExpired';
 
-export interface PlanFeatureDto { featureKey: string; modeWhenRestricted: ModeName }
+export interface PlanFeatureDto { featureKey: string; modeWhenRestricted: ModeName; itemDefault: ItemDefault }
 
 export interface PlanDto {
   id: string;
@@ -43,6 +47,8 @@ export interface PlanDto {
   isPublic: boolean;
   sortOrder: number;
   features: PlanFeatureDto[];
+  /** Screens and actions the plan allows or withdraws beneath its modules. */
+  rules: PlanRuleDto[];
   rowVersion: string;
 }
 
@@ -64,6 +70,7 @@ export interface SavePlanRequest {
   isPublic: boolean;
   sortOrder: number;
   features: PlanFeatureDto[];
+  rules: PlanRuleDto[];
   rowVersion: string | null;
 }
 
@@ -94,6 +101,9 @@ export interface ModuleAccessDto {
   source: EntitlementSource | null;
   validUntilUtc: string | null;
   reason: string | null;
+  itemDefault: ItemDefault;
+  /** False while nothing is built behind the module ("coming soon"). */
+  available: boolean;
 }
 
 export interface LimitUsageDto { kind: LimitKind; limit: number | null; used: number; exceeded: boolean }
@@ -119,6 +129,8 @@ export interface EntitlementStateDto {
   banner: BannerDto | null;
   modules: ModuleAccessDto[];
   limits: LimitUsageDto[];
+  /** Screens and actions withheld from this organisation. A UX snapshot; the API re-checks every call. */
+  access: AccessSummaryDto;
 }
 
 export interface BillingEventDto {

@@ -70,7 +70,7 @@ test.describe('Branded receipts and a live dashboard (criteria 10, 35)', () => {
     await page.goto('/app/subscription');
     await page.getByTestId('pm-token').fill('tok_ok');
     await page.getByTestId('pm-save').click();
-    await expect(page.getByTestId('payment-method')).toContainText('Development test card');
+    await expect(page.getByTestId('payment-method')).toContainText('Payment method saved.');
     await page.goto('/app/dashboard');
     await expect(page.getByTestId('step-Subscription')).toContainText('Complete');
   });

@@ -15,6 +15,7 @@ import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { BranchPickerComponent } from '../../shared/ui/ops-chrome.components';
 import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
+import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 
 const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
 
@@ -25,7 +26,7 @@ const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'ea
 @Component({
   selector: 'zp-adjustments',
   standalone: true,
-  imports: [DecimalPipe, FormsModule, TenantTimePipe, DialogComponent, StatusBadgeComponent, BranchPickerComponent, SearchSelectComponent],
+  imports: [EntitledActionDirective, DecimalPipe, FormsModule, TenantTimePipe, DialogComponent, StatusBadgeComponent, BranchPickerComponent, SearchSelectComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -54,7 +55,7 @@ const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'ea
             <div><label class="app-label" for="a-note">Notes</label><input id="a-note" class="app-input" maxlength="500" data-testid="adjust-note" [ngModel]="note()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="note.set($event)" /></div>
             @if (formError()) { <p class="sys-alert sys-alert-danger sm:col-span-2" role="alert" data-testid="adjust-error">{{ formError() }}</p> }
             @if (formMessage()) { <p class="sys-alert sys-alert-success sm:col-span-2" role="status" data-testid="adjust-message">{{ formMessage() }}</p> }
-            <div class="sm:col-span-2"><button type="submit" class="btn-primary" data-testid="adjust-submit" [disabled]="saving() || readOnly() || !canSubmit()">Submit adjustment</button></div>
+            <div class="sm:col-span-2"><button type="submit" class="btn-primary" data-testid="adjust-submit" zpAction="inventory.stock.adjust" [disabled]="saving() || readOnly() || !canSubmit()">Submit adjustment</button></div>
           </form>
         </section>
       }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -23,9 +23,15 @@ import { PlatformAuthService } from '../../core/services/subscription.services';
     </main>
   `
 })
-export class PlatformLoginComponent {
+export class PlatformLoginComponent implements OnInit {
   private readonly platform = inject(PlatformAuthService);
   private readonly router = inject(Router);
+
+  /** An operator who is already signed in (their cookie restores it) has no use for this form. */
+  async ngOnInit(): Promise<void> {
+    await this.platform.ready();
+    if (this.platform.isSignedIn()) await this.router.navigate(['/platform/overview']);
+  }
 
   protected readonly email = signal('');
   protected readonly password = signal('');

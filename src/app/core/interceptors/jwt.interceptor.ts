@@ -2,6 +2,7 @@ import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/comm
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, from, switchMap, throwError } from 'rxjs';
+import { AccessService } from '../services/access.service';
 import { AuthService } from '../services/auth.service';
 import { PlatformAuthService } from '../services/subscription.services';
 
@@ -23,26 +24,37 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
   if (req.url.startsWith('/api/v1/platform')) {
     if (req.url.startsWith('/api/v1/platform/auth/')) return next(req);
     const platform = inject(PlatformAuthService);
-    const token = platform.token();
-    const authed = token ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : req;
-    return next(authed).pipe(
+    const withPlatformToken = (request: HttpRequest<unknown>) => {
+      const token = platform.token();
+      return token ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request;
+    };
+    return next(withPlatformToken(req)).pipe(
       catchError((err: unknown) => {
-        if (err instanceof HttpErrorResponse && err.status === 401) {
-          platform.logout();
-          void router.navigate(['/platform/login']);
-        }
-        return throwError(() => err);
+        if (!(err instanceof HttpErrorResponse) || err.status !== 401) return throwError(() => err);
+        // The access token ran out (or the operator was switched off): ONE attempt to restore it from the cookie and replay, else back to sign-in.
+        return from(platform.refresh()).pipe(
+          switchMap((ok) => {
+            if (ok) return next(withPlatformToken(req));
+            platform.clear();
+            void router.navigate(['/platform/login']);
+            return throwError(() => err);
+          })
+        );
       })
     );
   }
 
   if (!isApi(req.url) || isAnonymous(req.url)) return next(req);
 
+  const access = inject(AccessService);
   const withToken = (request: HttpRequest<unknown>, token: string | null) =>
     token ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request;
 
   return next(withToken(req, auth.token())).pipe(
     catchError((err: unknown) => {
+      // The server refused because the organisation was not given this (code `not_entitled`): the access snapshot is stale, so re-read it
+      // and the menu and buttons correct themselves. The error still reaches the screen, which shows the server's plain message.
+      if (err instanceof HttpErrorResponse && err.status === 403 && (err.error as { code?: string } | null)?.code === 'not_entitled') access.noteRefusal();
       if (!(err instanceof HttpErrorResponse) || err.status !== 401) return throwError(() => err);
 
       return from(auth.refresh()).pipe(

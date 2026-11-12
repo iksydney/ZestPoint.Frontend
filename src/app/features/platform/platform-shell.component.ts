@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { PLATFORM_PERMISSIONS, ROLE_LABEL } from '../../core/models/support.model';
 import { PlatformAuthService } from '../../core/services/subscription.services';
@@ -44,8 +44,14 @@ export class PlatformShellComponent {
     return r ? ROLE_LABEL[r] : '';
   }
 
-  protected signOut(): void {
-    this.platform.logout();
-    void this.router.navigate(['/platform/login']);
+  constructor() {
+    // Signed out in another tab: this one has nothing left to show either.
+    this.platform.onRemoteSignOut = () => void this.router.navigate(['/platform/login']);
+    inject(DestroyRef).onDestroy(() => { this.platform.onRemoteSignOut = null; });
+  }
+
+  protected async signOut(): Promise<void> {
+    await this.platform.logout();
+    await this.router.navigate(['/platform/login']);
   }
 }

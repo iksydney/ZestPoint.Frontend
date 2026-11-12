@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { APP_NAV, permissionsOf } from '../navigation/app-nav';
+import { AccessService } from '../services/access.service';
 import { AuthService } from '../services/auth.service';
 
 /**
@@ -10,10 +11,11 @@ import { AuthService } from '../services/auth.service';
  */
 export const landingGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
+  const access = inject(AccessService);
   const router = inject(Router);
 
   await auth.ready();
   if (auth.locked()) return router.createUrlTree([auth.hasPermission('subscriptions.view') ? '/app/subscription' : '/restricted']);
-  const first = APP_NAV.find((n) => auth.hasAnyPermission(permissionsOf(n)) && (!n.feature || auth.accessModeFor(n.feature) !== 'locked'));
+  const first = APP_NAV.find((n) => auth.hasAnyPermission(permissionsOf(n)) && access.canShow(n));
   return router.createUrlTree([first?.route ?? '/forbidden']);
 };

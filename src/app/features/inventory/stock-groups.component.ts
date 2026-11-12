@@ -8,6 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { StockGroupApi } from '../../core/services/nav-ops.services';
 import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
+import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 
 const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description: null, parentId: null, sortOrder: 0, isActive: true });
 
@@ -18,14 +19,14 @@ const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description:
 @Component({
   selector: 'zp-stock-groups',
   standalone: true,
-  imports: [FormsModule, DialogComponent, StatusBadgeComponent],
+  imports: [EntitledActionDirective, FormsModule, DialogComponent, StatusBadgeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Stock Group Maintenance</h1>
       <div class="flex items-center gap-3">
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" data-testid="groups-inactive" [checked]="showInactive()" (change)="showInactive.set(!showInactive()); load()" /> Show inactive</label>
-        @if (canManage()) { <button type="button" class="btn-primary" data-testid="group-new" [disabled]="readOnly()" (click)="openEdit(null)">New group</button> }
+        @if (canManage()) { <button type="button" class="btn-primary" data-testid="group-new" zpAction="inventory.groups.manage" [disabled]="readOnly()" (click)="openEdit(null)">New group</button> }
       </div>
     </div>
     @if (readOnly()) { <p class="sys-alert sys-alert-warning mb-3" role="status">Read-only: your subscription limits this screen.</p> }
@@ -71,7 +72,7 @@ const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description:
         <div><label class="app-label" for="g-desc">Description</label><input id="g-desc" class="app-input" maxlength="300" [ngModel]="form().description" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ description: $event || null })" /></div>
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" [checked]="form().isActive" (change)="patch({ isActive: !form().isActive })" /> Active</label>
         @if (dialogError()) { <p class="sys-alert sys-alert-danger" role="alert">{{ dialogError() }}</p> }
-        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="group-save" [disabled]="saving() || !form().name.trim()">Save group</button></div>
+        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="group-save" zpAction="inventory.groups.manage" [disabled]="saving() || !form().name.trim()">Save group</button></div>
       </form>
     </zp-dialog>
 

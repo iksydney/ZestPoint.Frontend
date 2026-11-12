@@ -2,8 +2,9 @@ import { CurrencyPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { AccessCatalogDto, AccessCatalogModuleDto, AccessEffect } from '../../core/models/access.model';
 import { FEATURES } from '../../core/models/rbac.model';
-import { ModeName, PlanDto, SavePlanRequest } from '../../core/models/subscription.model';
+import { ItemDefault, ModeName, PlanDto, SavePlanRequest } from '../../core/models/subscription.model';
 import { toApiError } from '../../core/services/api.util';
 import { PlatformApi, PlatformAuthService } from '../../core/services/subscription.services';
 import { PLATFORM_PERMISSIONS } from '../../core/models/support.model';
@@ -14,7 +15,7 @@ const MODULES = Object.values(FEATURES) as string[];
 
 const blank = (): SavePlanRequest => ({
   code: '', name: '', description: '', priceMinor: 0, currencyCode: 'USD', interval: 'Monthly', maxBranches: null, maxStaff: null, maxMonthlyOrders: null,
-  trialDays: 14, warningDays: 3, graceDays: 7, restrictionPolicy: 'LockedExceptBilling', isActive: true, isPublic: true, sortOrder: 10, features: [], rowVersion: null
+  trialDays: 14, warningDays: 3, graceDays: 7, restrictionPolicy: 'LockedExceptBilling', isActive: true, isPublic: true, sortOrder: 10, features: [], rules: [], rowVersion: null
 });
 
 /** Plans are configuration, not code: price, interval, modules, limits, reminder/grace timing and the restriction policy. Saving updates every company on the plan. */
@@ -55,11 +56,43 @@ const blank = (): SavePlanRequest => ({
           <label class="flex items-center gap-2 text-sm"><input type="checkbox" [checked]="f().isPublic" (change)="patch({ isPublic: !f().isPublic })" /> Shown to customers</label>
         </div>
         <fieldset class="rounded-lg border border-ink/15 p-3"><legend class="px-1 text-sm font-semibold">Modules in this plan</legend>
-          <div class="grid gap-2 sm:grid-cols-2">
+          <div class="space-y-2">
             @for (m of allModules; track m) {
-              <div class="flex items-center justify-between gap-2 text-sm">
-                <label class="flex items-center gap-2"><input type="checkbox" [attr.data-testid]="'plan-module-' + m" [checked]="has(m)" (change)="toggle(m)" /> {{ m }}</label>
-                @if (has(m) && f().restrictionPolicy === 'PerModule') { <select class="app-input w-auto py-0.5 text-xs" [ngModel]="modeOf(m)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setMode(m, $event)"><option value="None">locked when restricted</option><option value="ReadOnly">read-only when restricted</option></select> }
+              <div class="rounded-lg border border-ink/10 p-2 text-sm" [attr.data-testid]="'plan-block-' + m">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <label class="flex items-center gap-2"><input type="checkbox" [attr.data-testid]="'plan-module-' + m" [checked]="has(m)" (change)="toggle(m)" /> {{ moduleInfo(m)?.name ?? m }}@if (moduleInfo(m) && !moduleInfo(m)!.available) { <span class="text-xs text-ink/70">(coming soon)</span> }</label>
+                  @if (has(m)) {
+                    <span class="flex flex-wrap items-center gap-2">
+                      <select class="app-input w-auto py-0.5 text-xs" [attr.aria-label]="'Which screens and buttons are included in ' + (moduleInfo(m)?.name ?? m)" [attr.data-testid]="'plan-default-' + m" [ngModel]="defaultOf(m)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setDefault(m, $event)"><option value="All">every screen and button</option><option value="OnlyGranted">only the ones I allow</option></select>
+                      @if (f().restrictionPolicy === 'PerModule') { <select class="app-input w-auto py-0.5 text-xs" [ngModel]="modeOf(m)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setMode(m, $event)"><option value="None">locked when restricted</option><option value="ReadOnly">read-only when restricted</option></select> }
+                    </span>
+                  }
+                </div>
+                @if (has(m) && moduleInfo(m); as info) {
+                  @if (info.screens.length + info.actions.length > 0) {
+                    <details class="mt-2" [attr.data-testid]="'plan-details-' + m"><summary class="cursor-pointer text-xs underline">Screens and buttons ({{ ruleCount(info) }} rule{{ ruleCount(info) === 1 ? '' : 's' }})</summary>
+                      <ul class="mt-1 divide-y divide-ink/10">
+                        @for (s of info.screens; track s.key) {
+                          <li class="py-1.5">
+                            <div class="flex items-center justify-between gap-2"><span>{{ s.name }}</span>
+                              <select class="app-input w-auto py-0.5 text-xs" [attr.aria-label]="'Rule for ' + s.name" [attr.data-testid]="'plan-rule-' + s.key" [ngModel]="ruleOf(s.key)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setRule(s.key, $event)"><option value="">Default</option><option value="Allow">Allow</option><option value="Deny">Withhold</option></select></div>
+                            @if (s.actions.length > 0) {
+                              <details class="ml-4 mt-1"><summary class="cursor-pointer text-xs text-ink/70 underline">{{ s.actions.length }} button{{ s.actions.length === 1 ? '' : 's' }}</summary>
+                                @for (a of s.actions; track a.key) {
+                                  <div class="flex items-center justify-between gap-2 py-0.5 text-xs"><span>{{ a.name }}</span>
+                                    <select class="app-input w-auto py-0.5 text-xs" [attr.aria-label]="'Rule for ' + a.name" [attr.data-testid]="'plan-rule-' + a.key" [ngModel]="ruleOf(a.key)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setRule(a.key, $event)"><option value="">Default</option><option value="Allow">Allow</option><option value="Deny">Withhold</option></select></div>
+                                }
+                              </details>
+                            }
+                          </li>
+                        }
+                        @for (a of info.actions; track a.key) {
+                          <li class="flex items-center justify-between gap-2 py-1.5 text-xs"><span>{{ a.name }}</span>
+                            <select class="app-input w-auto py-0.5 text-xs" [attr.aria-label]="'Rule for ' + a.name" [attr.data-testid]="'plan-rule-' + a.key" [ngModel]="ruleOf(a.key)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setRule(a.key, $event)"><option value="">Default</option><option value="Allow">Allow</option><option value="Deny">Withhold</option></select></li>
+                        }
+                      </ul></details>
+                  }
+                }
               </div>
             }
           </div></fieldset>
@@ -85,8 +118,30 @@ export class PlatformPlansComponent implements OnInit {
   protected readonly fe = signal<Readonly<Record<string, string>>>({});
   protected readonly busy = signal(false);
 
+  protected readonly catalog = signal<AccessCatalogDto | null>(null);
+
   ngOnInit(): void {
     void this.load();
+    // The screens and buttons come from the server's catalog, so a new screen appears here without a change to this page.
+    void firstValueFrom(this.api.accessCatalog()).then((c) => this.catalog.set(c), () => { /* the plan editor still works at module level */ });
+  }
+
+  protected moduleInfo(key: string): AccessCatalogModuleDto | undefined { return this.catalog()?.modules.find((m) => m.key === key); }
+  protected defaultOf(key: string): ItemDefault { return this.f().features.find((x) => x.featureKey === key)?.itemDefault ?? 'All'; }
+  protected ruleOf(key: string): '' | AccessEffect { return this.f().rules.find((r) => r.itemKey === key)?.effect ?? ''; }
+
+  protected setDefault(key: string, itemDefault: ItemDefault): void {
+    this.f.update((v) => ({ ...v, features: v.features.map((x) => (x.featureKey === key ? { ...x, itemDefault } : x)) }));
+  }
+
+  /** Default removes the plan's rule; Allow and Withhold set it. */
+  protected setRule(itemKey: string, effect: '' | AccessEffect): void {
+    this.f.update((v) => ({ ...v, rules: [...v.rules.filter((r) => r.itemKey !== itemKey), ...(effect ? [{ itemKey, effect }] : [])] }));
+  }
+
+  protected ruleCount(m: AccessCatalogModuleDto): number {
+    const keys = new Set([...m.screens.flatMap((s) => [s.key, ...s.actions.map((a) => a.key)]), ...m.actions.map((a) => a.key)]);
+    return this.f().rules.filter((r) => keys.has(r.itemKey)).length;
   }
 
   private async load(): Promise<void> {
@@ -98,7 +153,11 @@ export class PlatformPlansComponent implements OnInit {
   protected modeOf(key: string): ModeName { return this.f().features.find((x) => x.featureKey === key)?.modeWhenRestricted ?? 'None'; }
 
   protected toggle(key: string): void {
-    this.f.update((v) => ({ ...v, features: v.features.some((x) => x.featureKey === key) ? v.features.filter((x) => x.featureKey !== key) : [...v.features, { featureKey: key, modeWhenRestricted: 'None' as ModeName }] }));
+    // Taking a module out of the plan also takes out the screen and button rules beneath it: they would otherwise be saved invisibly.
+    const info = this.moduleInfo(key);
+    const owned = new Set(info ? [...info.screens.flatMap((s) => [s.key, ...s.actions.map((a) => a.key)]), ...info.actions.map((a) => a.key)] : []);
+    if (this.has(key) && owned.size > 0) this.f.update((v) => ({ ...v, rules: v.rules.filter((r) => !owned.has(r.itemKey)) }));
+    this.f.update((v) => ({ ...v, features: v.features.some((x) => x.featureKey === key) ? v.features.filter((x) => x.featureKey !== key) : [...v.features, { featureKey: key, modeWhenRestricted: 'None' as ModeName, itemDefault: 'All' as ItemDefault }] }));
   }
 
   protected setMode(key: string, mode: ModeName): void {
@@ -109,7 +168,7 @@ export class PlatformPlansComponent implements OnInit {
     this.saveError.set(null);
     this.fe.set({});
     this.editingId.set(p?.id ?? null);
-    this.f.set(p ? { ...p, features: p.features.map((x) => ({ ...x })), rowVersion: p.rowVersion } : blank());
+    this.f.set(p ? { ...p, features: p.features.map((x) => ({ ...x })), rules: p.rules.map((r) => ({ ...r })), rowVersion: p.rowVersion } : blank());
     this.open.set(true);
   }
 

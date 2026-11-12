@@ -112,4 +112,6 @@ export type FeatureCode = (typeof FEATURES)[keyof typeof FEATURES];
 export interface RouteAccessData {
   permission?: ScreenPermission | readonly ScreenPermission[];
   feature?: FeatureCode;
+  /** The menu key (APP_NAV) of the screen, so an operator withholding just this screen is honoured on a direct URL. */
+  screen?: string;
 }

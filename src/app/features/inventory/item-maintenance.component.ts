@@ -14,6 +14,7 @@ import { InventoryApi } from '../../core/services/ops.services';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { BranchPickerComponent } from '../../shared/ui/ops-chrome.components';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
+import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 
 const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
 
@@ -30,12 +31,12 @@ const blank = (): SaveInventoryItemRequest => ({
 @Component({
   selector: 'zp-item-maintenance',
   standalone: true,
-  imports: [DecimalPipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent, BranchPickerComponent],
+  imports: [EntitledActionDirective, DecimalPipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent, BranchPickerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Add / Modify Stock</h1>
-      <div class="flex items-center gap-4"><zp-branch-picker />@if (!readOnly()) { <button type="button" class="btn-primary" data-testid="item-new" (click)="openEdit(null)">New stock item</button> }</div>
+      <div class="flex items-center gap-4"><zp-branch-picker />@if (!readOnly()) { <button type="button" class="btn-primary" data-testid="item-new" zpAction="inventory.items.manage" (click)="openEdit(null)">New stock item</button> }</div>
     </div>
     @if (readOnly()) { <p class="sys-alert sys-alert-warning mb-3" role="status">Read-only: your subscription limits this screen.</p> }
     @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert" data-testid="items-error">{{ error() }}</p> }
@@ -142,7 +143,7 @@ const blank = (): SaveInventoryItemRequest => ({
         }
 
         @if (dialogError()) { <p class="sys-alert sys-alert-danger" role="alert">{{ dialogError() }}</p> }
-        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(false)">Cancel</button><button type="submit" class="btn-primary" data-testid="item-save" [disabled]="saving() || !f().name.trim()">Save item</button></div>
+        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(false)">Cancel</button><button type="submit" class="btn-primary" data-testid="item-save" zpAction="inventory.items.manage" [disabled]="saving() || !f().name.trim()">Save item</button></div>
       </form>
     </zp-dialog>
   `

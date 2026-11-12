@@ -17,11 +17,11 @@ import { APP_NAV, permissionsOf } from './core/navigation/app-nav';
  */
 /** The purchasing documents are opened from the list and from the receiving queue; they are not menu entries of their own. */
 const purchasingDocumentRoutes: Routes = [
-  { path: 'purchasing/orders/:id/receive', title: 'Receive goods', canActivate: [screenRbacGuard, subscriptionGateGuard], data: { permission: [SCREEN_PERMISSIONS.PURCHASING_RECEIVE], feature: FEATURES.INVENTORY } satisfies RouteAccessData,
+  { path: 'purchasing/orders/:id/receive', title: 'Receive goods', canActivate: [screenRbacGuard, subscriptionGateGuard], data: { permission: [SCREEN_PERMISSIONS.PURCHASING_RECEIVE], feature: FEATURES.INVENTORY, screen: 'purchasing.receiving' } satisfies RouteAccessData,
     loadComponent: () => import('./features/purchasing/goods-receiving.component').then((m) => m.GoodsReceivingComponent) },
-  { path: 'purchasing/orders/:id', title: 'Purchasing document' /* the id 'new' starts a document; the same route serves it once saved, so the screen is not rebuilt mid-save */, canActivate: [screenRbacGuard, subscriptionGateGuard], data: { permission: [SCREEN_PERMISSIONS.INVENTORY_PURCHASE_MANAGE], feature: FEATURES.INVENTORY } satisfies RouteAccessData,
+  { path: 'purchasing/orders/:id', title: 'Purchasing document' /* the id 'new' starts a document; the same route serves it once saved, so the screen is not rebuilt mid-save */, canActivate: [screenRbacGuard, subscriptionGateGuard], data: { permission: [SCREEN_PERMISSIONS.INVENTORY_PURCHASE_MANAGE], feature: FEATURES.INVENTORY, screen: 'purchasing.orders' } satisfies RouteAccessData,
     loadComponent: () => import('./features/purchasing/purchase-order-workstation.component').then((m) => m.PurchaseOrderWorkstationComponent) },
-  { path: 'purchasing/receipts/:id', title: 'Goods received note', canActivate: [screenRbacGuard, subscriptionGateGuard], data: { permission: [SCREEN_PERMISSIONS.PURCHASING_RECEIVE], feature: FEATURES.INVENTORY } satisfies RouteAccessData,
+  { path: 'purchasing/receipts/:id', title: 'Goods received note', canActivate: [screenRbacGuard, subscriptionGateGuard], data: { permission: [SCREEN_PERMISSIONS.PURCHASING_RECEIVE], feature: FEATURES.INVENTORY, screen: 'purchasing.receiving' } satisfies RouteAccessData,
     loadComponent: () => import('./features/purchasing/goods-receipt-view.component').then((m) => m.GoodsReceiptViewComponent) }
 ];
 
@@ -29,7 +29,7 @@ const navRoutes: Routes = APP_NAV.filter((n) => n.load).map((n) => ({
   path: n.route.replace(/^\/app\//, ''),
   title: n.label,
   canActivate: [screenRbacGuard, subscriptionGateGuard],
-  data: { permission: permissionsOf(n) as readonly ScreenPermission[], feature: n.feature, report: n.data?.report } satisfies RouteAccessData & { report?: unknown },
+  data: { permission: permissionsOf(n) as readonly ScreenPermission[], feature: n.feature, screen: n.feature ? n.key : undefined, report: n.data?.report } satisfies RouteAccessData & { report?: unknown },
   loadComponent: n.load!
 }));
 
@@ -129,7 +129,7 @@ export const routes: Routes = [
         path: 'inventory',
         title: 'Inventory',
         canActivate: [screenRbacGuard, subscriptionGateGuard],
-        data: { permission: SCREEN_PERMISSIONS.INVENTORY_VIEW, feature: FEATURES.INVENTORY } satisfies RouteAccessData,
+        data: { permission: SCREEN_PERMISSIONS.INVENTORY_VIEW, feature: FEATURES.INVENTORY, screen: 'inventory' } satisfies RouteAccessData,
         loadComponent: () => import('./features/inventory/inventory.component').then((m) => m.InventoryComponent)
       },
       {
@@ -150,7 +150,7 @@ export const routes: Routes = [
         path: 'catalog',
         title: 'Catalogue',
         canActivate: [screenRbacGuard, subscriptionGateGuard],
-        data: { permission: SCREEN_PERMISSIONS.PRODUCTS_MANAGE, feature: FEATURES.CORE_POS } satisfies RouteAccessData,
+        data: { permission: SCREEN_PERMISSIONS.PRODUCTS_MANAGE, feature: FEATURES.CORE_POS, screen: 'catalog' } satisfies RouteAccessData,
         loadComponent: () => import('./features/catalog/catalog.component').then((m) => m.CatalogComponent)
       },
       {

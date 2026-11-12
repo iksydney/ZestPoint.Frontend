@@ -7,6 +7,7 @@ import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { GlobalStockApi, StockGroupApi } from '../../core/services/nav-ops.services';
 import { ConfirmService, ToastService } from '../../shared/ui/feedback';
+import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 
 interface FieldSpec { readonly key: BulkField; readonly label: string; readonly kind: 'number' | 'bool' | 'group'; readonly help: string }
 
@@ -28,7 +29,7 @@ const FIELDS: readonly FieldSpec[] = [
 @Component({
   selector: 'zp-global-maintenance',
   standalone: true,
-  imports: [FormsModule],
+  imports: [EntitledActionDirective, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <h1 class="text-2xl font-bold">Global Stock Maintenance</h1>
@@ -70,7 +71,7 @@ const FIELDS: readonly FieldSpec[] = [
           <div class="app-card mt-4 max-w-xl space-y-3">
             <label class="app-label" for="g-reason">Reason for this company-wide change (recorded)</label>
             <input id="g-reason" class="app-input" data-testid="global-reason" maxlength="300" [ngModel]="reason()" (ngModelChange)="reason.set($event)" />
-            <button type="button" class="btn-primary" data-testid="global-apply" [disabled]="busy() || readOnly() || reason().trim().length < 3" (click)="apply()">Apply to {{ r.affectedCount }} item(s)</button>
+            <button type="button" class="btn-primary" data-testid="global-apply" zpAction="inventory.global.manage" [disabled]="busy() || readOnly() || reason().trim().length < 3" (click)="apply()">Apply to {{ r.affectedCount }} item(s)</button>
           </div>
         }
         @if (r.applied) { <p class="sys-alert sys-alert-success mt-4" role="status" data-testid="global-done">Applied to {{ r.affectedCount }} item(s). Before and after values were recorded in the activity log.</p> }

@@ -53,6 +53,8 @@ body { background-color: rgb(var(--canvas-rgb)); color: rgb(var(--ink-rgb)); fon
   .btn-outline { @apply inline-flex items-center justify-center gap-2 rounded-lg border border-ink/25 bg-transparent px-4 py-2 font-semibold text-ink transition hover:bg-ink/10 disabled:cursor-not-allowed disabled:opacity-40; }
   .btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 font-medium text-ink/80 transition hover:bg-ink/10 hover:text-ink disabled:opacity-40; }
   .touch-target { @apply min-h-[56px] min-w-[56px]; } /* bar-floor touch ergonomics */
+  /* A button the organisation was not given (zpAction): visible so staff know it exists; the reason is its tooltip and aria text. */
+  .zp-action-withheld { @apply cursor-not-allowed opacity-50; }
 
   .app-card { @apply rounded-xl border border-ink/10 bg-panel p-4 text-ink shadow-sm; }
   .app-input { @apply w-full rounded-lg border border-ink/20 bg-canvas px-3 py-2 text-ink placeholder:text-ink/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40; }

@@ -8,6 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { InventoryApi } from '../../core/services/ops.services';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
+import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 
 const blank = (): SaveSupplierRequest => ({ name: '', contactName: null, email: null, phone: null, address: null, paymentTermsDays: 30, isActive: true, taxId: null, repName: null, creditLimit: null });
 
@@ -15,12 +16,12 @@ const blank = (): SaveSupplierRequest => ({ name: '', contactName: null, email: 
 @Component({
   selector: 'zp-suppliers',
   standalone: true,
-  imports: [FormsModule, DialogComponent, StatusBadgeComponent],
+  imports: [EntitledActionDirective, FormsModule, DialogComponent, StatusBadgeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Add / Modify Suppliers</h1>
-      <button type="button" class="btn-primary" data-testid="supplier-new" [disabled]="readOnly()" (click)="openEdit(null)">Add supplier</button>
+      <button type="button" class="btn-primary" data-testid="supplier-new" zpAction="inventory.purchase.manage" [disabled]="readOnly()" (click)="openEdit(null)">Add supplier</button>
     </div>
     @if (readOnly()) { <p class="sys-alert sys-alert-warning mb-3" role="status">Read-only: your subscription limits this screen.</p> }
     @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert" data-testid="suppliers-error">{{ error() }}</p> }
@@ -49,7 +50,7 @@ const blank = (): SaveSupplierRequest => ({ name: '', contactName: null, email: 
         <div><label class="app-label" for="s-addr">Address</label><input id="s-addr" class="app-input" maxlength="300" [ngModel]="f().address" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ address: $event || null })" /></div>
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" [checked]="f().isActive" (change)="patch({ isActive: !f().isActive })" /> Active</label>
         @if (dialogError()) { <p class="sys-alert sys-alert-danger" role="alert">{{ dialogError() }}</p> }
-        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(false)">Cancel</button><button type="submit" class="btn-primary" data-testid="supplier-save" [disabled]="saving() || !f().name.trim()">Save supplier</button></div>
+        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(false)">Cancel</button><button type="submit" class="btn-primary" data-testid="supplier-save" zpAction="inventory.purchase.manage" [disabled]="saving() || !f().name.trim()">Save supplier</button></div>
       </form>
     </zp-dialog>
   `
