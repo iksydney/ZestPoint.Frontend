@@ -60,6 +60,8 @@ export class SearchSelectComponent<T extends string = string> {
   readonly error = input<string | null>(null);
 
   readonly valueChange = output<T>();
+  /** Fires when focus leaves the control, so a parent can start showing its validation message. */
+  readonly blurred = output<void>();
 
   protected readonly open = signal(false);
   protected readonly query = signal('');
@@ -94,6 +96,7 @@ export class SearchSelectComponent<T extends string = string> {
 
   protected onBlur(): void {
     this.open.set(false);
+    this.blurred.emit();
   }
 
   protected choose(option: SelectOption<T>): void {

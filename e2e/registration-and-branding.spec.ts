@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { Page, expect, test } from '@playwright/test';
 import { PNG, cssVar, newContext, pick, registerViaUi, setHex, signInViaUi } from './helpers';
 
 const PREVIEW = 'preview-frame';
@@ -86,6 +86,131 @@ test.describe('Registration and onboarding (criteria 1-4)', () => {
     await page.getByTestId('accept-terms').check();
     await page.getByTestId('submit').click();
     await expect(page.getByText('An account with this email already exists')).toBeVisible();
+  });
+});
+
+test.describe('Registration says why it cannot continue', () => {
+  const unique = () => Math.random().toString(36).slice(2, 8);
+
+  /** Opens the company step with the Bar type chosen. */
+  async function openCompanyStep(page: Page): Promise<void> {
+    await page.goto('/register');
+    await pick(page, 'enterprise-type', 'Bar');
+    await page.getByTestId('next').click();
+  }
+
+  /** Fills every company field with valid values; the slug can be overridden. */
+  async function fillCompany(page: Page, slug = `e2e-${unique()}`): Promise<void> {
+    await page.getByTestId('company-name').fill('La Bodega Test');
+    await page.getByTestId('slug').fill(slug);
+    await page.getByTestId('business-email').fill('labodega@example.com');
+    await page.getByTestId('business-phone').fill('08033090486');
+    await page.getByTestId('location').fill('Gberigbe ginti');
+  }
+
+  test('a business email without an @ keeps Continue disabled and explains it under the field', async ({ page }) => {
+    await openCompanyStep(page);
+    const next = page.getByTestId('next');
+    await fillCompany(page);
+    await page.getByTestId('business-email').fill('labodega');
+    await page.getByTestId('business-phone').focus(); // leaving the email field is what reveals its error
+
+    await expect(next).toBeDisabled();
+    await expect(page.getByText('Enter a valid email address, like name@company.com.')).toBeVisible();
+    await expect(page.getByTestId('business-email')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByTestId('step-blockers')).toHaveText('Still needed: Business email.');
+
+    await page.getByTestId('business-email').fill('labodega@example.com');
+    await expect(page.getByText('Enter a valid email address, like name@company.com.')).toHaveCount(0);
+    await expect(page.getByTestId('step-blockers')).toHaveCount(0);
+    await expect(next).toBeEnabled();
+  });
+
+  test('missing fields are listed beside Continue without turning an untouched form red, and show an error once visited', async ({ page }) => {
+    await openCompanyStep(page);
+
+    await expect(page.getByTestId('next')).toBeDisabled();
+    await expect(page.getByTestId('step-blockers')).toHaveText('Still needed: Company name, ZestPoint address, Business email, Business phone, Operating location.');
+    await expect(page.getByRole('alert')).toHaveCount(0);
+
+    await page.getByTestId('business-phone').focus();
+    await page.getByTestId('business-phone').blur();
+    await expect(page.getByText('Enter the business phone number.')).toBeVisible();
+    await expect(page.getByTestId('business-phone')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  test('while the address is being checked Continue waits and says so', async ({ page }) => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    // continue() can fail for a request the page already abandoned (a newer slug replaced it); that is expected here.
+    await page.route(/\/api\/v1\/registration\/slug-availability/, async (route) => { await gate; await route.continue().catch(() => undefined); });
+
+    await openCompanyStep(page);
+    await fillCompany(page);
+
+    await expect(page.getByTestId('next')).toBeDisabled();
+    await expect(page.getByTestId('step-waiting')).toHaveText('Waiting for the address availability check to finish.');
+
+    release();
+    await expect(page.getByTestId('next')).toBeEnabled();
+    await expect(page.getByTestId('step-waiting')).toHaveCount(0);
+  });
+
+  test('a reserved address blocks Continue, says why, and a suggestion unblocks it', async ({ page }) => {
+    await openCompanyStep(page);
+    await fillCompany(page, 'www');
+
+    await expect(page.getByText('That name is reserved.')).toBeVisible();
+    await expect(page.getByTestId('slug')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByTestId('next')).toBeDisabled();
+    await expect(page.getByTestId('step-blockers')).toHaveText('Still needed: An available ZestPoint address.');
+
+    await page.getByRole('button', { name: /^Use / }).click();
+    await expect(page.getByTestId('next')).toBeEnabled();
+    await expect(page.getByTestId('step-blockers')).toHaveCount(0);
+  });
+
+  test('a malformed address is explained under the field', async ({ page }) => {
+    await openCompanyStep(page);
+    await page.getByTestId('slug').fill('ab');
+    await page.getByTestId('company-name').focus();
+
+    await expect(page.getByText('Your address needs at least 3 characters.')).toBeVisible();
+    await expect(page.getByTestId('next')).toBeDisabled();
+  });
+
+  test('the account step lists what is missing and shows each problem under its field', async ({ page }) => {
+    await openCompanyStep(page);
+    await fillCompany(page);
+    await expect(page.getByTestId('next')).toBeEnabled();
+    await page.getByTestId('next').click();
+
+    const submit = page.getByTestId('submit');
+    await expect(submit).toBeDisabled();
+    await expect(page.getByTestId('step-blockers')).toHaveText(
+      'Still needed: Your full name, Your email, Password, Password confirmation, Agreement to the terms.');
+
+    await page.getByTestId('admin-name').fill('A');
+    await page.getByTestId('admin-email').fill('ada');
+    await page.getByTestId('admin-password').fill('short');
+    await page.getByTestId('admin-confirm').fill('different');
+    await page.getByTestId('accept-terms').check();
+    await page.getByTestId('accept-terms').uncheck();
+
+    await expect(page.getByText('Enter your full name (at least 2 characters).')).toBeVisible();
+    await expect(page.getByText('Enter a valid email address, like name@company.com.')).toBeVisible();
+    await expect(page.getByText('Your password does not meet all the requirements below.')).toBeVisible();
+    await expect(page.getByText('Passwords do not match.')).toBeVisible();
+    await expect(page.getByText('Accept the Terms of Service and Privacy Policy to continue.')).toBeVisible();
+    await expect(submit).toBeDisabled();
+
+    await page.getByTestId('admin-name').fill('Ada Obi');
+    await page.getByTestId('admin-email').fill('ada@example.com');
+    await page.getByTestId('admin-password').fill('Str0ngPassw0rd!');
+    await page.getByTestId('admin-confirm').fill('Str0ngPassw0rd!');
+    await page.getByTestId('accept-terms').check();
+    await expect(page.getByTestId('step-blockers')).toHaveCount(0);
+    await expect(submit).toBeEnabled();
   });
 });
 

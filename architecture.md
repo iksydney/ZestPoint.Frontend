@@ -9,7 +9,7 @@
 One Angular single-page app, one origin, one port (`ng serve` -> `:4200`) containing:
 
 1. the **public marketing site** (`/`, `/features`, `/pricing`, `/contact`, `/privacy`, `/terms`) for hospitality **and retail**; its forms post to the real API;
-2. **registration, sign-in and onboarding** (`/register`, `/login`, `/accept-invite`, `/onboarding`). Registration step 1 picks the main business type plus optional extra types; step 2 picks the default currency and which extra wallets (USD, CNY, JPY, NGN; `WALLET_CURRENCIES` mirrors the API) to open. `/accept-invite` asks for the default PIN from the invitation e-mail once, then a new PIN;
+2. **registration, sign-in and onboarding** (`/register`, `/login`, `/accept-invite`, `/onboarding`). Registration step 1 picks the main business type plus optional extra types; step 2 picks the default currency and which extra wallets (USD, CNY, JPY, NGN; `WALLET_CURRENCIES` mirrors the API) to open. Continue / Create stay disabled until the step is valid, but never silently: each field shows its own message under it once visited, and a "Still needed: ..." / "Waiting for the address availability check" status beside the button names what is missing or pending (local checks are UX only; the server re-validates on register and its field errors replace the local ones). `/accept-invite` asks for the default PIN from the invitation e-mail once, then a new PIN;
 3. the **signed-in application** under `/app` (dashboard, POS, inventory, catalogue, staff and roles, branding, branches, operations settings, subscription), gated by authentication, screen-level RBAC, the workspace lock and module entitlements;
 4. the **platform operator interface** under `/platform` (a separate sign-in: overview, companies, plans).
 

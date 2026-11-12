@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { catchError, debounceTime, distinctUntilChanged, filter, of, switchMap, tap } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, filter, map, of, switchMap, tap } from 'rxjs';
 import {
-  EnterpriseTypeCode, EnterpriseTypeDto, RegisterCompanyRequest, SlugAvailabilityDto
+  EnterpriseTypeCode, EnterpriseTypeDto, RegisterCompanyRequest
 } from '../../core/models/api.model';
 import {
   CHECKOUT_STYLE_LABELS, COUNTRIES, CURRENCIES, MODULE_LABELS, WALLET_CURRENCIES, browserTimeZone, timeZones
@@ -26,6 +26,40 @@ const DRAFT_KEY = 'zp.register.draft.v1';
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PHONE_RE = /^[+()\d\s.-]{7,32}$/;
+
+/** Something that stops the person moving on: shown under its field once touched, and listed beside the button always. */
+interface Problem {
+  /** Same key the API uses for the field, so a server error replaces the local one. */
+  field: string;
+  /** Short name for the "Still needed" line. */
+  label: string;
+  message: string;
+}
+
+type SlugStatus = 'idle' | 'checking' | 'available' | 'taken' | 'unknown';
+/** The outcome of checking one specific slug; `slug` says which, so a stale result is never applied to newer text. */
+interface SlugState { slug: string; status: SlugStatus; reason?: string | null; suggestion?: string | null }
+
+const isCheckableSlug = (slug: string): boolean => slug.length >= 3 && SLUG_RE.test(slug);
+
+function slugProblem(slug: string): string | null {
+  if (!slug) return 'Choose your ZestPoint address.';
+  if (slug.length < 3) return 'Your address needs at least 3 characters.';
+  if (!SLUG_RE.test(slug)) return 'Use only lowercase letters, numbers and single hyphens, and do not start or end with a hyphen.';
+  return null;
+}
+
+function emailProblem(value: string, whenEmpty: string): string | null {
+  const v = value.trim();
+  if (!v) return whenEmpty;
+  return EMAIL_RE.test(v) ? null : 'Enter a valid email address, like name@company.com.';
+}
+
+function phoneProblem(value: string): string | null {
+  const v = value.trim();
+  if (!v) return 'Enter the business phone number.';
+  return PHONE_RE.test(v) ? null : 'Enter a valid phone number, for example +234 803 309 0486.';
+}
 
 interface Draft {
   type: EnterpriseTypeCode | null;
@@ -94,8 +128,8 @@ interface Draft {
                 <p role="status">Loading business types...</p>
               } @else {
                 <zp-search-select label="What type of business are you registering?" placeholder="Search: supermarket, bar, hotel..."
-                                  testId="enterprise-type" [options]="typeOptions()" [value]="d().type" (valueChange)="pickType($event)"
-                                  [error]="errors()['enterpriseType'] || null" />
+                                  testId="enterprise-type" [options]="typeOptions()" [value]="d().type" (valueChange)="pickType($event)" (blurred)="touch('enterpriseType')"
+                                  [error]="shown()['enterpriseType'] || null" />
                 @if (d().type) {
                   <fieldset data-testid="extra-types">
                     <legend class="app-label">Does your business operate as anything else too? (optional)</legend>
@@ -113,9 +147,9 @@ interface Draft {
                 @if (d().type === 'Other') {
                   <div>
                     <label class="app-label" for="r-custom">Describe your business</label>
-                    <input id="r-custom" class="app-input" maxlength="100" [ngModel]="d().customType" (ngModelChange)="patch({ customType: $event })"
-                           [attr.aria-invalid]="!!errors()['customEnterpriseType']" placeholder="e.g. Car wash, cinema, spa" data-testid="custom-type" />
-                    @if (errors()['customEnterpriseType']) { <p class="app-error" role="alert">{{ errors()['customEnterpriseType'] }}</p> }
+                    <input id="r-custom" class="app-input" maxlength="100" [ngModel]="d().customType" (ngModelChange)="patch({ customType: $event })" (blur)="touch('customEnterpriseType')"
+                           [attr.aria-invalid]="!!shown()['customEnterpriseType']" placeholder="e.g. Car wash, cinema, spa" data-testid="custom-type" />
+                    @if (shown()['customEnterpriseType']) { <p class="app-error" role="alert">{{ shown()['customEnterpriseType'] }}</p> }
                   </div>
                 }
               }
@@ -125,41 +159,42 @@ interface Draft {
               <div class="grid gap-4 sm:grid-cols-2">
                 <div class="sm:col-span-2">
                   <label class="app-label" for="r-name">Company or trading name</label>
-                  <input id="r-name" class="app-input" maxlength="120" autocomplete="organization" [ngModel]="d().companyName" (ngModelChange)="onName($event)"
-                         [attr.aria-invalid]="!!errors()['companyName']" data-testid="company-name" />
-                  @if (errors()['companyName']) { <p class="app-error" role="alert">{{ errors()['companyName'] }}</p> }
+                  <input id="r-name" class="app-input" maxlength="120" autocomplete="organization" [ngModel]="d().companyName" (ngModelChange)="onName($event)" (blur)="touch('companyName')"
+                         [attr.aria-invalid]="!!shown()['companyName']" data-testid="company-name" />
+                  @if (shown()['companyName']) { <p class="app-error" role="alert">{{ shown()['companyName'] }}</p> }
                 </div>
                 <div class="sm:col-span-2">
                   <label class="app-label" for="r-slug">Your ZestPoint address</label>
                   <div class="flex items-center gap-2">
-                    <input id="r-slug" class="app-input font-mono" maxlength="63" [ngModel]="d().slug" (ngModelChange)="onSlug($event)" data-testid="slug"
-                           [attr.aria-invalid]="!!errors()['slug'] || slugState().status === 'taken'" aria-describedby="r-slug-hint" />
+                    <input id="r-slug" class="app-input font-mono" maxlength="63" [ngModel]="d().slug" (ngModelChange)="onSlug($event)" (blur)="touch('slug')" data-testid="slug"
+                           [attr.aria-invalid]="!!shown()['slug'] || slugStatus() === 'taken'" aria-describedby="r-slug-hint" />
                     <span class="shrink-0 text-sm text-ink/70">.zestpoint.app</span>
                   </div>
                   <p id="r-slug-hint" class="app-hint" role="status">
-                    @switch (slugState().status) {
+                    @switch (slugStatus()) {
                       @case ('checking') { Checking availability... }
                       @case ('available') { <span class="text-success">Available</span> }
                       @case ('taken') { <span class="text-danger">{{ slugState().reason }}</span> @if (slugState().suggestion) { <button type="button" class="underline" (click)="useSlug(slugState().suggestion!)">Use {{ slugState().suggestion }}</button> } }
+                      @case ('unknown') { We could not check this address just now. We will check it again when you create your account. }
                       @default { Staff use this with their staff code to sign in. }
                     }
                   </p>
-                  @if (errors()['slug']) { <p class="app-error" role="alert">{{ errors()['slug'] }}</p> }
+                  @if (shown()['slug']) { <p class="app-error" role="alert">{{ shown()['slug'] }}</p> }
                 </div>
                 <div>
                   <label class="app-label" for="r-bemail">Business email</label>
-                  <input id="r-bemail" type="email" class="app-input" autocomplete="email" [ngModel]="d().businessEmail" (ngModelChange)="patch({ businessEmail: $event })"
-                         [attr.aria-invalid]="!!errors()['businessEmail']" data-testid="business-email" />
-                  @if (errors()['businessEmail']) { <p class="app-error" role="alert">{{ errors()['businessEmail'] }}</p> }
+                  <input id="r-bemail" type="email" class="app-input" autocomplete="email" [ngModel]="d().businessEmail" (ngModelChange)="patch({ businessEmail: $event })" (blur)="touch('businessEmail')"
+                         [attr.aria-invalid]="!!shown()['businessEmail']" data-testid="business-email" />
+                  @if (shown()['businessEmail']) { <p class="app-error" role="alert">{{ shown()['businessEmail'] }}</p> }
                 </div>
                 <div>
                   <label class="app-label" for="r-phone">Business phone</label>
-                  <input id="r-phone" type="tel" class="app-input" autocomplete="tel" [ngModel]="d().businessPhone" (ngModelChange)="patch({ businessPhone: $event })"
-                         [attr.aria-invalid]="!!errors()['businessPhone']" data-testid="business-phone" />
-                  @if (errors()['businessPhone']) { <p class="app-error" role="alert">{{ errors()['businessPhone'] }}</p> }
+                  <input id="r-phone" type="tel" class="app-input" autocomplete="tel" [ngModel]="d().businessPhone" (ngModelChange)="patch({ businessPhone: $event })" (blur)="touch('businessPhone')"
+                         [attr.aria-invalid]="!!shown()['businessPhone']" data-testid="business-phone" />
+                  @if (shown()['businessPhone']) { <p class="app-error" role="alert">{{ shown()['businessPhone'] }}</p> }
                 </div>
-                <zp-search-select label="Country" testId="country" [options]="countryOptions" [value]="d().countryCode" (valueChange)="pickCountry($event)" [error]="errors()['countryCode'] || null" />
-                <zp-search-select label="Default currency" testId="currency" [options]="currencyOptions" [value]="d().currencyCode" (valueChange)="patch({ currencyCode: $event })" [error]="errors()['currencyCode'] || null" />
+                <zp-search-select label="Country" testId="country" [options]="countryOptions" [value]="d().countryCode" (valueChange)="pickCountry($event)" (blurred)="touch('countryCode')" [error]="shown()['countryCode'] || null" />
+                <zp-search-select label="Default currency" testId="currency" [options]="currencyOptions" [value]="d().currencyCode" (valueChange)="patch({ currencyCode: $event })" (blurred)="touch('currencyCode')" [error]="shown()['currencyCode'] || null" />
                 <fieldset class="sm:col-span-2" data-testid="wallets">
                   <legend class="app-label">Wallets</legend>
                   <p class="app-hint mb-2">We open a wallet in your default currency ({{ d().currencyCode }}). Tick any others you also trade in.</p>
@@ -172,16 +207,16 @@ interface Draft {
                       </label>
                     }
                   </div>
-                  @if (errors()['walletCurrencies']) { <p class="app-error" role="alert">{{ errors()['walletCurrencies'] }}</p> }
+                  @if (shown()['walletCurrencies']) { <p class="app-error" role="alert">{{ shown()['walletCurrencies'] }}</p> }
                 </fieldset>
                 <div class="sm:col-span-2">
-                  <zp-search-select label="Time zone" testId="timezone" [options]="zoneOptions" [value]="d().timeZoneId" (valueChange)="patch({ timeZoneId: $event })" [error]="errors()['timeZoneId'] || null" />
+                  <zp-search-select label="Time zone" testId="timezone" [options]="zoneOptions" [value]="d().timeZoneId" (valueChange)="patch({ timeZoneId: $event })" (blurred)="touch('timeZoneId')" [error]="shown()['timeZoneId'] || null" />
                 </div>
                 <div class="sm:col-span-2">
                   <label class="app-label" for="r-loc">Primary operating location</label>
-                  <input id="r-loc" class="app-input" maxlength="300" autocomplete="street-address" [ngModel]="d().primaryLocation" (ngModelChange)="patch({ primaryLocation: $event })"
-                         placeholder="Street, area, city" [attr.aria-invalid]="!!errors()['primaryLocation']" data-testid="location" />
-                  @if (errors()['primaryLocation']) { <p class="app-error" role="alert">{{ errors()['primaryLocation'] }}</p> }
+                  <input id="r-loc" class="app-input" maxlength="300" autocomplete="street-address" [ngModel]="d().primaryLocation" (ngModelChange)="patch({ primaryLocation: $event })" (blur)="touch('primaryLocation')"
+                         placeholder="Street, area, city" [attr.aria-invalid]="!!shown()['primaryLocation']" data-testid="location" />
+                  @if (shown()['primaryLocation']) { <p class="app-error" role="alert">{{ shown()['primaryLocation'] }}</p> }
                 </div>
                 <div class="sm:col-span-2">
                   <p class="app-label">Logo (optional)</p>
@@ -203,27 +238,27 @@ interface Draft {
               <div class="grid gap-4 sm:grid-cols-2">
                 <div class="sm:col-span-2">
                   <label class="app-label" for="r-aname">Your full name</label>
-                  <input id="r-aname" class="app-input" autocomplete="name" [ngModel]="d().adminFullName" (ngModelChange)="patch({ adminFullName: $event })"
-                         [attr.aria-invalid]="!!errors()['adminFullName']" data-testid="admin-name" />
-                  @if (errors()['adminFullName']) { <p class="app-error" role="alert">{{ errors()['adminFullName'] }}</p> }
+                  <input id="r-aname" class="app-input" autocomplete="name" [ngModel]="d().adminFullName" (ngModelChange)="patch({ adminFullName: $event })" (blur)="touch('adminFullName')"
+                         [attr.aria-invalid]="!!shown()['adminFullName']" data-testid="admin-name" />
+                  @if (shown()['adminFullName']) { <p class="app-error" role="alert">{{ shown()['adminFullName'] }}</p> }
                 </div>
                 <div class="sm:col-span-2">
                   <label class="app-label" for="r-aemail">Your email (used to sign in)</label>
-                  <input id="r-aemail" type="email" class="app-input" autocomplete="username" [ngModel]="d().adminEmail" (ngModelChange)="patch({ adminEmail: $event })"
-                         [attr.aria-invalid]="!!errors()['adminEmail']" data-testid="admin-email" />
-                  @if (errors()['adminEmail']) { <p class="app-error" role="alert">{{ errors()['adminEmail'] }}</p> }
+                  <input id="r-aemail" type="email" class="app-input" autocomplete="username" [ngModel]="d().adminEmail" (ngModelChange)="patch({ adminEmail: $event })" (blur)="touch('adminEmail')"
+                         [attr.aria-invalid]="!!shown()['adminEmail']" data-testid="admin-email" />
+                  @if (shown()['adminEmail']) { <p class="app-error" role="alert">{{ shown()['adminEmail'] }}</p> }
                 </div>
                 <div>
                   <label class="app-label" for="r-pw">Password</label>
-                  <input id="r-pw" [type]="showPassword() ? 'text' : 'password'" class="app-input" autocomplete="new-password" [ngModel]="password()" (ngModelChange)="password.set($event)"
-                         [attr.aria-invalid]="!!errors()['adminPassword']" aria-describedby="r-pw-rules" data-testid="admin-password" />
-                  @if (errors()['adminPassword']) { <p class="app-error" role="alert">{{ errors()['adminPassword'] }}</p> }
+                  <input id="r-pw" [type]="showPassword() ? 'text' : 'password'" class="app-input" autocomplete="new-password" [ngModel]="password()" (ngModelChange)="password.set($event)" (blur)="touch('adminPassword')"
+                         [attr.aria-invalid]="!!shown()['adminPassword']" aria-describedby="r-pw-rules" data-testid="admin-password" />
+                  @if (shown()['adminPassword']) { <p class="app-error" role="alert">{{ shown()['adminPassword'] }}</p> }
                 </div>
                 <div>
                   <label class="app-label" for="r-pw2">Confirm password</label>
-                  <input id="r-pw2" [type]="showPassword() ? 'text' : 'password'" class="app-input" autocomplete="new-password" [ngModel]="confirm()" (ngModelChange)="confirm.set($event)"
-                         [attr.aria-invalid]="confirm().length > 0 && confirm() !== password()" data-testid="admin-confirm" />
-                  @if (confirm().length > 0 && confirm() !== password()) { <p class="app-error" role="alert">Passwords do not match.</p> }
+                  <input id="r-pw2" [type]="showPassword() ? 'text' : 'password'" class="app-input" autocomplete="new-password" [ngModel]="confirm()" (ngModelChange)="confirm.set($event); touch('adminConfirm')"
+                         (blur)="touch('adminConfirm')" [attr.aria-invalid]="!!shown()['adminConfirm']" data-testid="admin-confirm" />
+                  @if (shown()['adminConfirm']) { <p class="app-error" role="alert">{{ shown()['adminConfirm'] }}</p> }
                 </div>
                 <label class="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" [ngModel]="showPassword()" (ngModelChange)="showPassword.set($event)" /> Show password</label>
                 <ul id="r-pw-rules" class="space-y-0.5 text-xs sm:col-span-2" aria-label="Password requirements">
@@ -232,9 +267,11 @@ interface Draft {
                   }
                 </ul>
                 <label class="flex items-start gap-2 text-sm sm:col-span-2">
-                  <input type="checkbox" class="mt-1" [ngModel]="accepted()" (ngModelChange)="accepted.set($event)" data-testid="accept-terms" />
+                  <input type="checkbox" class="mt-1" [ngModel]="accepted()" (ngModelChange)="accepted.set($event); touch('acceptTerms')" (blur)="touch('acceptTerms')"
+                         [attr.aria-invalid]="!!shown()['acceptTerms']" [attr.aria-describedby]="shown()['acceptTerms'] ? 'r-terms-err' : null" data-testid="accept-terms" />
                   <span>I agree to the <a routerLink="/terms" target="_blank" class="underline">Terms of Service</a> and <a routerLink="/privacy" target="_blank" class="underline">Privacy Policy</a>.</span>
                 </label>
+                @if (shown()['acceptTerms']) { <p id="r-terms-err" class="app-error sm:col-span-2" role="alert">{{ shown()['acceptTerms'] }}</p> }
               </div>
             }
           }
@@ -242,12 +279,18 @@ interface Draft {
           <div class="flex items-center justify-between gap-3 border-t border-ink/10 pt-4">
             <button type="button" class="btn-ghost" [disabled]="stepIndex() === 0 || submitting()" (click)="back()">Back</button>
             @if (step() !== 'admin') {
-              <button type="button" class="btn-primary" (click)="next()" [disabled]="!canAdvance()" data-testid="next">Continue</button>
+              <button type="button" class="btn-primary" (click)="next()" [disabled]="!canAdvance()" aria-describedby="step-status" data-testid="next">Continue</button>
             } @else {
-              <button type="button" class="btn-primary" (click)="submit()" [disabled]="submitting() || !canSubmit()" data-testid="submit">
+              <button type="button" class="btn-primary" (click)="submit()" [disabled]="submitting() || !canSubmit()" aria-describedby="step-status" data-testid="submit">
                 {{ submitting() ? 'Creating your account...' : 'Create my account' }}
               </button>
             }
+          </div>
+
+          <!-- Why the button is disabled: what is still missing, or what we are waiting for. -->
+          <div id="step-status" class="space-y-0.5 text-right text-sm text-ink/80" role="status" aria-live="polite" data-testid="step-status">
+            @if (blockers().length) { <p data-testid="step-blockers">Still needed: {{ blockers().join(', ') }}.</p> }
+            @if (waitingFor(); as w) { <p data-testid="step-waiting">Waiting for {{ w }} to finish.</p> }
           </div>
         </section>
 
@@ -308,12 +351,21 @@ export class RegisterComponent {
   protected readonly accepted = signal(false);
   protected readonly submitting = signal(false);
   protected readonly formError = signal<string | null>(null);
+  /** Errors the server sent back; they replace the local ones and clear on the next edit. */
   protected readonly errors = signal<Record<string, string>>({});
+  /** Fields the person has been in. A local error only appears under a field after that, so an untouched form is not red. */
+  private readonly touched = signal<ReadonlySet<string>>(new Set());
 
   protected readonly logoFile = signal<File | null>(null);
   protected readonly logoPreview = signal<string | null>(null);
   protected readonly logoNote = signal<string | null>(null);
-  protected readonly slugState = signal<{ status: 'idle' | 'checking' | 'available' | 'taken'; reason?: string | null; suggestion?: string | null }>({ status: 'idle' });
+  protected readonly slugState = signal<SlugState>({ slug: '', status: 'idle' });
+  /** The state for the slug currently in the box: while the answer is for older text, a valid slug counts as still being checked. */
+  protected readonly slugStatus = computed<SlugStatus>(() => {
+    const slug = this.d().slug;
+    if (this.slugState().slug !== slug) return isCheckableSlug(slug) ? 'checking' : 'idle';
+    return this.slugState().status;
+  });
 
   protected readonly typeOptions = computed<SelectOption<EnterpriseTypeCode>[]>(() =>
     this.types().map((t) => ({ value: t.code, label: t.name, description: t.description, group: t.category === 'Group' ? 'Groups' : t.category })));
@@ -340,6 +392,59 @@ export class RegisterComponent {
     ];
   });
 
+  /** Everything wrong on the current step, whether or not the person has reached that field yet. */
+  protected readonly problems = computed<Problem[]>(() => {
+    const d = this.d();
+    const out: Problem[] = [];
+    const add = (field: string, label: string, message: string | null): void => { if (message) out.push({ field, label, message }); };
+
+    switch (d.step) {
+      case 'type':
+        if (!d.type) add('enterpriseType', 'Business type', 'Choose your business type.');
+        else if (d.type === 'Other' && d.customType.trim().length < 2) add('customEnterpriseType', 'Description of your business', 'Describe your business in a few words (at least 2 characters).');
+        break;
+      case 'company':
+        if (d.companyName.trim().length < 2) add('companyName', 'Company name', 'Enter your company or trading name (at least 2 characters).');
+        add('slug', 'ZestPoint address', slugProblem(d.slug));
+        add('businessEmail', 'Business email', emailProblem(d.businessEmail, 'Enter the business email.'));
+        add('businessPhone', 'Business phone', phoneProblem(d.businessPhone));
+        if (!d.countryCode) add('countryCode', 'Country', 'Choose a country.');
+        if (!d.currencyCode) add('currencyCode', 'Default currency', 'Choose a default currency.');
+        if (!d.timeZoneId) add('timeZoneId', 'Time zone', 'Choose a time zone.');
+        if (d.primaryLocation.trim().length < 2) add('primaryLocation', 'Operating location', 'Enter where the business operates (street, area, city).');
+        break;
+      case 'admin': {
+        const password = this.password();
+        if (d.adminFullName.trim().length < 2) add('adminFullName', 'Your full name', 'Enter your full name (at least 2 characters).');
+        add('adminEmail', 'Your email', emailProblem(d.adminEmail, 'Enter your email address.'));
+        if (!password) add('adminPassword', 'Password', 'Enter a password.');
+        else if (!this.passwordRules().every((r) => r.ok)) add('adminPassword', 'Password', 'Your password does not meet all the requirements below.');
+        if (!this.confirm()) add('adminConfirm', 'Password confirmation', 'Re-enter your password to confirm it.');
+        else if (this.confirm() !== password) add('adminConfirm', 'Password confirmation', 'Passwords do not match.');
+        if (!this.accepted()) add('acceptTerms', 'Agreement to the terms', 'Accept the Terms of Service and Privacy Policy to continue.');
+        break;
+      }
+    }
+    return out;
+  });
+
+  /** What each field displays: the server's message if there is one, otherwise the local problem once the field was touched. */
+  protected readonly shown = computed<Record<string, string>>(() => {
+    const touched = this.touched();
+    const local: Record<string, string> = {};
+    for (const p of this.problems()) if (touched.has(p.field)) local[p.field] = p.message;
+    return { ...local, ...this.errors() };
+  });
+
+  /** The "Still needed" list beside the button. A taken address has its own message under the field, so it is only named here. */
+  protected readonly blockers = computed<string[]>(() => {
+    const list = this.problems().map((p) => p.label);
+    if (this.step() === 'company' && this.slugStatus() === 'taken') list.push('An available ZestPoint address');
+    return list;
+  });
+
+  protected readonly waitingFor = computed<string | null>(() => (this.step() === 'company' && this.slugStatus() === 'checking' ? 'the address availability check' : null));
+
   constructor() {
     this.loadTypes();
 
@@ -347,13 +452,17 @@ export class RegisterComponent {
     toObservable(this.d).pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef)).subscribe((draft) => this.persistDraft(draft));
 
     // Live subdomain availability.
+    // A failed check is shown as 'unknown' and does not block: the server checks the address again on registration.
     toObservable(computed(() => this.d().slug)).pipe(
       debounceTime(400), distinctUntilChanged(),
-      tap((slug) => this.slugState.set(slug.length >= 3 && SLUG_RE.test(slug) ? { status: 'checking' } : { status: 'idle' })),
-      filter((slug) => slug.length >= 3 && SLUG_RE.test(slug)),
-      switchMap((slug) => this.registration.checkSlug(slug).pipe(catchError(() => of<SlugAvailabilityDto | null>(null)))),
+      tap((slug) => this.slugState.set({ slug, status: isCheckableSlug(slug) ? 'checking' : 'idle' })),
+      filter(isCheckableSlug),
+      switchMap((slug) => this.registration.checkSlug(slug).pipe(
+        map((r): SlugState => (r.available ? { slug, status: 'available' } : { slug, status: 'taken', reason: r.reason, suggestion: r.suggestion })),
+        catchError(() => of<SlugState>({ slug, status: 'unknown' }))
+      )),
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe((r) => this.slugState.set(r ? (r.available ? { status: 'available' } : { status: 'taken', reason: r.reason, suggestion: r.suggestion }) : { status: 'idle' }));
+    ).subscribe((state) => this.slugState.set(state));
 
     this.destroyRef.onDestroy(() => this.revokeLogo());
   }
@@ -367,6 +476,10 @@ export class RegisterComponent {
   }
 
   // ---- Editing -------------------------------------------------------------------------------
+
+  protected touch(field: string): void {
+    if (!this.touched().has(field)) this.touched.update((cur) => new Set(cur).add(field));
+  }
 
   protected patch(change: Partial<Draft>): void {
     this.d.update((cur) => ({ ...cur, ...change }));
@@ -432,15 +545,12 @@ export class RegisterComponent {
   // ---- Navigation ----------------------------------------------------------------------------
 
   protected canAdvance(): boolean {
-    const d = this.d();
-    if (this.step() === 'type') return !!d.type && (d.type !== 'Other' || d.customType.trim().length > 1);
-    return this.companyErrors().length === 0 && this.slugState().status !== 'taken' && this.slugState().status !== 'checking';
+    if (this.problems().length > 0) return false;
+    return this.step() !== 'company' || (this.slugStatus() !== 'taken' && this.slugStatus() !== 'checking');
   }
 
   protected canSubmit(): boolean {
-    const pw = this.passwordRules().every((r) => r.ok) && this.password() === this.confirm();
-    const d = this.d();
-    return pw && this.accepted() && d.adminFullName.trim().length > 1 && EMAIL_RE.test(d.adminEmail.trim());
+    return this.step() === 'admin' && this.problems().length === 0;
   }
 
   protected next(): void {
@@ -451,18 +561,6 @@ export class RegisterComponent {
 
   protected back(): void {
     this.patch({ step: STEPS[Math.max(0, this.stepIndex() - 1)]!.key });
-  }
-
-  private companyErrors(): string[] {
-    const d = this.d();
-    const out: string[] = [];
-    if (d.companyName.trim().length < 2) out.push('name');
-    if (!SLUG_RE.test(d.slug) || d.slug.length < 3) out.push('slug');
-    if (!EMAIL_RE.test(d.businessEmail.trim())) out.push('email');
-    if (!PHONE_RE.test(d.businessPhone.trim())) out.push('phone');
-    if (!d.countryCode || !d.currencyCode || !d.timeZoneId) out.push('region');
-    if (d.primaryLocation.trim().length < 2) out.push('location');
-    return out;
   }
 
   // ---- Submit --------------------------------------------------------------------------------
