@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { InviteInfoDto } from '../../core/models/staff.model';
 import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { StaffApiService } from '../../core/services/staff.services';
+import { ThemeToggleComponent } from '../../public/layout/theme-toggle.component';
+import { PublicThemeService } from '../../public/public-theme.service';
 
 /**
  * Landing page for an emailed staff invitation (also the target of the mobile deep link). An invitation that carries a default PIN
@@ -13,10 +15,11 @@ import { StaffApiService } from '../../core/services/staff.services';
 @Component({
   selector: 'zp-accept-invite',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, ThemeToggleComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <main class="grid min-h-screen place-items-center p-4 text-ink">
+    <main class="relative grid min-h-screen place-items-center p-4 text-ink">
+      <div class="absolute right-4 top-4"><zp-theme-toggle /></div>
       <div class="w-full max-w-sm">
         @if (loading()) { <p role="status" class="text-center">Checking your invitation...</p> }
         @else if (!info()) {
@@ -63,6 +66,7 @@ export class AcceptInviteComponent {
   private readonly api = inject(StaffApiService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly publicTheme = inject(PublicThemeService);
 
   private readonly venue: string;
   private readonly token: string;
@@ -86,6 +90,10 @@ export class AcceptInviteComponent {
   });
 
   constructor() {
+    // The invited person has no venue theme until they sign in, so this page follows their light/dark choice.
+    this.publicTheme.attach(true);
+    inject(DestroyRef).onDestroy(() => this.publicTheme.detach());
+
     const q = inject(ActivatedRoute).snapshot.queryParamMap;
     this.venue = q.get('venue') ?? '';
     this.token = q.get('token') ?? '';

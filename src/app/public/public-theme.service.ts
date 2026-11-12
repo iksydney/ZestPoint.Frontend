@@ -5,13 +5,16 @@ type Choice = 'light' | 'dark';
 const KEY = 'zp-public-theme';
 
 /**
- * Light/dark theme for the public site only. Follows the OS until the visitor picks, then persists the choice.
- * The `dark` class lives on <html> only while a public page is mounted (attach/detach), so the dashboard is unaffected.
+ * Light/dark theme for the public site and the guest entry pages (register, accept-invite). Follows the OS until the visitor
+ * picks, then persists the choice. The `dark` class lives on <html> only while one of those pages is mounted (attach/detach),
+ * so the dashboard is unaffected. An entry page attaches with `entryPage = true`, which also adds `zp-entry` so the app colour
+ * tokens switch to their light set (styles.scss); marketing pages style themselves with `dark:` classes and do not need it.
  */
 @Injectable({ providedIn: 'root' })
 export class PublicThemeService {
   private readonly document = inject(DOCUMENT);
   private readonly _choice = signal<Choice>(this.initial());
+  private entryPage = false;
 
   readonly isDark = computed(() => this._choice() === 'dark');
 
@@ -26,16 +29,20 @@ export class PublicThemeService {
     this.paint();
   }
 
-  attach(): void {
+  attach(entryPage = false): void {
+    this.entryPage = entryPage;
     this.paint();
   }
 
   detach(): void {
-    this.document.documentElement.classList.remove('dark');
+    this.entryPage = false;
+    this.document.documentElement.classList.remove('dark', 'zp-entry');
   }
 
   private paint(): void {
-    this.document.documentElement.classList.toggle('dark', this.isDark());
+    const root = this.document.documentElement;
+    root.classList.toggle('dark', this.isDark());
+    root.classList.toggle('zp-entry', this.entryPage);
   }
 
   private initial(): Choice {

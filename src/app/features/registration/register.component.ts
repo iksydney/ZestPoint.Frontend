@@ -14,6 +14,8 @@ import { ApiError, toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { BrandingApiService, RegistrationService } from '../../core/services/domain.services';
 import { computeInitials } from '../../core/theme/theme-tokens';
+import { ThemeToggleComponent } from '../../public/layout/theme-toggle.component';
+import { PublicThemeService } from '../../public/public-theme.service';
 import { BrandMarkComponent } from '../../shared/ui/brand-mark.component';
 import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 
@@ -91,7 +93,7 @@ interface Draft {
 @Component({
   selector: 'zp-register',
   standalone: true,
-  imports: [FormsModule, RouterLink, SearchSelectComponent, BrandMarkComponent],
+  imports: [FormsModule, RouterLink, SearchSelectComponent, BrandMarkComponent, ThemeToggleComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="mx-auto min-h-screen max-w-5xl px-4 py-8 text-ink">
@@ -100,7 +102,10 @@ interface Draft {
           <span class="inline-grid h-9 w-9 place-items-center rounded-lg bg-primary font-bold text-on-primary">Z</span>
           <span class="text-lg font-bold">ZestPoint</span>
         </a>
-        <p class="text-sm text-ink/80">Already registered? <a routerLink="/login" class="font-semibold text-ink underline">Sign in</a></p>
+        <div class="flex items-center gap-3">
+          <p class="text-sm text-ink/80">Already registered? <a routerLink="/login" class="font-semibold text-ink underline">Sign in</a></p>
+          <zp-theme-toggle />
+        </div>
       </header>
 
       <h1 class="text-2xl font-bold sm:text-3xl">Register your business</h1>
@@ -332,6 +337,7 @@ export class RegisterComponent {
   private readonly branding = inject(BrandingApiService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly publicTheme = inject(PublicThemeService);
 
   protected readonly steps = STEPS;
   protected readonly countryOptions: SelectOption[] = COUNTRIES.map((c) => ({ value: c.code, label: c.name }));
@@ -446,6 +452,10 @@ export class RegisterComponent {
   protected readonly waitingFor = computed<string | null>(() => (this.step() === 'company' && this.slugStatus() === 'checking' ? 'the address availability check' : null));
 
   constructor() {
+    // No venue theme exists yet, so this page follows the visitor's light/dark choice; the tenant theme takes over after sign-up.
+    this.publicTheme.attach(true);
+    this.destroyRef.onDestroy(() => this.publicTheme.detach());
+
     this.loadTypes();
 
     // Save progress locally (never the password) so a refresh or a later visit resumes here.
