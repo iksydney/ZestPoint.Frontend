@@ -1,8 +1,10 @@
 import { defineConfig } from '@playwright/test';
+import { apiProject, e2eConnectionString } from './e2e/e2e-database';
 
 /**
  * End-to-end tests drive the REAL stack: the Angular dev server (proxying /api) and the ASP.NET Core API against a
- * throw-away LocalDB database (ZestPoint_E2E), using the Microsoft Edge that ships with Windows.
+ * throw-away PostgreSQL database (zestpoint_e2e, created by the API's startup migrations on first run), using the Microsoft
+ * Edge that ships with Windows. Connection and API location rules, and why the database name is locked, are in e2e/e2e-database.ts.
  */
 const API_PORT = 5250;
 const WEB_PORT = 4300;
@@ -25,14 +27,15 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'dotnet run --project ../../ZestPoint/ZestPoint/ZestPoint.API.csproj --no-launch-profile',
+      command: `dotnet run --project "${apiProject()}" --no-launch-profile`,
       url: `http://localhost:${API_PORT}/runtime`,
       timeout: 240_000,
       reuseExistingServer: !process.env['CI'],
       env: {
         ASPNETCORE_ENVIRONMENT: 'Development',
         ASPNETCORE_URLS: `http://localhost:${API_PORT}`,
-        ConnectionStrings__DefaultConnection: 'Server=(localdb)\\MSSQLLocalDB;Database=ZestPoint_E2E;Trusted_Connection=True;MultipleActiveResultSets=True;TrustServerCertificate=True;Min Pool Size=12',
+        ConnectionStrings__DefaultConnection: e2eConnectionString(),
+        Database__MigrateOnStartup: 'true', // creates zestpoint_e2e on the first run and brings it up to date on later ones
         RateLimiting__AuthPerMinute: '100000',
         RateLimiting__GlobalPerMinute: '100000',
         Cors__AllowedOrigins__0: `http://localhost:${WEB_PORT}`,

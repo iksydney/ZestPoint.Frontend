@@ -1,7 +1,7 @@
 /**
- * LocalDB needs roughly 0.9 s to open each NEW connection, so the first burst of parallel requests after a cold start looks
- * like random multi-second stalls. Fire a burst up front so the connection pool is warm before any test runs. (A real SQL
- * Server opens connections in milliseconds; this only matters for local LocalDB runs.)
+ * A cold API opens each NEW database connection (and JIT-compiles its first requests) on demand, so the first burst of parallel
+ * requests after a start looks like random multi-second stalls. Fire a burst up front so the connection pool is warm before any
+ * test runs.
  */
 export default async function globalSetup(): Promise<void> {
   const base = 'http://localhost:5250';
