@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { PASSWORD, pick } from './helpers';
+import { PASSWORD, answerBarManQuestion, pick } from './helpers';
 
 test.describe('Business types and wallets at registration', () => {
   test('a business can be several types, and wallets are offered for the chosen currencies', async ({ page }) => {
@@ -16,6 +16,7 @@ test.describe('Business types and wallets at registration', () => {
     await pick(page, 'enterprise-type', 'Hotel');
     await expect(page.getByTestId('extra-type-Nightclub')).toBeChecked();
     await expect(page.getByTestId('extra-type-Hotel')).toHaveCount(0);
+    await answerBarManQuestion(page);                                        // still a bar-type business through its Nightclub side
     await page.getByTestId('next').click();
 
     await page.getByTestId('company-name').fill(`E2E Multi ${id}`);

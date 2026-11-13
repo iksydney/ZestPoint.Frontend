@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { recalculate, round2 } from '../offline/order-calc';
 import {
-  CategoryDto, CompanySettingsDto, LocalOrder, OrderDto, OrderKind, OrderLineDto, PayRequest, PaymentMethod, ProductDto
+  CategoryDto, CompanySettingsDto, LocalOrder, OrderDto, OrderKind, OrderLineDto, PayRequest, PaymentMethod, ProductDto, VoidAuthorizer
 } from '../models/ops.model';
 import { ApiError, toApiError } from './api.util';
 import { AuthService } from './auth.service';
@@ -248,15 +248,15 @@ export class PosStore {
     await this.commit(next, 'payment.cash', { orderId: o.id, method: 'Cash', amount, tip, cashTendered: tendered, idempotencyKey: key }, `Cash payment ${amount.toFixed(2)}`);
   }
 
-  /** A void is a request unless the person may approve it; either way the server decides, so the line is only flagged here. */
-  async voidLine(lineId: string, reason: string, wasted: boolean): Promise<void> {
-    const o = this.requireEditable();
-    const line = o.lines.find((l) => l.id === lineId);
-    if (!line) return;
-    await this.commit(
-      { ...o, hasPendingVoids: true, lines: o.lines.map((l) => (l.id === lineId ? { ...l, voidPending: true } : l)) },
-      'void.request', { orderId: o.id, lineId, reason, wasted }, `Void ${line.productName}`
-    );
+  /**
+   * Voids a sent item, or the whole bill when no line is given. Never queued: a supervisor's or an administrator's credentials are checked
+   * by the server for this void, so it needs a connection and a bill the server already has. The credentials are passed straight through.
+   */
+  async voidWithAuthoriser(lineId: string | null, reason: string, wasted: boolean, authorizer: VoidAuthorizer): Promise<void> {
+    this.requireEditable();
+    const body = { reason, wasted, authorizer };
+    await this.serverAction((id) => firstValueFrom(lineId ? this.ordersApi.voidLine(id, lineId, body) : this.ordersApi.voidOrder(id, body)), 'Voids');
+    await this.refreshBills();
   }
 
   // ---- Server-only actions ----------------------------------------------------------------------------

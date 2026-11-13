@@ -43,10 +43,14 @@ export interface CompanySettingsDto {
   currencyCode: string;
   paymentProvider: string;
   paymentProviderIsDemo: boolean;
+  /** The bar man method is on: Send hands items to a bar man and stock is deducted when the bar man dispatches them. */
+  barManMethodEnabled: boolean;
+  /** True for a bar-type business; only these can switch the method on. */
+  barManMethodAvailable: boolean;
   rowVersion: string;
 }
 
-export type UpdateCompanySettingsRequest = Omit<CompanySettingsDto, 'currencyCode' | 'paymentProvider' | 'paymentProviderIsDemo'>;
+export type UpdateCompanySettingsRequest = Omit<CompanySettingsDto, 'currencyCode' | 'paymentProvider' | 'paymentProviderIsDemo' | 'barManMethodAvailable'>;
 
 // ---- Catalogue --------------------------------------------------------------------------------
 
@@ -134,9 +138,76 @@ export interface OrderLineDto {
   discountAmount: number;
   lineTotal: number;
   status: LineStatus;
+  /** True once the line has been sent (to the bar man, for a company that uses the bar man method). */
   confirmed: boolean;
   voidReason: string | null;
   voidPending: boolean;
+  /** Bar man method only: where the line is at the bar. Absent or null when it never went to the bar (or was sent offline and has not synced). */
+  barState?: BarLineState | null;
+  /** The bar man's reason when barState is CantMake. */
+  barNote?: string | null;
+}
+
+/**
+ * Who authorises a void, proving it for that void: a staff code and PIN, OR an email and password (exactly one pair). Mirrors
+ * VoidAuthorizationRequest in the API. Sent with the void and kept nowhere on the device.
+ */
+export interface VoidAuthorizer {
+  staffCode?: string;
+  pin?: string;
+  email?: string;
+  password?: string;
+}
+
+// ---- Bar man method (mirrors BarOrderDto and friends in the API's PosModels.cs) ---------------
+
+export type BarLineState = 'Waiting' | 'Preparing' | 'Ready' | 'Collected' | 'CantMake';
+export type BarOrderStatus = 'New' | 'Taken' | 'Ready' | 'Collected' | 'CantMake' | 'Cancelled';
+export type BarItemStatus = 'Pending' | 'Done' | 'CantMake' | 'Cancelled';
+
+export interface BarOrderItemDto {
+  id: string;
+  orderLineId: string;
+  productName: string;
+  quantity: number;
+  seat: number | null;
+  notes: string | null;
+  modifiers: string[];
+  status: BarItemStatus;
+  cantMakeReason: string | null;
+  acknowledged: boolean;
+}
+
+/** What one press of Send handed to the bar, with the bill it belongs to as it is now. */
+export interface BarOrderDto {
+  id: string;
+  branchId: string;
+  orderId: string;
+  orderNumber: number;
+  orderKind: OrderKind;
+  label: string | null;
+  tableLabel: string | null;
+  customerName: string | null;
+  orderNotes: string | null;
+  status: BarOrderStatus;
+  requestedByMembershipId: string;
+  requestedByName: string;
+  sentAtUtc: string;
+  takenByMembershipId: string | null;
+  takenByName: string | null;
+  takenAtUtc: string | null;
+  readyAtUtc: string | null;
+  collectedAtUtc: string | null;
+  /** For the attendant: ready to collect, or an item cannot be made and they have not confirmed seeing that. */
+  needsAttention: boolean;
+  items: BarOrderItemDto[];
+}
+
+/** The live notice: ids only. The order itself is then read through the API. */
+export interface BarOrderNotice {
+  barOrderId: string;
+  branchId: string;
+  change: 'sent' | 'taken' | 'released' | 'cant_make' | 'ready' | 'collected' | 'cancelled';
 }
 
 export interface PaymentDto {
@@ -275,7 +346,7 @@ export interface PayRequest {
 
 export type SyncKind =
   | 'order.create' | 'order.line.add' | 'order.line.update' | 'order.line.remove' | 'order.confirm'
-  | 'order.discount' | 'order.tip' | 'payment.cash' | 'void.request' | 'stock.adjust' | 'measurement.add'
+  | 'order.discount' | 'order.tip' | 'payment.cash' | 'stock.adjust' | 'measurement.add'
   | 'shift.open' | 'shift.cash_movement' | 'shift.close';
 
 export interface SyncOperationDto { clientOperationId: string; kind: SyncKind; payload: unknown; createdAtUtc: string }

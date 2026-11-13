@@ -5,6 +5,8 @@ import { filter, map, startWith } from 'rxjs';
 import { APP_NAV, NavDefinition, groupOf, navFor, permissionsOf } from '../../core/navigation/app-nav';
 import { AccessService } from '../../core/services/access.service';
 import { AuthService } from '../../core/services/auth.service';
+import { BarStore } from '../../core/services/bar.services';
+import { BarDockComponent } from '../pos-billing/bar-dock.component';
 import { BrandMarkComponent } from '../../shared/ui/brand-mark.component';
 import { AccountBannerComponent } from '../../shared/ui/account-banner.component';
 import { ConfirmHostComponent, ToastHostComponent } from '../../shared/ui/feedback';
@@ -17,7 +19,7 @@ import { NavSidebarComponent } from '../../shared/ui/nav-sidebar.component';
 @Component({
   selector: 'zp-app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent],
+  imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, BarDockComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="grid min-h-screen grid-cols-1 bg-canvas text-ink md:grid-cols-[16rem_1fr] print:block">
@@ -63,7 +65,9 @@ import { NavSidebarComponent } from '../../shared/ui/nav-sidebar.component';
           </nav>
         }
         <zp-account-banner class="block px-4 pt-3 sm:px-6 print:hidden" />
-        <main class="min-w-0 flex-1 p-4 sm:p-6"><router-outlet /></main>
+        <!-- Room at the bottom so the floating bar button never covers the last control of a screen. -->
+        <main class="min-w-0 flex-1 p-4 sm:p-6" [class.pb-24]="bar.active()"><router-outlet /></main>
+        <zp-bar-dock />
         <zp-toast-host />
         <zp-confirm-host />
       </div>
@@ -74,6 +78,12 @@ export class AppShellComponent {
   protected readonly auth = inject(AuthService);
   private readonly access = inject(AccessService);
   private readonly router = inject(Router);
+  protected readonly bar = inject(BarStore);
+
+  constructor() {
+    // Finds out whether the company uses the bar man method and, if this person takes part in it, starts the live connection.
+    void this.bar.start();
+  }
 
   protected readonly branding = this.auth.branding;
   protected readonly drawer = signal(false);
@@ -82,7 +92,7 @@ export class AppShellComponent {
   /** The screens this person may use: permission AND module AND the screen itself (an operator may withhold just one); a locked workspace keeps only the subscription screen. */
   protected readonly items = computed<NavDefinition[]>(() =>
     APP_NAV.filter((n) => this.auth.hasAnyPermission(permissionsOf(n)) && (!this.auth.locked() || n.key === 'subscription' || n.key === 'support')
-      && this.access.canShow(n)));
+      && this.access.canShow(n) && (n.key !== 'pos.bar' || this.bar.enabled())));
 
   protected readonly crumbs = computed(() => {
     const here = navFor(this.url());

@@ -7,7 +7,7 @@ import {
   MovementDto, OrderDto, OrderSummaryDto, PagedResult, PayRequest, ProductDto, PurchaseOrderDto, ReceiptDto, ReceiveGoodsRequest, RecipeDto,
   SaveInventoryItemRequest, SavePurchaseOrderRequest, SaveProductRequest, SaveRecipeRequest, SaveSupplierRequest, SplitPreviewDto, SuggestedOrderDto,
   SupplierDto, SyncOperationDto, SyncOperationResultDto, TransferStockRequest, UpdateCompanySettingsRequest, UsageRowDto, VarianceDto,
-  VarianceSummaryRowDto, VoidRequestDto
+  VarianceSummaryRowDto, VoidAuthorizer, VoidRequestDto
 } from '../models/ops.model';
 import { unwrap } from './api.util';
 
@@ -115,7 +115,12 @@ export class OrdersApi {
     return this.http.get<ApiEnvelope<SplitPreviewDto>>(`/api/v1/orders/${id}/split-preview`, { params: q({ parts }) }).pipe(unwrap());
   }
 
-  voidOrder(id: string, body: { reason: string; wasted: boolean }): Observable<OrderDto> {
+  /** Voids a sent item. Needs the network: the server checks the authoriser's credentials at that moment. */
+  voidLine(id: string, lineId: string, body: { reason: string; wasted: boolean; authorizer: VoidAuthorizer }): Observable<OrderDto> {
+    return this.http.post<ApiEnvelope<OrderDto>>(`/api/v1/orders/${id}/lines/${lineId}/void`, body).pipe(unwrap());
+  }
+
+  voidOrder(id: string, body: { reason: string; wasted: boolean; authorizer: VoidAuthorizer }): Observable<OrderDto> {
     return this.http.post<ApiEnvelope<OrderDto>>(`/api/v1/orders/${id}/void`, body).pipe(unwrap());
   }
 
@@ -123,8 +128,9 @@ export class OrdersApi {
     return this.http.get<ApiEnvelope<VoidRequestDto[]>>('/api/v1/orders/void-requests', { params: q(filter) }).pipe(unwrap());
   }
 
-  decideVoid(requestId: string, approve: boolean, note: string | null): Observable<OrderDto> {
-    return this.http.post<ApiEnvelope<OrderDto>>(`/api/v1/orders/void-requests/${requestId}/decision`, { approve, note }).pipe(unwrap());
+  /** Decides a request left from before voids were authorised at the till; approving and rejecting both need the authoriser's credentials. */
+  decideVoid(requestId: string, approve: boolean, note: string | null, authorizer: VoidAuthorizer): Observable<OrderDto> {
+    return this.http.post<ApiEnvelope<OrderDto>>(`/api/v1/orders/void-requests/${requestId}/decision`, { approve, note, authorizer }).pipe(unwrap());
   }
 
   receipt(id: string): Observable<ReceiptDto> {

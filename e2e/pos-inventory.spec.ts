@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { newContext, registerViaUi } from './helpers';
+import { PASSWORD, newContext, registerViaUi } from './helpers';
 
 /** Registers a company, publishes the starter brand and loads the labelled demonstration data (the dev environment allows it). */
 async function shopWithDemoData(page: Page) {
@@ -36,12 +36,12 @@ async function stockOf(page: Page, item: string): Promise<string> {
   return (await row.getByTestId('on-hand').innerText()).replace(/\s+/g, ' ');
 }
 
-async function addPinCashier(page: Page, name: string, pin = '7391'): Promise<string> {
+async function addPinCashier(page: Page, name: string, pin = '7391', role = 'cashier'): Promise<string> {
   await page.goto('/app/staff');
   await page.getByTestId('add-staff').click();
   await page.getByTestId('new-name').fill(name);
   await page.getByTestId('new-pin').fill(pin);
-  await page.getByTestId('new-role-cashier').check();
+  await page.getByTestId(`new-role-${role}`).check();
   await page.getByTestId('create-staff').click();
   const shown = (await page.getByTestId('staff-added-code').innerText()).trim();       // the panel shown right after adding
   await page.getByTestId('staff-added-done').click();
@@ -143,9 +143,10 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
     await expect(page.getByTestId('receipt-view')).toContainText('DEMONSTRATION PAYMENT');
   });
 
-  test('a cashier can only request a void; a manager approves it and the stock comes back', async ({ page, browser }) => {
+  test('a cashier cannot void alone: a supervisor types their code and PIN on the till, and the void is in the history', async ({ page, browser }) => {
     const who = await shopWithDemoData(page);
     const code = await addPinCashier(page, 'Cash Ier');
+    const supervisorCode = await addPinCashier(page, 'Sade Super', '5827', 'supervisor');
 
     await openPos(page);
     await startBill(page, 'Void me');
@@ -163,24 +164,68 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
     await expect(cashier.page).toHaveURL(/\/app\/(dashboard|pos)$/);
     await cashier.page.getByTestId('main-nav').getByRole('link', { name: 'Point of Sale' }).click();
     await cashier.page.getByTestId('bill-Void me').click();
-    await expect(cashier.page.getByTestId('open-approvals')).toHaveCount(0); // not an approver
+    await expect(cashier.page.getByTestId('open-approvals')).toHaveCount(0);
+
+    // The cashier starts the void, but the button stays off until someone who may authorise it has entered their details.
     await cashier.page.getByTestId('void-Demo Canned Beans').click();
     await cashier.page.getByTestId('void-reason').fill('Customer changed their mind');
+    await expect(cashier.page.getByTestId('void-authoriser')).toContainText('This does not sign them in');
+    await expect(cashier.page.getByTestId('void-confirm')).toBeDisabled();
+    await expect(cashier.page.getByTestId('auth-code')).toHaveValue('');              // nothing is pre-filled from the signed-in person
+    await expect(cashier.page.getByTestId('auth-pin')).toHaveAttribute('autocomplete', 'one-time-code');
+
+    // The cashier's own code and PIN are real, but a cashier cannot authorise a void.
+    await cashier.page.getByTestId('auth-code').fill(code);
+    await cashier.page.getByTestId('auth-pin').fill('7391');
     await cashier.page.getByTestId('void-confirm').click();
-    await expect(cashier.page.getByTestId('bill-lines')).toContainText('awaiting approval');
-    await waitForSync(cashier.page);
+    await expect(cashier.page.getByTestId('void-error')).toContainText('Cash Ier is not allowed');
+    await expect(cashier.page.getByTestId('auth-pin')).toHaveValue('');               // the PIN is wiped after a refusal
+
+    // A wrong PIN for the supervisor says nothing about which part was wrong.
+    await cashier.page.getByTestId('auth-code').fill(supervisorCode);
+    await cashier.page.getByTestId('auth-pin').fill('0000');
+    await cashier.page.getByTestId('void-confirm').click();
+    await expect(cashier.page.getByTestId('void-error')).toContainText('Those details are not right');
+    await expect(cashier.page.getByTestId('bill-lines')).toContainText('Demo Canned Beans');
+
+    // The supervisor types their own PIN on the cashier's till: the item leaves the bill at once.
+    await cashier.page.getByTestId('auth-pin').fill('5827');
+    await cashier.page.getByTestId('void-confirm').click();
+    await expect(cashier.page.getByTestId('void-dialog')).toHaveCount(0);
+    await expect(cashier.page.getByTestId('bill-lines')).not.toContainText('Demo Canned Beans');
+    await expect(cashier.page.getByTestId('user-name')).toHaveText('Cash Ier');       // nobody was signed in or out by it
+    await cashier.page.goto('/app/pos/reports/void-history');
+    await expect(cashier.page.getByRole('heading', { name: 'No access' })).toBeVisible();   // the history is not the cashier's to read
     await cashier.context.close();
 
-    await page.goto('/app/pos');
-    await page.getByTestId('open-approvals').click();
-    await page.getByTestId('void-approve').click();
-    await page.keyboard.press('Escape');
-    await page.getByTestId('bill-Void me').click();
-    await expect(page.getByTestId('bill-lines')).not.toContainText('Demo Canned Beans');
+    expect(await stockOf(page, 'Demo Canned Beans 400g')).toContain('48');           // the stock came back
 
-    expect(await stockOf(page, 'Demo Canned Beans 400g')).toContain('48');
+    // The owner is asked too, and proves it with email and password; here for a whole bill.
+    await openPos(page);
+    await startBill(page, 'Wrong table');
+    await page.getByTestId('product-Demo Canned Beans').click();
+    await page.getByTestId('send-order').click();
+    await waitForSync(page);
+    await page.getByTestId('void-bill').click();
+    await page.getByTestId('void-reason').fill('Rung up on the wrong table');
+    await expect(page.getByTestId('void-confirm')).toBeDisabled();
+    await page.getByTestId('auth-mode-password').click();
+    await page.getByTestId('auth-email').fill(who.email);
+    await page.getByTestId('auth-password').fill(PASSWORD);
+    await page.getByTestId('void-confirm').click();
+    await expect(page.getByTestId('void-dialog')).toHaveCount(0);
+    await expect(page.getByTestId('bill-Wrong table')).toHaveCount(0);
+
+    // Both voids are in the Void History report with who asked and who authorised.
+    await page.goto('/app/pos/reports/void-history');
+    const table = page.getByTestId('report-table');
+    await expect(table).toContainText('Customer changed their mind');
+    await expect(table).toContainText('Cash Ier');
+    await expect(table).toContainText('Sade Super');
+    await expect(table).toContainText('Staff code and PIN');
+    await expect(table).toContainText('Rung up on the wrong table');
+    await expect(table).toContainText('Email and password');
   });
-
   test('stock adjustments need a reason, are recorded in the ledger and a count below zero is shown honestly', async ({ page }) => {
     await shopWithDemoData(page);
     await page.goto('/app/inventory');

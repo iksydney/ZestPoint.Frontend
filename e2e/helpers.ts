@@ -24,14 +24,32 @@ export async function pick(page: Page, testId: string, text: string): Promise<vo
   await box.press('Enter');
 }
 
+/** A bar-type business must answer "Will you use the bar man method?" before it can continue. Fails when the question is not asked. */
+export async function answerBarManQuestion(page: Page, use = false): Promise<void> {
+  await expect(page.getByTestId('bar-man-question')).toBeVisible();
+  await page.getByTestId(use ? 'bar-man-yes' : 'bar-man-no').check();
+}
+
+/**
+ * Answers the bar man question when the chosen type is asked it, and does nothing otherwise. Typing a type name picks the first match,
+ * which is not always the type typed ("Bar" finds Retail Store through "barcode": FND-076), so this looks at what the page asks.
+ */
+export async function answerBarManQuestionIfAsked(page: Page, use = false): Promise<void> {
+  await expect(page.getByTestId('setup-summary')).not.toContainText('Pick your business type'); // the chosen type has been applied
+  if (await page.getByTestId('bar-man-question').count()) await page.getByTestId(use ? 'bar-man-yes' : 'bar-man-no').check();
+}
+
 /** Walks the real registration flow in the browser and lands on the onboarding wizard. */
-export async function registerViaUi(page: Page, opts: { name?: string; type?: string } = {}): Promise<Registered> {
+export async function registerViaUi(page: Page, opts: { name?: string; type?: string; barManMethod?: boolean } = {}): Promise<Registered> {
   const id = unique();
   const name = opts.name ?? `E2E Venue ${id}`;
   const email = `owner-${id}@example.com`;
+  const type = opts.type ?? 'Bar';
 
   await page.goto('/register');
-  await pick(page, 'enterprise-type', opts.type ?? 'Bar');
+  await pick(page, 'enterprise-type', type);
+  if (opts.barManMethod !== undefined) await answerBarManQuestion(page, opts.barManMethod); // the caller needs a bar-type business
+  else await answerBarManQuestionIfAsked(page);
   await page.getByTestId('next').click();
 
   await page.getByTestId('company-name').fill(name);

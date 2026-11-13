@@ -3,10 +3,11 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, s
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
-import { OrderKind, PaymentMethod, ProductDto, ReceiptDto, VoidRequestDto } from '../../core/models/ops.model';
+import { BarLineState, OrderKind, PaymentMethod, ProductDto, ReceiptDto, VoidAuthorizer, VoidRequestDto } from '../../core/models/ops.model';
 import { splitEvenly } from '../../core/offline/order-calc';
 import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
+import { BarStore } from '../../core/services/bar.services';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { OrdersApi } from '../../core/services/ops.services';
 import { PosStore } from '../../core/services/pos-store.service';
@@ -14,6 +15,7 @@ import { SyncAgentService } from '../../core/services/sync-agent.service';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { BranchPickerComponent, SyncStatusComponent } from '../../shared/ui/ops-chrome.components';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
+import { VoidAuthoriserComponent } from './void-authoriser.component';
 
 type Dialog = 'new' | 'serial' | 'modifiers' | 'pay' | 'void' | 'discount' | 'split' | 'merge' | 'transfer' | 'receipt' | 'approvals' | 'tip' | null;
 
@@ -25,7 +27,7 @@ type Dialog = 'new' | 'serial' | 'modifiers' | 'pay' | 'void' | 'discount' | 'sp
 @Component({
   selector: 'zp-pos-billing',
   standalone: true,
-  imports: [CurrencyPipe, DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent, BranchPickerComponent, SyncStatusComponent],
+  imports: [CurrencyPipe, DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent, BranchPickerComponent, SyncStatusComponent, VoidAuthoriserComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -63,8 +65,9 @@ type Dialog = 'new' | 'serial' | 'modifiers' | 'pay' | 'void' | 'discount' | 'sp
             </li>
           } @empty { <li class="text-sm text-ink/70">No open bills.</li> }
         </ul>
-        @if (canApproveVoid()) {
-          <button type="button" class="btn-outline mt-2 text-sm" data-testid="open-approvals" (click)="openApprovals()">Void requests @if (approvals().length) { ({{ approvals().length }}) }</button>
+        <!-- Requests left from before voids were authorised at the till. No new ones can be made; the button goes when the list is empty. -->
+        @if (canApproveVoid() && approvals().length) {
+          <button type="button" class="btn-outline mt-2 text-sm" data-testid="open-approvals" (click)="openApprovals()">Old void requests ({{ approvals().length }})</button>
         }
       </section>
 
@@ -115,7 +118,10 @@ type Dialog = 'new' | 'serial' | 'modifiers' | 'pay' | 'void' | 'discount' | 'sp
                       <p class="font-medium">{{ l.productName }}</p>
                       @if (l.serialNumber) { <p class="font-mono text-xs text-ink/70">S/N {{ l.serialNumber }}</p> }
                       @for (m of l.modifiers; track m.id) { <p class="text-xs text-ink/70">+ {{ m.name }}</p> }
-                      @if (l.confirmed) { <span class="app-badge app-badge-success">sent</span> }
+                      @if (l.barState) {
+                        <span class="app-badge" [class]="barTone(l.barState)" [attr.data-testid]="'bar-state-' + l.productName">{{ barLabel(l.barState) }}</span>
+                        @if (l.barState === 'CantMake') { <p class="text-xs font-semibold text-danger" role="status">{{ l.barNote }}. Void this item or offer something else.</p> }
+                      } @else if (l.confirmed) { <span class="app-badge app-badge-success">sent</span> }
                       @if (l.voidPending) { <span class="app-badge app-badge-warning">void awaiting approval</span> }
                     </div>
                     <span class="font-semibold">{{ l.lineTotal | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</span>
@@ -160,6 +166,7 @@ type Dialog = 'new' | 'serial' | 'modifiers' | 'pay' | 'void' | 'discount' | 'sp
               @if (canSplit()) { <button type="button" class="btn-outline" (click)="dialog.set('transfer')">Move / hand over</button> }
               @if (canPay() && o.balance > 0) { <button type="button" class="btn-primary col-span-2 touch-target" data-testid="pay" (click)="openPay()">Pay {{ o.balance | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</button> }
             }
+            @if (canVoid() && !readOnly() && isOpen() && o.amountPaid === 0 && activeLines().length > 0) { <button type="button" class="btn-ghost col-span-2 text-sm" data-testid="void-bill" (click)="openVoid(null)">Void whole bill</button> }
             @if (o.status === 'Paid' || o.amountPaid > 0) { <button type="button" class="btn-outline col-span-2" data-testid="receipt" (click)="openReceipt()">Receipt</button> }
           </div>
         } @else {
@@ -251,12 +258,15 @@ type Dialog = 'new' | 'serial' | 'modifiers' | 'pay' | 'void' | 'discount' | 'sp
     </zp-dialog>
 
     <!-- Void -->
-    <zp-dialog [open]="dialog() === 'void'" title="Void item" (closed)="dialog.set(null)">
-      <form class="space-y-3" (submit)="$event.preventDefault(); submitVoid()">
-        <p class="text-sm text-ink/80">@if (canApproveVoid()) { The item is removed now and stock is returned unless it was wasted. } @else { A manager must approve this before it takes effect. }</p>
+    <zp-dialog [open]="dialog() === 'void'" [title]="voidLineId() ? 'Void item' : 'Void whole bill'" (closed)="dialog.set(null)">
+      <form class="space-y-3" (submit)="$event.preventDefault(); submitVoid()" data-testid="void-dialog">
+        <p class="text-sm text-ink/80">{{ voidLineId() ? 'The item is removed from the bill' : 'Every item is removed and the bill is closed as voided' }} as soon as a supervisor or an administrator authorises it. Stock is returned unless it was thrown away. The void is recorded with who asked and who authorised it.</p>
+        @if (!online()) { <p class="sys-alert sys-alert-warning" role="status" data-testid="void-offline">A void needs a connection: the authoriser's details are checked by the server. Try again when this device is back online.</p> }
         <div><label class="app-label" for="void-reason">Reason</label><input id="void-reason" class="app-input" data-testid="void-reason" [ngModel]="voidReason()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="voidReason.set($event)" /></div>
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" data-testid="void-wasted" [checked]="voidWasted()" (change)="voidWasted.set(!voidWasted())" /> It was made and thrown away (keep the stock used)</label>
-        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="void-confirm" [disabled]="voidReason().trim().length < 3">{{ canApproveVoid() ? 'Void item' : 'Request void' }}</button></div>
+        @if (dialog() === 'void') { <zp-void-authoriser [clearSecret]="authAttempts()" (changed)="authorizer.set($event)" /> }
+        @if (voidError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="void-error">{{ voidError() }}</p> }
+        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary touch-target" data-testid="void-confirm" [disabled]="voiding() || !online() || voidReason().trim().length < 3 || !authorizer()">{{ voiding() ? 'Checking...' : voidLineId() ? 'Void item' : 'Void bill' }}</button></div>
       </form>
     </zp-dialog>
 
@@ -315,12 +325,14 @@ type Dialog = 'new' | 'serial' | 'modifiers' | 'pay' | 'void' | 'discount' | 'sp
     </zp-dialog>
 
     <!-- Void approvals -->
-    <zp-dialog [open]="dialog() === 'approvals'" title="Void requests waiting for approval" [wide]="true" (closed)="dialog.set(null)">
+    <zp-dialog [open]="dialog() === 'approvals'" title="Old void requests" [wide]="true" (closed)="dialog.set(null)">
+      <p class="mb-3 text-sm text-ink/80">These were asked for before voids were authorised at the till. Approve or reject each one; either way you enter your own details first.</p>
+      @if (dialog() === 'approvals') { <zp-void-authoriser class="mb-3 block" [clearSecret]="authAttempts()" (changed)="authorizer.set($event)" /> }
       <ul class="space-y-2">
         @for (r of approvals(); track r.id) {
           <li class="app-card flex items-start justify-between gap-3" [attr.data-testid]="'void-request-' + r.orderNumber">
             <div><p class="font-medium">Bill #{{ r.orderNumber }}: {{ r.lineName ?? 'whole bill' }}</p><p class="text-sm text-ink/80">{{ r.reason }}</p></div>
-            <div class="flex gap-2"><button type="button" class="btn-outline px-2 py-1 text-sm" (click)="decide(r, false)">Reject</button><button type="button" class="btn-primary px-2 py-1 text-sm" data-testid="void-approve" (click)="decide(r, true)">Approve</button></div>
+            <div class="flex gap-2"><button type="button" class="btn-outline px-2 py-1 text-sm" data-testid="void-reject" [disabled]="!authorizer()" (click)="decide(r, false)">Reject</button><button type="button" class="btn-primary px-2 py-1 text-sm" data-testid="void-approve" [disabled]="!authorizer()" (click)="decide(r, true)">Approve</button></div>
           </li>
         } @empty { <li class="text-ink/70">Nothing waiting.</li> }
       </ul>
@@ -362,6 +374,7 @@ export class PosBillingComponent implements OnInit {
   private readonly ordersApi = inject(OrdersApi);
   private readonly toast = inject(ToastService);
   protected readonly syncAgent = inject(SyncAgentService);
+  private readonly bar = inject(BarStore);
 
   protected readonly perms = SCREEN_PERMISSIONS;
   protected readonly dialog = signal<Dialog>(null);
@@ -388,6 +401,11 @@ export class PosBillingComponent implements OnInit {
   protected readonly voidLineId = signal<string | null>(null);
   protected readonly voidReason = signal('');
   protected readonly voidWasted = signal(false);
+  protected readonly voidError = signal<string | null>(null);
+  protected readonly voiding = signal(false);
+  /** What the authoriser typed, for the void in hand only; cleared when the dialog opens and after it succeeds. */
+  protected readonly authorizer = signal<VoidAuthorizer | null>(null);
+  protected readonly authAttempts = signal(0);
   protected readonly discPercent = signal(0);
   protected readonly discAmount = signal(0);
   protected readonly discReason = signal('');
@@ -443,6 +461,24 @@ export class PosBillingComponent implements OnInit {
       const id = this.branches.activeId();
       if (id) untracked(() => void this.reloadBranch(id));
     });
+
+    // Bar man method: when something changes at the bar, re-read the open bill so each line shows where it is (waiting, preparing, ready).
+    // A bill with changes not yet synced keeps its local figures (PosStore.open), so nothing the person typed is lost.
+    effect(() => {
+      if (this.bar.changes() === 0) return;
+      untracked(() => {
+        const open = this.store.current();
+        if (open && this.bar.enabled() && this.online()) void this.store.open(open.id).catch(() => undefined);
+      });
+    }, { allowSignalWrites: true });
+  }
+
+  protected barLabel(state: BarLineState): string {
+    return { Waiting: 'waiting at the bar', Preparing: 'being prepared', Ready: 'ready to collect', Collected: 'served', CantMake: "bar can't make this" }[state];
+  }
+
+  protected barTone(state: BarLineState): string {
+    return state === 'CantMake' ? 'app-badge-danger' : state === 'Waiting' ? 'app-badge-warning' : state === 'Preparing' ? 'app-badge-primary' : 'app-badge-success';
   }
 
   ngOnInit(): void {
@@ -583,19 +619,33 @@ export class PosBillingComponent implements OnInit {
   }
 
   // ---- void / discount / tip ----
-  protected openVoid(lineId: string): void {
+  /** A line id voids that item; null voids the whole bill. */
+  protected openVoid(lineId: string | null): void {
     this.voidLineId.set(lineId);
     this.voidReason.set('');
     this.voidWasted.set(false);
+    this.voidError.set(null);
+    this.authorizer.set(null);
     this.dialog.set('void');
   }
 
+  /** The server checks the authoriser for this void. A refusal keeps the dialog open with the reason and wipes the PIN / password box. */
   protected async submitVoid(): Promise<void> {
-    const id = this.voidLineId();
-    if (!id) return;
-    await this.run(() => this.store.voidLine(id, this.voidReason().trim(), this.voidWasted()));
-    this.dialog.set(null);
-    this.toast.info(this.canApproveVoid() ? 'Void sent.' : 'Void requested. A manager must approve it.');
+    const authorizer = this.authorizer();
+    if (!authorizer || this.voiding()) return;
+    const whole = this.voidLineId() === null;
+    this.voiding.set(true);
+    this.voidError.set(null);
+    try {
+      await this.store.voidWithAuthoriser(this.voidLineId(), this.voidReason().trim(), this.voidWasted(), authorizer);
+      this.dialog.set(null);
+      this.authorizer.set(null);
+      if (whole) this.store.close();
+      this.toast.success(whole ? 'Bill voided.' : 'Item voided.');
+    } catch (err) {
+      this.voidError.set(toApiError(err).message);
+      this.authAttempts.update((n) => n + 1);
+    } finally { this.voiding.set(false); }
   }
 
   protected async submitDiscount(): Promise<void> {
@@ -655,6 +705,7 @@ export class PosBillingComponent implements OnInit {
   // ---- approvals ----
   protected async openApprovals(): Promise<void> {
     this.splitError.set(null);
+    this.authorizer.set(null);
     await this.loadApprovals();
     this.dialog.set('approvals');
   }
@@ -666,13 +717,19 @@ export class PosBillingComponent implements OnInit {
   }
 
   protected async decide(r: VoidRequestDto, approve: boolean): Promise<void> {
+    const authorizer = this.authorizer();
+    if (!authorizer) return;
     this.splitError.set(null);
     try {
-      await firstValueFrom(this.ordersApi.decideVoid(r.id, approve, null));
+      await firstValueFrom(this.ordersApi.decideVoid(r.id, approve, null, authorizer));
       await this.loadApprovals();
+      if (this.approvals().length === 0) this.dialog.set(null);
       if (this.store.current()?.id === r.orderId) await this.store.reload(r.orderId);
       await this.store.refreshBills();
-    } catch (err) { this.splitError.set(toApiError(err).message); }
+    } catch (err) {
+      this.splitError.set(toApiError(err).message);
+      this.authAttempts.update((n) => n + 1);
+    }
   }
 
   // ---- receipt ----

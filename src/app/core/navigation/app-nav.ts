@@ -68,12 +68,16 @@ export const APP_NAV: readonly NavDefinition[] = [
     load: () => import('../../features/pos-billing/pos-billing.component').then((m) => m.PosBillingComponent), description: 'Open tabs, take orders and payments.' },
   { key: 'pos.day', label: 'Start / End of Day', route: '/app/pos/day-management', icon: 'clock', permission: P.POS_DAY_VIEW, feature: FEATURES.CORE_POS, group: 'pos', kind: 'screen', needsBranch: true, quickAccess: true,
     load: () => import('../../features/pos-billing/day-management.component').then((m) => m.DayManagementComponent), description: 'Start your shift, count the till and close.' },
+  // The bar man method. The menu offers it only to a company that uses the method (the shell filters on that); the route and the API are guarded as usual.
+  { key: 'pos.bar', label: 'Bar Orders', route: '/app/pos/bar-orders', icon: 'inbox', permission: P.POS_BAR_ORDER_FULFIL, feature: FEATURES.CORE_POS, group: 'pos', kind: 'screen', needsBranch: true,
+    load: () => import('../../features/pos-billing/bar-orders.component').then((m) => m.BarOrdersComponent), description: 'Orders sent by attendants: take, make and dispatch them.' },
   report('pos.report.income', 'Summary Income Report', 'pos/reports/summary-income', 'pos', REPORTS.summaryIncome, P.REPORTS_INCOME_VIEW, FEATURES.CORE_POS, '1', 'chart'),
   report('pos.report.daily', 'Daily Sales Report', 'pos/reports/daily-sales', 'pos', REPORTS.dailySales, P.REPORTS_DAILY_SALES_VIEW, FEATURES.CORE_POS, '2', 'calendar'),
   report('pos.report.staff', 'Staff Sales Report', 'pos/reports/staff-sales', 'pos', REPORTS.staffSales, P.REPORTS_STAFF_SALES_VIEW, FEATURES.CORE_POS, '3', 'users'),
   report('pos.report.groups', 'Stock Groups Sales Report', 'pos/reports/stock-group-sales', 'pos', REPORTS.stockGroupSales, P.REPORTS_STOCK_GROUP_SALES_VIEW, FEATURES.CORE_POS, '4', 'layers'),
   report('pos.report.analysis', 'Sales Analysis Report', 'pos/reports/sales-analysis', 'pos', REPORTS.salesAnalysis, P.REPORTS_SALES_ANALYSIS_VIEW, FEATURES.ADVANCED_ANALYTICS, '5', 'chart'),
   report('pos.report.currency', 'Multi-Currency Report', 'pos/reports/multi-currency', 'pos', REPORTS.multiCurrency, P.REPORTS_MULTI_CURRENCY_VIEW, FEATURES.FINANCIAL_REPORTING, '6', 'globe'),
+  report('pos.report.voids', 'Void History Report', 'pos/reports/void-history', 'pos', REPORTS.voidHistory, P.POS_VOID_APPROVE, FEATURES.CORE_POS, '7', 'clipboard', 'Every void: what, why, who asked and who authorised it.'),
 
   // ---- Stock -------------------------------------------------------------------------------------
   { key: 'stock.items', label: 'Add / Modify Stock', route: '/app/inventory/items', icon: 'edit', permission: P.INVENTORY_ITEMS_MANAGE, feature: FEATURES.INVENTORY, group: 'stock', kind: 'screen', quickAccess: true,

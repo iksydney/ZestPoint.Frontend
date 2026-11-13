@@ -91,7 +91,7 @@ type Tone = 'success' | 'warning' | 'danger' | 'primary';
       <form class="space-y-3" (ngSubmit)="create()" novalidate>
         <div>
           <label class="app-label" for="c-name">Full name</label>
-          <input id="c-name" name="name" class="app-input" [ngModel]="c().displayName" (ngModelChange)="patchC({ displayName: $event })" data-testid="new-name" />
+          <input id="c-name" name="staff-display-name" autocomplete="off" data-1p-ignore data-lpignore="true" class="app-input" [ngModel]="c().displayName" (ngModelChange)="patchC({ displayName: $event })" data-testid="new-name" />
           @if (cErrors()['displayName']) { <p class="app-error" role="alert">{{ cErrors()['displayName'] }}</p> }
         </div>
         <fieldset>
@@ -109,7 +109,7 @@ type Tone = 'success' | 'warning' | 'danger' | 'primary';
         } @else {
           <div>
             <label class="app-label" for="c-pin">PIN (4 to 12 digits)</label>
-            <input id="c-pin" name="pin" type="password" inputmode="numeric" autocomplete="off" class="app-input w-40" [ngModel]="c().pin" (ngModelChange)="patchC({ pin: $event })" data-testid="new-pin" />
+            <input id="c-pin" name="staff-new-pin" type="password" inputmode="numeric" autocomplete="one-time-code" data-1p-ignore data-lpignore="true" class="app-input w-40" [ngModel]="c().pin" (ngModelChange)="patchC({ pin: $event })" data-testid="new-pin" />
             @if (cErrors()['pin']) { <p class="app-error" role="alert">{{ cErrors()['pin'] }}</p> }
           </div>
         }
@@ -204,7 +204,7 @@ type Tone = 'success' | 'warning' | 'danger' | 'primary';
               <p class="text-xs text-ink/70">{{ d.hasPin ? (d.pinLocked ? 'A PIN is set but locked after too many wrong attempts. Setting a new one unlocks it.' : 'A PIN is set.') : 'No PIN set.' }}</p>
               @if (canManage()) {
                 <div class="flex gap-2">
-                  <input class="app-input w-32" type="password" inputmode="numeric" autocomplete="off" placeholder="New PIN" [ngModel]="newPin()" (ngModelChange)="newPin.set($event)" aria-label="New PIN" data-testid="set-pin-input" />
+                  <input class="app-input w-32" type="password" inputmode="numeric" autocomplete="one-time-code" data-1p-ignore data-lpignore="true" placeholder="New PIN" [ngModel]="newPin()" (ngModelChange)="newPin.set($event)" aria-label="New PIN" data-testid="set-pin-input" />
                   <button type="button" class="btn-outline" (click)="setPin()" [disabled]="!newPin()" data-testid="set-pin">{{ d.hasPin ? 'Reset PIN' : 'Set PIN' }}</button>
                   @if (d.hasPin) { <button type="button" class="btn-ghost" (click)="removeCredential('pin')">Remove</button> }
                 </div>

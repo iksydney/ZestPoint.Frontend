@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { CompanySettingsDto } from '../../core/models/ops.model';
 import { toApiError } from '../../core/services/api.util';
+import { BarStore } from '../../core/services/bar.services';
 import { OperationSettingsApi } from '../../core/services/ops.services';
 import { ConfirmService, ToastService } from '../../shared/ui/feedback';
 
@@ -37,6 +38,20 @@ import { ConfirmService, ToastService } from '../../shared/ui/feedback';
           @if (v.paymentProviderIsDemo) { <p class="sys-alert sys-alert-warning" role="status" data-testid="provider-note">Card and transfer payments use a <strong>development stub</strong>: no real money moves. A real payment provider must be connected before taking real card payments.</p> }
           @else { <p class="text-sm">Payment provider: {{ v.paymentProvider }}</p> }
         </section>
+
+        @if (v.barManMethodAvailable || v.barManMethodEnabled) {
+          <section class="app-card space-y-2" data-testid="bar-man-section"><h2 class="font-semibold">Bar man method</h2>
+            <label class="flex min-h-11 items-start gap-2 text-sm"><input type="checkbox" class="mt-1" data-testid="bar-man-enabled" [checked]="v.barManMethodEnabled" (change)="patch({ barManMethodEnabled: !v.barManMethodEnabled })" />
+              <span>Attendants send orders to a bar man, who prepares them and tells the attendant when they are ready</span></label>
+            <ul class="list-disc space-y-1 pl-6 text-sm text-ink/80">
+              <li>When an attendant presses Send, staff with the "bar man" permission at that branch get the order on their device, with the table and who asked.</li>
+              <li>Stock is deducted when the bar man marks the order ready, not when it is sent.</li>
+              <li>Bar orders need a connection: an order sent while a device is offline reaches the bar when that device is back online.</li>
+              <li>It cannot be switched off while orders are still waiting at the bar.</li>
+            </ul>
+            @if (fe()['barManMethodEnabled']) { <p class="app-error" role="alert" data-testid="bar-man-error">{{ fe()['barManMethodEnabled'] }}</p> }
+          </section>
+        }
 
         <section class="app-card space-y-3" data-testid="controls-section"><h2 class="font-semibold">Shifts, adjustments and expiry</h2>
           <div class="grid gap-3 sm:grid-cols-2">
@@ -76,6 +91,7 @@ export class OperationsSettingsComponent implements OnInit {
   private readonly api = inject(OperationSettingsApi);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
+  private readonly bar = inject(BarStore);
 
   protected readonly s = signal<CompanySettingsDto | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -97,7 +113,9 @@ export class OperationsSettingsComponent implements OnInit {
     this.fe.set({});
     this.msg.set('');
     try {
-      this.s.set(await firstValueFrom(this.api.update(v)));
+      const saved = await firstValueFrom(this.api.update(v));
+      this.s.set(saved);
+      this.bar.setEnabled(saved.barManMethodEnabled); // this device follows the switch at once; others pick it up when they next open the app
       this.msg.set('Saved.');
       this.toast.success('Settings saved.');
     } catch (err) {

@@ -18,6 +18,7 @@ export const SCREEN_PERMISSIONS = {
   POS_DAY_OPEN: 'pos.day.open',
   POS_DAY_CLOSE: 'pos.day.close',
   POS_DAY_REVIEW: 'pos.day.review',
+  POS_BAR_ORDER_FULFIL: 'pos.bar_order.fulfil',
 
   INVENTORY_VIEW: 'inventory.view',
   INVENTORY_STOCK_ADJUST: 'inventory.stock.adjust',

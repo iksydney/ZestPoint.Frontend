@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { PNG, cssVar, newContext, pick, registerViaUi, setHex, signInViaUi } from './helpers';
+import { PNG, answerBarManQuestionIfAsked, cssVar, newContext, pick, registerViaUi, setHex, signInViaUi } from './helpers';
 
 const PREVIEW = 'preview-frame';
 
@@ -73,6 +73,7 @@ test.describe('Registration and onboarding (criteria 1-4)', () => {
 
     await page.goto('/register');
     await pick(page, 'enterprise-type', 'Bar');
+    await answerBarManQuestionIfAsked(page);
     await page.getByTestId('next').click();
     await page.getByTestId('company-name').fill(`Second ${Date.now()}`);
     await page.getByTestId('business-email').fill('x@example.com');
@@ -96,6 +97,7 @@ test.describe('Registration says why it cannot continue', () => {
   async function openCompanyStep(page: Page): Promise<void> {
     await page.goto('/register');
     await pick(page, 'enterprise-type', 'Bar');
+    await answerBarManQuestionIfAsked(page);
     await page.getByTestId('next').click();
   }
 

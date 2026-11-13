@@ -47,12 +47,17 @@ export interface RegisterCompanyRequest {
   currencyCode: string;
   /** Extra currencies to open a wallet in; the wallet for currencyCode is always created and is the default. */
   walletCurrencies: string[];
+  /** The answer to "will you use the bar man method?", asked of bar-type businesses only. The server refuses true for any other business. */
+  useBarManMethod: boolean | null;
   timeZoneId: string;
   primaryLocation: string;
   adminFullName: string;
   adminEmail: string;
   adminPassword: string;
 }
+
+/** The business types offered the bar man method. Mirrors BarOrderRules.BarTypes in the API (ZestPoint.Service/Domain); keep in sync. */
+export const BAR_MAN_METHOD_TYPES: readonly EnterpriseTypeCode[] = ['Bar', 'Nightclub', 'Lounge', 'BeachClubPoolBar'];
 
 export interface SlugAvailabilityDto {
   readonly slug: string;

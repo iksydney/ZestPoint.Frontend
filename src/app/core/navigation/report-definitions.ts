@@ -60,6 +60,8 @@ export const REPORTS = {
     path: 'pos/reports/multi-currency', period: 'range', branch: true,
     view: { label: 'Show', default: 'currency', options: opts(['currency', 'By currency'], ['transactions', 'Bills in other currencies']) }
   },
+  /** Every voided item with who asked and who authorised it. Read by people who may authorise voids. */
+  voidHistory: { path: 'pos/reports/void-history', period: 'range', branch: true, search: 'Item or reason' },
 
   // ---- Stock -------------------------------------------------------------------------------------
   itemsEnquiry: {

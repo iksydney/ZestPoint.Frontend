@@ -2,6 +2,7 @@
   "/api": {
     "target": "http://localhost:5250",
     "secure": false,
+    "ws": true,
     "changeOrigin": false,
     "logLevel": "warn"
   }

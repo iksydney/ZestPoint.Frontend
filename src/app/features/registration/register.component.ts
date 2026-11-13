@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { catchError, debounceTime, distinctUntilChanged, filter, map, of, switchMap, tap } from 'rxjs';
 import {
-  EnterpriseTypeCode, EnterpriseTypeDto, RegisterCompanyRequest
+  BAR_MAN_METHOD_TYPES, EnterpriseTypeCode, EnterpriseTypeDto, RegisterCompanyRequest
 } from '../../core/models/api.model';
 import {
   CHECKOUT_STYLE_LABELS, COUNTRIES, CURRENCIES, MODULE_LABELS, WALLET_CURRENCIES, browserTimeZone, timeZones
@@ -67,6 +67,8 @@ interface Draft {
   type: EnterpriseTypeCode | null;
   /** Further types for a business that is several things at once (bar + nightclub + hotel). */
   additionalTypes: EnterpriseTypeCode[];
+  /** The answer to "will you use the bar man method?" (asked of bar-type businesses only); null until answered. */
+  useBarManMethod: boolean | null;
   customType: string;
   companyName: string;
   slug: string;
@@ -147,6 +149,21 @@ interface Draft {
                       }
                     </div>
                     <p class="app-hint">Your main type sets the starting theme and wording. The others add their suggested modules.</p>
+                  </fieldset>
+                }
+                @if (barBusiness()) {
+                  <fieldset data-testid="bar-man-question" [attr.aria-invalid]="!!shown()['useBarManMethod']">
+                    <legend class="app-label">Will you use the bar man method?</legend>
+                    <p class="app-hint mb-2 mt-0">An attendant takes the order at the table and presses Send. A bar man gets it on their own device, prepares it and taps Ready, and the attendant is told which table to take it to. Stock is deducted when the bar man marks it ready. You can change this later in Operations settings.</p>
+                    <div class="grid gap-2 sm:grid-cols-2">
+                      <label class="flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-sm" [class]="d().useBarManMethod === true ? 'border-primary bg-primary/10' : 'border-ink/15'">
+                        <input type="radio" name="bar-man-method" data-testid="bar-man-yes" [checked]="d().useBarManMethod === true" (change)="answerBarMan(true)" /> Yes, orders go to a bar man
+                      </label>
+                      <label class="flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-sm" [class]="d().useBarManMethod === false ? 'border-primary bg-primary/10' : 'border-ink/15'">
+                        <input type="radio" name="bar-man-method" data-testid="bar-man-no" [checked]="d().useBarManMethod === false" (change)="answerBarMan(false)" /> No, whoever takes the order serves it
+                      </label>
+                    </div>
+                    @if (shown()['useBarManMethod']) { <p class="app-error" role="alert">{{ shown()['useBarManMethod'] }}</p> }
                   </fieldset>
                 }
                 @if (d().type === 'Other') {
@@ -379,6 +396,11 @@ export class RegisterComponent {
   protected readonly initials = computed(() => computeInitials(this.d().companyName));
   /** Types a business can add on top of its main one. "Other" is free text, so it only ever stands alone. */
   protected readonly extraTypeChoices = computed(() => this.types().filter((t) => t.code !== this.d().type && t.code !== 'Other'));
+  /** A bar-type business (as its main type or an additional one) is asked about the bar man method. UX only: the server decides the same way. */
+  protected readonly barBusiness = computed(() => {
+    const d = this.d();
+    return [d.type, ...d.additionalTypes].some((t) => t !== null && BAR_MAN_METHOD_TYPES.includes(t));
+  });
   protected readonly modules = computed(() => {
     const picked = new Set<string>([this.d().type ?? '', ...this.d().additionalTypes]);
     const all = this.types().filter((t) => picked.has(t.code)).flatMap((t) => t.suggestedModules);
@@ -408,6 +430,7 @@ export class RegisterComponent {
       case 'type':
         if (!d.type) add('enterpriseType', 'Business type', 'Choose your business type.');
         else if (d.type === 'Other' && d.customType.trim().length < 2) add('customEnterpriseType', 'Description of your business', 'Describe your business in a few words (at least 2 characters).');
+        if (this.barBusiness() && d.useBarManMethod === null) add('useBarManMethod', 'Your answer about the bar man method', 'Choose Yes or No.');
         break;
       case 'company':
         if (d.companyName.trim().length < 2) add('companyName', 'Company name', 'Enter your company or trading name (at least 2 characters).');
@@ -506,6 +529,11 @@ export class RegisterComponent {
     this.patch({ additionalTypes: cur.includes(code) ? cur.filter((t) => t !== code) : [...cur, code] });
   }
 
+  protected answerBarMan(use: boolean): void {
+    this.patch({ useBarManMethod: use });
+    this.touch('useBarManMethod');
+  }
+
   protected toggleWallet(code: string): void {
     const cur = this.d().walletCurrencies;
     this.patch({ walletCurrencies: cur.includes(code) ? cur.filter((c) => c !== code) : [...cur, code] });
@@ -581,6 +609,8 @@ export class RegisterComponent {
     const request: RegisterCompanyRequest = {
       companyName: d.companyName.trim(), slug: d.slug || null, enterpriseType: d.type!,
       additionalEnterpriseTypes: d.additionalTypes.filter((t) => t !== d.type),
+      // Only a bar-type business is asked; an answer left over from an earlier choice of type is not sent.
+      useBarManMethod: this.barBusiness() ? d.useBarManMethod : null,
       customEnterpriseType: d.type === 'Other' ? d.customType.trim() : null,
       businessEmail: d.businessEmail.trim(), businessPhone: d.businessPhone.trim(), countryCode: d.countryCode,
       currencyCode: d.currencyCode, walletCurrencies: d.walletCurrencies.filter((c) => c !== d.currencyCode), timeZoneId: d.timeZoneId, primaryLocation: d.primaryLocation.trim(),
@@ -621,7 +651,7 @@ export class RegisterComponent {
     this.errors.set(map);
     this.formError.set(Object.keys(map).length ? 'Please fix the highlighted fields.' : err.message);
 
-    const typeFields = ['enterpriseType', 'customEnterpriseType', 'additionalEnterpriseTypes'];
+    const typeFields = ['enterpriseType', 'customEnterpriseType', 'additionalEnterpriseTypes', 'useBarManMethod'];
     const companyFields = ['companyName', 'slug', 'businessEmail', 'businessPhone', 'countryCode', 'currencyCode', 'walletCurrencies', 'timeZoneId', 'primaryLocation'];
     const fields = Object.keys(map);
     if (fields.some((f) => typeFields.includes(f))) this.d.update((c) => ({ ...c, step: 'type' }));
@@ -633,7 +663,7 @@ export class RegisterComponent {
   private restoreDraft(): Draft {
     const tz = browserTimeZone();
     const fresh: Draft = {
-      type: null, additionalTypes: [], customType: '', companyName: '', slug: '', slugTouched: false, businessEmail: '', businessPhone: '',
+      type: null, additionalTypes: [], useBarManMethod: null, customType: '', companyName: '', slug: '', slugTouched: false, businessEmail: '', businessPhone: '',
       countryCode: 'NG', currencyCode: 'NGN', walletCurrencies: [], timeZoneId: COUNTRIES.some((c) => c.timeZone === tz) ? tz : 'Africa/Lagos',
       primaryLocation: '', adminFullName: '', adminEmail: '', step: 'type'
     };
