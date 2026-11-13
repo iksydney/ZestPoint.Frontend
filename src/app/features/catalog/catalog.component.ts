@@ -166,7 +166,7 @@ export class CatalogComponent implements OnInit {
     this.recipeRows.set([]);
     this.currentRecipe.set(null);
     this.form.set(p
-      ? { categoryId: p.categoryId, name: p.name, sku: p.sku, barcode: p.barcode, description: p.description, price: p.price, isActive: p.isActive, isFavorite: p.isFavorite,
+      ? { categoryId: p.categoryId, name: p.name, sku: p.sku, barcode: p.barcode, description: p.description, price: p.regularPrice ?? p.price, isActive: p.isActive, isFavorite: p.isFavorite,
           inventoryItemId: p.inventoryItemId, stockPerSale: p.stockPerSale, rowVersion: p.rowVersion,
           modifiers: p.modifiers.map((m) => ({ id: m.id, name: m.name, priceDelta: m.priceDelta, inventoryItemId: m.inventoryItemId, quantity: m.quantity, isActive: m.isActive })) }
       : blank());

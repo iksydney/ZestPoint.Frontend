@@ -13,27 +13,39 @@ export const round2 = (value: number): number => {
 export function recalculate(order: LocalOrder): LocalOrder {
   let subtotal = 0;
   let lineDiscounts = 0;
+  // What a whole-bill discount may be taken from (items that do not block discounts), and how much of that is taxable.
+  let discountable = 0;
+  let taxableDiscountable = 0;
+  let taxableFixed = 0;
   const lines: OrderLineDto[] = order.lines.map((l) => {
     if (l.status === 'Voided') return { ...l, lineTotal: 0 };
     const gross = round2((l.unitPrice + l.modifierTotal) * l.quantity);
     const discount = Math.min(Math.max(0, l.discountAmount), gross);
     subtotal += gross;
     lineDiscounts += discount;
+    if (l.blockDiscount) { if (!l.taxExempt) taxableFixed += gross - discount; }
+    else {
+      discountable += gross - discount;
+      if (!l.taxExempt) taxableDiscountable += gross - discount;
+    }
     return { ...l, lineTotal: round2(gross - discount) };
   });
 
   const net = subtotal - lineDiscounts;
-  const orderDiscount = Math.min(Math.max(0, order.orderDiscount), net);
+  const orderDiscount = Math.min(Math.max(0, order.orderDiscount), discountable);
   const netAfter = net - orderDiscount;
   const tip = Math.max(0, order.tipAmount);
+
+  // Tax on the taxable lines only; the whole-bill discount is shared in proportion (same rule as the server).
+  const taxable = taxableFixed + (discountable === 0 ? 0 : taxableDiscountable === discountable ? discountable - orderDiscount : (taxableDiscountable * (discountable - orderDiscount)) / discountable);
 
   let tax: number;
   let total: number;
   if (order.taxInclusive) {
-    tax = order.taxRatePercent <= 0 ? 0 : round2((netAfter * order.taxRatePercent) / (100 + order.taxRatePercent));
+    tax = order.taxRatePercent <= 0 ? 0 : round2((taxable * order.taxRatePercent) / (100 + order.taxRatePercent));
     total = netAfter + tip;
   } else {
-    tax = round2((netAfter * order.taxRatePercent) / 100);
+    tax = round2((taxable * order.taxRatePercent) / 100);
     total = netAfter + tax + tip;
   }
 

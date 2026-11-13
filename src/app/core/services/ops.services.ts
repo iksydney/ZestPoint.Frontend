@@ -159,6 +159,26 @@ export class InventoryApi {
     return this.http.get<ApiEnvelope<PagedResult<InventoryItemDto>>>('/api/v1/inventory/items', { params: q(filter) }).pipe(unwrap());
   }
 
+  /** One item with the stock card's own figures (on order, last sold, last ordered). */
+  item(id: string, branchId?: string): Observable<InventoryItemDto> {
+    return this.http.get<ApiEnvelope<InventoryItemDto>>(`/api/v1/inventory/items/${id}`, { params: q({ branchId }) }).pipe(unwrap());
+  }
+
+  /** The item's picture as a blob (the request carries the session, so an img tag cannot fetch it by itself). */
+  picture(id: string): Observable<Blob> {
+    return this.http.get(`/api/v1/inventory/items/${id}/picture`, { responseType: 'blob' });
+  }
+
+  setPicture(id: string, file: File): Observable<boolean> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<ApiEnvelope<boolean>>(`/api/v1/inventory/items/${id}/picture`, form).pipe(unwrap());
+  }
+
+  removePicture(id: string): Observable<boolean> {
+    return this.http.delete<ApiEnvelope<boolean>>(`/api/v1/inventory/items/${id}/picture`).pipe(unwrap());
+  }
+
   saveItem(id: string | null, body: SaveInventoryItemRequest): Observable<InventoryItemDto> {
     return id
       ? this.http.put<ApiEnvelope<InventoryItemDto>>(`/api/v1/inventory/items/${id}`, body).pipe(unwrap())

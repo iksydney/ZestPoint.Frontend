@@ -122,6 +122,9 @@ type Dialog = 'new' | 'serial' | 'modifiers' | 'pay' | 'void' | 'discount' | 'sp
                         <span class="app-badge" [class]="barTone(l.barState)" [attr.data-testid]="'bar-state-' + l.productName">{{ barLabel(l.barState) }}</span>
                         @if (l.barState === 'CantMake') { <p class="text-xs font-semibold text-danger" role="status">{{ l.barNote }}. Void this item or offer something else.</p> }
                       } @else if (l.confirmed) { <span class="app-badge app-badge-success">sent</span> }
+                      @if (l.onSpecial) { <span class="app-badge app-badge-primary" [attr.data-testid]="'special-' + l.productName">special price</span> }
+                      @if (l.taxExempt) { <span class="app-badge bg-ink/10 text-ink/80" [attr.data-testid]="'exempt-' + l.productName">no tax</span> }
+                      @if (l.blockDiscount) { <span class="app-badge bg-ink/10 text-ink/80">no discount</span> }
                       @if (l.voidPending) { <span class="app-badge app-badge-warning">void awaiting approval</span> }
                     </div>
                     <span class="font-semibold">{{ l.lineTotal | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</span>
@@ -129,9 +132,13 @@ type Dialog = 'new' | 'serial' | 'modifiers' | 'pay' | 'void' | 'discount' | 'sp
                   @if (canEdit() && !readOnly()) {
                     <div class="mt-1 flex items-center gap-1">
                       @if (!l.confirmed) {
-                        <button type="button" class="btn-outline h-8 w-8 p-0" aria-label="Fewer" (click)="qty(l.id, l.quantity - 1)">-</button>
-                        <span class="w-8 text-center" data-testid="line-qty">{{ l.quantity }}</span>
-                        <button type="button" class="btn-outline h-8 w-8 p-0" aria-label="More" (click)="qty(l.id, l.quantity + 1)">+</button>
+                        <!-- An item set to "one per line" on its stock card has no quantity buttons: add it again for another one. -->
+                        @if (qtyLocked(l.productId)) { <span class="w-8 text-center" data-testid="line-qty">x{{ l.quantity }}</span> }
+                        @else {
+                          <button type="button" class="btn-outline h-8 w-8 p-0" aria-label="Fewer" (click)="qty(l.id, l.quantity - 1)">-</button>
+                          <span class="w-8 text-center" data-testid="line-qty">{{ l.quantity }}</span>
+                          <button type="button" class="btn-outline h-8 w-8 p-0" aria-label="More" (click)="qty(l.id, l.quantity + 1)">+</button>
+                        }
                         <button type="button" class="btn-ghost ml-auto px-2 py-1 text-sm" (click)="qty(l.id, 0)">Remove</button>
                       } @else {
                         <span class="w-8 text-center">x{{ l.quantity }}</span>
@@ -471,6 +478,11 @@ export class PosBillingComponent implements OnInit {
         if (open && this.bar.enabled() && this.online()) void this.store.open(open.id).catch(() => undefined);
       });
     }, { allowSignalWrites: true });
+  }
+
+  /** The item's stock card says its quantity is not changed at the till. UX only: the server refuses it too. */
+  protected qtyLocked(productId: string): boolean {
+    return this.store.products().find((p) => p.id === productId)?.editQtyOnSales === false;
   }
 
   protected barLabel(state: BarLineState): string {

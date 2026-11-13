@@ -75,6 +75,18 @@ export interface ProductDto {
   hasRecipe: boolean;
   /** The linked stock item carries serial numbers: the till asks for the unit's serial and sells one unit per line. */
   tracksSerials: boolean;
+  /**
+   * Sale rules of the linked stock item (stock card). `price` is what the till charges now: the special while its period runs, else the
+   * regular price. The server enforces every one of these; the till follows them so the person is not surprised by a refusal.
+   */
+  regularPrice?: number;
+  onSpecial?: boolean;
+  specialEndsAtUtc?: string | null;
+  taxExempt?: boolean;
+  blockQtyFractions?: boolean;
+  editQtyOnSales?: boolean;
+  blockDiscount?: boolean;
+  minimumPrice?: number | null;
   modifiers: ModifierDto[];
   available: number | null;
   rowVersion: string;
@@ -138,6 +150,12 @@ export interface OrderLineDto {
   discountAmount: number;
   lineTotal: number;
   status: LineStatus;
+  /** The company tax is not charged on this line. */
+  taxExempt?: boolean;
+  /** The unit price was the item's special price when the line was added. */
+  onSpecial?: boolean;
+  /** The item blocks discounts: none on this line, and a whole-bill discount skips it. */
+  blockDiscount?: boolean;
   /** True once the line has been sent (to the bar man, for a company that uses the bar man method). */
   confirmed: boolean;
   voidReason: string | null;
@@ -397,6 +415,37 @@ export interface InventoryItemDto {
   sellingPrice: number | null;
   tradePrice?: number | null;
   wholesalePrice?: number | null;
+  // ---- Stock card. Price fields are null without the selling-price right, cost fields without the cost right.
+  resellerPrice?: number | null;
+  bundlePrice?: number | null;
+  specialPrice?: number | null;
+  /** UTC on the wire; the card shows and takes them in the company's time zone. */
+  specialFromUtc?: string | null;
+  specialToUtc?: string | null;
+  minimumPrice?: number | null;
+  suggestedRetailPrice?: number | null;
+  specialCost?: number | null;
+  /** yyyy-MM-dd */
+  specialCostFrom?: string | null;
+  specialCostTo?: string | null;
+  blockQtyFractions?: boolean;
+  useScale?: boolean;
+  printOnInvoice?: boolean;
+  editQtyOnSales?: boolean;
+  blockDiscount?: boolean;
+  taxExempt?: boolean;
+  pointsValue?: number;
+  salesAccount?: string | null;
+  purchaseAccount?: string | null;
+  userPrompt?: string | null;
+  notes?: string | null;
+  onSpecial?: boolean;
+  hasPicture?: boolean;
+  /** Filled when one item is read (the card); absent in lists. */
+  onOrderQuantity?: number | null;
+  lastSoldAtUtc?: string | null;
+  lastReceiptAtUtc?: string | null;
+  lastOrderedAtUtc?: string | null;
   isActive: boolean;
   isDemo: boolean;
   onHand: number;
@@ -434,6 +483,32 @@ export interface SaveInventoryItemRequest {
   sellingPrice?: number | null;
   tradePrice?: number | null;
   wholesalePrice?: number | null;
+  // ---- Stock card. Price fields are null without the selling-price right, cost fields without the cost right.
+  resellerPrice?: number | null;
+  bundlePrice?: number | null;
+  specialPrice?: number | null;
+  /** UTC on the wire; the card shows and takes them in the company's time zone. */
+  specialFromUtc?: string | null;
+  specialToUtc?: string | null;
+  minimumPrice?: number | null;
+  suggestedRetailPrice?: number | null;
+  specialCost?: number | null;
+  /** yyyy-MM-dd */
+  specialCostFrom?: string | null;
+  specialCostTo?: string | null;
+  blockQtyFractions?: boolean;
+  useScale?: boolean;
+  printOnInvoice?: boolean;
+  editQtyOnSales?: boolean;
+  blockDiscount?: boolean;
+  taxExempt?: boolean;
+  pointsValue?: number;
+  salesAccount?: string | null;
+  purchaseAccount?: string | null;
+  userPrompt?: string | null;
+  notes?: string | null;
+  /** Cost of the most recent purchase; applied only with the cost right. */
+  lastCost?: number | null;
   isActive: boolean;
   rowVersion: string | null;
 }

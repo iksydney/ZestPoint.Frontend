@@ -180,7 +180,8 @@ export class PosStore {
     const line: OrderLineDto = {
       id: crypto.randomUUID(), productId: product.id, productName: product.name, unitPrice: product.price, quantity, seat, serialNumber, notes: null,
       modifiers: mods.map((m) => ({ id: m.id, name: m.name, priceDelta: m.priceDelta })), modifierTotal: round2(mods.reduce((s, m) => s + m.priceDelta, 0)),
-      discountAmount: 0, lineTotal: 0, status: 'Active', confirmed: false, voidReason: null, voidPending: false
+      discountAmount: 0, lineTotal: 0, status: 'Active', confirmed: false, voidReason: null, voidPending: false,
+      taxExempt: product.taxExempt ?? false, onSpecial: product.onSpecial ?? false, blockDiscount: product.blockDiscount ?? false
     };
     await this.commit(
       recalculate({ ...o, lines: [...o.lines, line] }), 'order.line.add',

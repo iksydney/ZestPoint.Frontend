@@ -21,6 +21,7 @@ import { ZpIconComponent } from '../../shared/ui/zp-icon.component';
 import { PoPrintSheetComponent } from './po-print-sheet.component';
 import { SupplierFormComponent, SupplierLookupComponent } from './supplier-dialogs.component';
 import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
+import { StockCardComponent } from '../inventory/stock-card.component';
 
 const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
 const TERMS: readonly { days: number; label: string }[] = [
@@ -65,7 +66,7 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
 @Component({
   selector: 'zp-po-workstation',
   standalone: true,
-  imports: [EntitledActionDirective, DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, SupplierLookupComponent, SupplierFormComponent, PoPrintSheetComponent],
+  imports: [EntitledActionDirective, DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, SupplierLookupComponent, SupplierFormComponent, PoPrintSheetComponent, StockCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="no-print flex flex-col gap-4 font-jakarta" data-testid="po-workstation">
@@ -184,7 +185,7 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
               <zp-icon name="scan" [size]="18" class="ml-2 text-primary" />
               <input #scan class="w-full bg-transparent font-data text-xs placeholder:text-ink/50 focus:outline-none" placeholder="Quick scan barcode or SKU, or type an item name" data-testid="po-scan" autocomplete="off" [ngModel]="scanText()" (ngModelChange)="onScanText($event)" (keydown.enter)="scanEnter(); $event.preventDefault()" />
               <span class="po-kbd">F4</span>
-              <button type="button" class="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 font-data text-[11px] font-bold text-on-primary" data-testid="po-add-sku" (click)="scanEnter()"><zp-icon name="plus" [size]="14" /> Add SKU</button>
+              <button type="button" class="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 font-data text-[11px] font-bold text-on-primary" data-testid="po-add-sku" [attr.title]="canAddItems() ? 'Create a new stock item and add it to this document' : 'You need the right to edit stock items to create one'" (click)="addSku()"><zp-icon name="plus" [size]="14" /> Add SKU</button>
               @if (matches().length > 0) {
                 <ul class="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-ink/15 bg-panel shadow-xl" data-testid="po-matches">
                   @for (m of matches(); track m.id) { <li><button type="button" class="app-focus flex w-full justify-between gap-3 px-3 py-2 text-left hover:bg-primary/10" [attr.data-testid]="'po-match-' + m.id" (click)="addItem(m)"><span class="text-sm font-semibold">{{ m.name }}</span><span class="font-data text-[11px] text-ink/60">{{ m.sku }} {{ m.barcode }}</span></button></li> }
@@ -194,6 +195,8 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
           }
         </div>
         @if (scanNote()) { <p class="text-xs text-warning" role="status" data-testid="po-scan-note">{{ scanNote() }}</p> }
+        <!-- Add SKU: the stock card for a brand-new item; once saved it goes straight onto this document. -->
+        @if (newItemOpen()) { <zp-stock-card [itemId]="null" [prefill]="newItemPrefill()" (savedItem)="onNewItem($event)" (closed)="newItemOpen.set(false)" /> }
 
         <div class="overflow-x-auto rounded-lg bg-ink/5">
           <table class="w-full min-w-[60rem] text-left" data-testid="po-lines">
@@ -403,6 +406,8 @@ export class PurchaseOrderWorkstationComponent implements OnInit {
   protected readonly scanText = signal('');
   protected readonly matches = signal<readonly InventoryItemDto[]>([]);
   protected readonly scanNote = signal<string | null>(null);
+  protected readonly newItemOpen = signal(false);
+  protected readonly newItemPrefill = signal<{ name?: string; barcode?: string } | null>(null);
 
   // Dialogs.
   protected readonly lookupOpen = signal(false);
@@ -427,6 +432,8 @@ export class PurchaseOrderWorkstationComponent implements OnInit {
   private readonly formKey = `po-${crypto.randomUUID()}`;
   private readonly receiptKey = `dc-${crypto.randomUUID()}`;
 
+  /** UX only: creating a stock item is checked again by the server. */
+  protected readonly canAddItems = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_ITEMS_MANAGE));
   protected readonly canDirect = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.PURCHASING_RECEIVE));
   protected readonly direct = computed(() => this.type() === 'DirectConsignment');
   protected readonly editable = computed(() => !this.doc() || this.doc()!.actions.canEdit);
@@ -615,9 +622,27 @@ export class PurchaseOrderWorkstationComponent implements OnInit {
       const exact = found.find((i) => i.barcode === text || i.sku?.toLowerCase() === text.toLowerCase());
       if (exact) this.addItem(exact);
       else if (found.length === 1) this.addItem(found[0]!);
-      else if (found.length === 0) this.scanNote.set(`Nothing matches "${text}". Check the code, or add the item in Add / Modify Stock first.`);
+      else if (found.length === 0) this.scanNote.set(this.canAddItems() ? `Nothing matches "${text}". Check the code, or press Add SKU to create it as a new item.` : `Nothing matches "${text}". Check the code, or ask someone who can edit stock items to add it.`);
       else this.matches.set(found);
     } catch (err) { this.scanNote.set(toApiError(err).message); }
+  }
+
+  /**
+   * Add SKU: with the right to edit stock items it opens the stock card for a NEW item, carrying over what was typed (digits are taken as
+   * a barcode, anything else as the name). Without that right it does what Enter does: looks the typed code up among existing items.
+   */
+  protected addSku(): void {
+    if (!this.canAddItems()) return void this.scanEnter();
+    const text = this.scanText().trim();
+    this.matches.set([]);
+    this.scanNote.set(null);
+    this.newItemPrefill.set(/^\d{6,}$/.test(text) ? { barcode: text } : { name: text });
+    this.newItemOpen.set(true);
+  }
+
+  protected onNewItem(item: InventoryItemDto): void {
+    this.newItemOpen.set(false);
+    this.addItem(item);
   }
 
   protected addItem(item: InventoryItemDto): void {
