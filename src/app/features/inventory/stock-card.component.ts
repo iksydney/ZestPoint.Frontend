@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AliasKind, ItemAliasDto, StockGroupDto } from '../../core/models/nav-ops.model';
-import { InventoryItemDto, SaveInventoryItemRequest, StockUnit, SupplierDto } from '../../core/models/ops.model';
+import { InventoryItemDto, SaveInventoryItemRequest, SellingUnitDto, StockUnit, SupplierDto } from '../../core/models/ops.model';
 import { BinDto } from '../../core/models/purchasing.model';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { TenantTimePipe } from '../../core/pipes/tenant-time.pipe';
@@ -18,7 +18,7 @@ import { utcToZoned, zonedToUtc } from '../../core/time-zone';
 import { ToastService } from '../../shared/ui/feedback';
 
 const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
-type Tab = 'details' | 'aliases' | 'picture' | 'history' | 'sales' | 'purchases';
+type Tab = 'details' | 'aliases' | 'units' | 'picture' | 'history' | 'sales' | 'purchases';
 type PriceKey = 'sellingPrice' | 'tradePrice' | 'wholesalePrice' | 'resellerPrice' | 'bundlePrice' | 'specialPrice';
 
 const PRICE_LEVELS: readonly { key: PriceKey; label: string; testId: string }[] = [
@@ -105,7 +105,6 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
                       [disabled]="t.needsItem && !saved()" [attr.title]="t.needsItem && !saved() ? 'Save the item first' : null" [attr.data-testid]="'sc-tab-' + t.key" (click)="tab.set(t.key)">{{ t.label }}</button>
             }
             <span class="px-3 py-2 text-sm text-ink/40" title="Comes with the Package Content step">Package content</span>
-            <span class="px-3 py-2 text-sm text-ink/40" title="Comes with the Units of Measure step">Unit of measure</span>
           </div>
 
           @switch (tab()) {
@@ -219,6 +218,31 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
               </fieldset>
             }
 
+            @case ('units') {
+              <div class="space-y-3" data-testid="units-tab">
+                <p class="text-sm text-ink/80">Other ways this item is sold besides singly, for example Half case = 6, Case = 12. At the till one unit costs the item's price (or its special) times what it holds, and that many leave the shelf. Adding a unit never adds stock: stock comes in through purchasing, receiving and adjustments.</p>
+                <table class="app-table" data-testid="unit-list">
+                  <thead><tr><th>Unit</th><th class="text-right">Holds</th><th>Barcode</th>@if (canPrice()) { <th class="text-right">Sells for now</th> }<th></th></tr></thead>
+                  <tbody>
+                    @for (u of units(); track u.id) {
+                      <tr [attr.data-testid]="'unit-row-' + u.name"><td class="font-medium">{{ u.name }}</td><td class="text-right font-mono">{{ u.size | number: '1.0-3' }}</td><td class="font-mono text-xs">{{ u.barcode }}</td>
+                        @if (canPrice()) { <td class="text-right font-mono">{{ unitPrice(u.size) | number: '1.2-2' }}</td> }
+                        <td class="text-right">@if (!readOnly()) { <button type="button" class="btn-ghost px-2 py-0.5 text-sm text-danger" [attr.data-testid]="'unit-remove-' + u.name" (click)="removeUnit(u)">Remove</button> }</td></tr>
+                    } @empty { <tr><td [attr.colspan]="canPrice() ? 5 : 4" class="py-4 text-center text-ink/70">Sold singly only.</td></tr> }
+                  </tbody>
+                </table>
+                @if (!readOnly()) {
+                  <div class="grid gap-2 sm:grid-cols-[1fr_8rem_1fr_auto] sm:items-end">
+                    <div><label class="app-label" for="sc-u-name">Unit name</label><input id="sc-u-name" class="app-input" maxlength="40" placeholder="e.g. Case" data-testid="unit-name" [ngModel]="unitName()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="unitName.set($event)" /></div>
+                    <div><label class="app-label" for="sc-u-size">Holds</label><input id="sc-u-size" type="number" min="0" step="any" class="app-input" placeholder="12" data-testid="unit-size" [ngModel]="unitSize()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="unitSize.set(unitNumber($event))" /></div>
+                    <div><label class="app-label" for="sc-u-barcode">Its barcode (optional)</label><input id="sc-u-barcode" class="app-input font-mono" maxlength="60" data-testid="unit-barcode" [ngModel]="unitBarcode()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="unitBarcode.set($event)" /></div>
+                    <button type="button" class="btn-outline" data-testid="unit-add" [disabled]="!unitName().trim() || !unitSize()" (click)="addUnit()">Add unit</button>
+                  </div>
+                }
+                @if (unitError()) { <p class="app-error" role="alert" data-testid="unit-error">{{ unitError() }}</p> }
+              </div>
+            }
+
             @case ('picture') {
               <div class="grid gap-4 sm:grid-cols-[16rem_1fr]" data-testid="picture-tab">
                 <div class="grid h-56 place-items-center overflow-hidden rounded-lg border border-ink/15 bg-ink/5">
@@ -293,7 +317,7 @@ export class StockCardComponent implements OnDestroy {
   readonly navigate = output<string>();
 
   protected readonly tabs: readonly { key: Tab; label: string; needsItem: boolean }[] = [
-    { key: 'details', label: 'Details', needsItem: false }, { key: 'aliases', label: 'Equivalent part numbers', needsItem: true }, { key: 'picture', label: 'Picture', needsItem: true },
+    { key: 'details', label: 'Details', needsItem: false }, { key: 'aliases', label: 'Equivalent part numbers', needsItem: true }, { key: 'units', label: 'Unit of measure', needsItem: true }, { key: 'picture', label: 'Picture', needsItem: true },
     { key: 'history', label: 'History', needsItem: true }, { key: 'sales', label: 'Sales', needsItem: true }, { key: 'purchases', label: 'Purchases', needsItem: true }
   ];
   protected readonly levels = PRICE_LEVELS;
@@ -318,6 +342,11 @@ export class StockCardComponent implements OnDestroy {
   protected readonly aliasCode = signal('');
   protected readonly aliasSupplier = signal('');
   protected readonly aliasError = signal<string | null>(null);
+  protected readonly units = signal<readonly SellingUnitDto[]>([]);
+  protected readonly unitName = signal('');
+  protected readonly unitSize = signal<number | null>(null);
+  protected readonly unitBarcode = signal('');
+  protected readonly unitError = signal<string | null>(null);
   protected readonly pictureUrl = signal<string | null>(null);
   protected readonly pictureError = signal<string | null>(null);
   protected readonly pictureBusy = signal(false);
@@ -377,6 +406,8 @@ export class StockCardComponent implements OnDestroy {
     this.formError.set(null);
     this.loadError.set(null);
     this.aliases.set([]);
+    this.units.set([]);
+    this.unitError.set(null);
     this.revokePicture();
     this.binId.set(null);
     this.binAtLoad = null;
@@ -393,6 +424,7 @@ export class StockCardComponent implements OnDestroy {
     try {
       this.adopt(await firstValueFrom(this.inventory.item(id, this.branches.activeId() ?? undefined)));
       void firstValueFrom(this.extras.aliases(id)).then((a) => this.aliases.set(a)).catch(() => undefined);
+      void firstValueFrom(this.inventory.units(id)).then((u) => this.units.set(u)).catch((err) => this.unitError.set(toApiError(err).message));
       void this.loadBinDefault(id);
     } catch (err) { this.loadError.set(toApiError(err).message); } finally { this.loading.set(false); }
   }
@@ -490,6 +522,45 @@ export class StockCardComponent implements OnDestroy {
     if (!id) return;
     try { await firstValueFrom(this.extras.removeAlias(id, a.id)); this.aliases.update((l) => l.filter((x) => x.id !== a.id)); }
     catch (err) { this.aliasError.set(toApiError(err).message); }
+  }
+
+  // ---- Selling units (Unit of measure) ----
+
+  protected unitNumber(v: unknown): number | null {
+    const x = typeof v === 'number' ? v : parseFloat(String(v ?? ''));
+    return Number.isFinite(x) ? x : null;
+  }
+
+  /** What one unit sells for now: the special while it runs, else the retail price, times what it holds. Null when there is no price. */
+  protected unitPrice(size: number): number | null {
+    const f = this.f() as { specialPrice?: number | null; sellingPrice?: number | null };
+    const each = this.item()?.onSpecial ? f.specialPrice : f.sellingPrice;
+    return each === null || each === undefined ? null : Math.round(each * size * 100) / 100;
+  }
+
+  protected async addUnit(): Promise<void> {
+    const id = this.saved();
+    const size = this.unitSize();
+    if (!id || !size) return;
+    this.unitError.set(null);
+    try {
+      const unit = await firstValueFrom(this.inventory.saveUnit(id, null, { name: this.unitName().trim(), size, barcode: this.unitBarcode().trim() || null, isActive: true }));
+      this.units.update((l) => [...l, unit].sort((a, b) => a.size - b.size));
+      this.unitName.set('');
+      this.unitSize.set(null);
+      this.unitBarcode.set('');
+    } catch (err) {
+      const e = toApiError(err);
+      this.unitError.set(Object.values(e.fieldErrors ?? {})[0]?.[0] ?? e.message);
+    }
+  }
+
+  protected async removeUnit(u: SellingUnitDto): Promise<void> {
+    const id = this.saved();
+    if (!id) return;
+    this.unitError.set(null);
+    try { await firstValueFrom(this.inventory.removeUnit(id, u.id)); this.units.update((l) => l.filter((x) => x.id !== u.id)); }
+    catch (err) { this.unitError.set(toApiError(err).message); }
   }
 
   // ---- Picture ---------------------------------------------------------------------------------

@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { recalculate, round2 } from '../offline/order-calc';
 import {
-  CategoryDto, CompanySettingsDto, LocalOrder, OrderDto, OrderKind, OrderLineDto, PayRequest, PaymentMethod, ProductDto, VoidAuthorizer
+  CategoryDto, CompanySettingsDto, LocalOrder, OrderDto, OrderKind, OrderLineDto, PayRequest, PaymentMethod, ProductDto, SellingUnitDto, VoidAuthorizer
 } from '../models/ops.model';
 import { ApiError, toApiError } from './api.util';
 import { AuthService } from './auth.service';
@@ -174,18 +174,20 @@ export class PosStore {
 
   // ---- Editing (offline-first) ----------------------------------------------------------------------
 
-  async addProduct(product: ProductDto, quantity: number, modifierIds: string[] = [], seat: number | null = null, serialNumber: string | null = null): Promise<void> {
+  /** `unit` sells one of the product's selling units (a case): its price is the item's price times what it holds, as the server will set it. */
+  async addProduct(product: ProductDto, quantity: number, modifierIds: string[] = [], seat: number | null = null, serialNumber: string | null = null, unit: SellingUnitDto | null = null): Promise<void> {
     const o = this.requireEditable();
     const mods = product.modifiers.filter((m) => modifierIds.includes(m.id) && m.isActive);
     const line: OrderLineDto = {
-      id: crypto.randomUUID(), productId: product.id, productName: product.name, unitPrice: product.price, quantity, seat, serialNumber, notes: null,
+      id: crypto.randomUUID(), productId: product.id, productName: unit ? `${product.name} (${unit.name} of ${unit.size})` : product.name,
+      unitPrice: unit ? round2(product.price * unit.size) : product.price, sellingUnitId: unit?.id ?? null, unitSize: unit?.size ?? null, quantity, seat, serialNumber, notes: null,
       modifiers: mods.map((m) => ({ id: m.id, name: m.name, priceDelta: m.priceDelta })), modifierTotal: round2(mods.reduce((s, m) => s + m.priceDelta, 0)),
       discountAmount: 0, lineTotal: 0, status: 'Active', confirmed: false, voidReason: null, voidPending: false,
       taxExempt: product.taxExempt ?? false, onSpecial: product.onSpecial ?? false, blockDiscount: product.blockDiscount ?? false
     };
     await this.commit(
       recalculate({ ...o, lines: [...o.lines, line] }), 'order.line.add',
-      { orderId: o.id, id: line.id, productId: product.id, quantity, seat, notes: null, modifierIds, serialNumber }, `Add ${product.name}${serialNumber ? ' (' + serialNumber + ')' : ''} x${quantity}`
+      { orderId: o.id, id: line.id, productId: product.id, quantity, seat, notes: null, modifierIds, serialNumber, sellingUnitId: unit?.id ?? null }, `Add ${line.productName}${serialNumber ? ' (' + serialNumber + ')' : ''} x${quantity}`
     );
   }
 

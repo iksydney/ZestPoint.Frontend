@@ -209,4 +209,67 @@ test.describe('Stock card', () => {
     await expect(page.getByTestId('sync-pending')).toHaveCount(0, { timeout: 30_000 });
     await expect(page.getByTestId('bill-total')).toContainText('1,350.00');             // the server agrees with the till's own sum
   });
+
+  test('selling units are set on the Unit of measure tab and the till sells a case at the price times what it holds', async ({ page }) => {
+    await ownerInApp(page);
+    await page.goto('/app/inventory/items');
+    await page.getByTestId('item-new').click();
+    await expect(page.getByTestId('sc-tab-units')).toBeDisabled();                       // units need a saved item
+    await page.getByTestId('item-name').fill('Lager');
+    await page.getByTestId('item-barcode').fill('6001000000017');
+    await page.getByTestId('item-price').fill('1000');
+    await page.getByTestId('item-tax').selectOption('exempt');
+    await page.getByTestId('item-save').click();
+    await expect(page.getByTestId('item-Lager')).toBeVisible();
+
+    await page.getByTestId('item-edit-Lager').click();
+    await page.getByTestId('sc-tab-units').click();
+    await expect(page.getByTestId('unit-list')).toContainText('Sold singly only.');
+    await expect(page.getByTestId('unit-add')).toBeDisabled();
+    await page.getByTestId('unit-name').fill('Case');
+    await page.getByTestId('unit-size').fill('12');
+    await page.getByTestId('unit-barcode').fill('6001000000024');
+    await page.getByTestId('unit-add').click();
+    await expect(page.getByTestId('unit-row-Case')).toContainText('12,000.00');          // 12 x 1,000
+    await page.getByTestId('unit-name').fill('Half case');
+    await page.getByTestId('unit-size').fill('6');
+    await page.getByTestId('unit-add').click();
+    await expect(page.getByTestId('unit-row-Half case')).toContainText('6,000.00');
+    // The server refuses a second unit with the same name, and one that holds a single.
+    await page.getByTestId('unit-name').fill('case');
+    await page.getByTestId('unit-size').fill('10');
+    await page.getByTestId('unit-add').click();
+    await expect(page.getByTestId('unit-error')).toBeVisible();
+    await page.getByTestId('unit-name').fill('Tray');
+    await page.getByTestId('unit-size').fill('24');
+    await page.getByTestId('unit-add').click();
+    await expect(page.getByTestId('unit-row-Tray')).toBeVisible();
+    await page.getByTestId('unit-remove-Tray').click();
+    await expect(page.getByTestId('unit-row-Tray')).toHaveCount(0);
+    await page.getByTestId('sc-tab-details').click();
+    await expect(page.getByTestId('fig-on-hand')).toHaveText('0');                       // adding units added no stock
+    await page.getByTestId('sc-close').click();
+
+    // The till asks how it is sold.
+    await page.goto('/app/pos');
+    await page.getByTestId('new-bill').click();
+    await page.getByTestId('nb-label').fill('Cases');
+    await page.getByTestId('nb-create').click();
+    await page.getByTestId('product-Lager').click();
+    await expect(page.getByTestId('unit-single')).toContainText('1,000.00');
+    await expect(page.getByTestId('unit-Half case')).toContainText('6,000.00');
+    await page.getByTestId('unit-Case').click();
+    await expect(page.getByTestId('line-Lager (Case of 12)')).toContainText('12,000.00');
+    await page.getByTestId('product-Lager').click();
+    await page.getByTestId('unit-single').click();
+    await expect(page.getByTestId('bill-total')).toContainText('13,000.00');
+
+    // The barcode on the case sells a case without asking; the item's own barcode still asks.
+    await page.getByTestId('barcode').fill('6001000000024');
+    await page.getByTestId('barcode').press('Enter');
+    await expect(page.getByTestId('unit-choices')).toHaveCount(0);
+    await expect(page.getByTestId('bill-total')).toContainText('25,000.00');
+    await expect(page.getByTestId('sync-pending')).toHaveCount(0, { timeout: 30_000 });
+    await expect(page.getByTestId('bill-total')).toContainText('25,000.00');             // the server agrees
+  });
 });

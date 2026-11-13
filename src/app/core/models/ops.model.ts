@@ -87,10 +87,27 @@ export interface ProductDto {
   editQtyOnSales?: boolean;
   blockDiscount?: boolean;
   minimumPrice?: number | null;
+  /** Other ways this product is sold (a case of 12), each priced at the item's price times what it holds. */
+  sellingUnits?: SellingUnitDto[];
   modifiers: ModifierDto[];
   available: number | null;
   rowVersion: string;
 }
+
+/** A selling unit of an item (the Unit of Measure tab of the stock card). It has no price or stock of its own. */
+export interface SellingUnitDto {
+  id: string;
+  inventoryItemId: string;
+  name: string;
+  /** How many base units one of these holds. */
+  size: number;
+  barcode: string | null;
+  isActive: boolean;
+  /** What one unit costs at the till now; null where prices are not shown. */
+  price: number | null;
+}
+
+export interface SaveSellingUnitRequest { name: string; size: number; barcode: string | null; isActive: boolean }
 
 export interface SaveProductRequest {
   categoryId: string | null;
@@ -156,6 +173,9 @@ export interface OrderLineDto {
   onSpecial?: boolean;
   /** The item blocks discounts: none on this line, and a whole-bill discount skips it. */
   blockDiscount?: boolean;
+  /** Set when the line sells a selling unit (a case): quantity counts units, each holding unitSize base units. */
+  sellingUnitId?: string | null;
+  unitSize?: number | null;
   /** True once the line has been sent (to the bar man, for a company that uses the bar man method). */
   confirmed: boolean;
   voidReason: string | null;

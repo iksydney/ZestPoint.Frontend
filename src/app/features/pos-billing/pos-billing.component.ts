@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, s
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
-import { BarLineState, OrderKind, PaymentMethod, ProductDto, ReceiptDto, VoidAuthorizer, VoidRequestDto } from '../../core/models/ops.model';
+import { BarLineState, OrderKind, PaymentMethod, ProductDto, ReceiptDto, SellingUnitDto, VoidAuthorizer, VoidRequestDto } from '../../core/models/ops.model';
 import { splitEvenly } from '../../core/offline/order-calc';
 import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
@@ -17,7 +17,7 @@ import { BranchPickerComponent, SyncStatusComponent } from '../../shared/ui/ops-
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 import { VoidAuthoriserComponent } from './void-authoriser.component';
 
-type Dialog = 'new' | 'serial' | 'modifiers' | 'pay' | 'void' | 'discount' | 'split' | 'merge' | 'transfer' | 'receipt' | 'approvals' | 'tip' | null;
+type Dialog = 'new' | 'serial' | 'unit' | 'modifiers' | 'pay' | 'void' | 'discount' | 'split' | 'merge' | 'transfer' | 'receipt' | 'approvals' | 'tip' | null;
 
 /**
  * Three-panel point of sale: open bills | catalogue | the bill being built. Works offline for everything except card/transfer
@@ -204,6 +204,18 @@ type Dialog = 'new' | 'serial' | 'modifiers' | 'pay' | 'void' | 'discount' | 'sp
         @if (!syncAgent.online()) { <p class="text-xs text-ink/70" role="status">You are offline: the serial is checked against stock when the bill syncs.</p> }
         <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="serial-add" [disabled]="!serialText().trim()">Continue</button></div>
       </form>
+    </zp-dialog>
+
+    <!-- Sold singly or by one of its selling units (a case): the price of a unit is the item's price times what it holds -->
+    <zp-dialog [open]="dialog() === 'unit'" [title]="'How is ' + (pending()?.name ?? 'it') + ' sold?'" (closed)="dialog.set(null)">
+      @if (pending(); as p) {
+        <div class="grid gap-2" data-testid="unit-choices">
+          <button type="button" class="btn-outline touch-target justify-between" data-testid="unit-single" (click)="chooseUnit(null)"><span>Single</span><span class="font-bold">{{ p.price | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</span></button>
+          @for (u of p.sellingUnits ?? []; track u.id) {
+            <button type="button" class="btn-outline touch-target justify-between" [attr.data-testid]="'unit-' + u.name" (click)="chooseUnit(u)"><span>{{ u.name }} <span class="text-ink/70">of {{ u.size }}</span></span><span class="font-bold">{{ p.price * u.size | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</span></button>
+          }
+        </div>
+      }
     </zp-dialog>
 
     <!-- Modifiers -->
@@ -395,6 +407,7 @@ export class PosBillingComponent implements OnInit {
   protected readonly chosenMods = signal<readonly string[]>([]);
   protected readonly serialText = signal('');
   private serialChosen: string | null = null;
+  private unitChosen: SellingUnitDto | null = null;
 
   protected readonly payMethod = signal<PaymentMethod>('Cash');
   protected readonly payAmount = signal(0);
@@ -535,12 +548,25 @@ export class PosBillingComponent implements OnInit {
     this.continuePick(p);
   }
 
-  private continuePick(p: ProductDto): void {
+  /** A product with selling units asks first how it is being sold; `unit` is given when a case barcode already answered that. */
+  private continuePick(p: ProductDto, unit?: SellingUnitDto | null): void {
+    if (unit === undefined && (p.sellingUnits?.length ?? 0) > 0) {
+      this.pending.set(p);
+      this.dialog.set('unit');
+      return;
+    }
+    this.unitChosen = unit ?? null;
     if (p.modifiers.some((m) => m.isActive)) {
       this.pending.set(p);
       this.chosenMods.set([]);
       this.dialog.set('modifiers');
-    } else void this.run(() => this.store.addProduct(p, 1, [], null, this.serialChosen));
+    } else void this.run(() => this.store.addProduct(p, 1, [], null, this.serialChosen, this.unitChosen));
+  }
+
+  protected chooseUnit(unit: SellingUnitDto | null): void {
+    const p = this.pending();
+    this.dialog.set(null);
+    if (p) this.continuePick(p, unit);
   }
 
   protected confirmSerial(): void {
@@ -558,7 +584,7 @@ export class PosBillingComponent implements OnInit {
 
   protected async addPending(): Promise<void> {
     const p = this.pending();
-    if (p) await this.run(() => this.store.addProduct(p, 1, [...this.chosenMods()], null, this.serialChosen));
+    if (p) await this.run(() => this.store.addProduct(p, 1, [...this.chosenMods()], null, this.serialChosen, this.unitChosen));
     this.dialog.set(null);
   }
 
@@ -578,6 +604,11 @@ export class PosBillingComponent implements OnInit {
     const hit = this.store.products().find((p) => p.barcode === code);
     this.barcode.set('');
     if (hit) { this.pick(hit); return; }
+    // The barcode printed on a case sells that case.
+    for (const p of this.store.products()) {
+      const unit = p.sellingUnits?.find((u) => u.barcode === code);
+      if (unit) { this.serialChosen = null; this.continuePick(p, unit); return; }
+    }
     this.toast.error(`No product has the barcode ${code}.`);
   }
 

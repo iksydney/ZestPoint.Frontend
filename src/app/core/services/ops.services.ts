@@ -5,7 +5,7 @@ import { ApiEnvelope } from '../models/api.model';
 import {
   AddMeasurementRequest, AdjustStockRequest, AuditDto, BatchDto, CategoryDto, CompanySettingsDto, InventoryItemDto, MeasurementDto,
   MovementDto, OrderDto, OrderSummaryDto, PagedResult, PayRequest, ProductDto, PurchaseOrderDto, ReceiptDto, ReceiveGoodsRequest, RecipeDto,
-  SaveInventoryItemRequest, SavePurchaseOrderRequest, SaveProductRequest, SaveRecipeRequest, SaveSupplierRequest, SplitPreviewDto, SuggestedOrderDto,
+  SaveInventoryItemRequest, SaveSellingUnitRequest, SellingUnitDto, SavePurchaseOrderRequest, SaveProductRequest, SaveRecipeRequest, SaveSupplierRequest, SplitPreviewDto, SuggestedOrderDto,
   SupplierDto, SyncOperationDto, SyncOperationResultDto, TransferStockRequest, UpdateCompanySettingsRequest, UsageRowDto, VarianceDto,
   VarianceSummaryRowDto, VoidAuthorizer, VoidRequestDto
 } from '../models/ops.model';
@@ -162,6 +162,20 @@ export class InventoryApi {
   /** One item with the stock card's own figures (on order, last sold, last ordered). */
   item(id: string, branchId?: string): Observable<InventoryItemDto> {
     return this.http.get<ApiEnvelope<InventoryItemDto>>(`/api/v1/inventory/items/${id}`, { params: q({ branchId }) }).pipe(unwrap());
+  }
+
+  units(itemId: string): Observable<SellingUnitDto[]> {
+    return this.http.get<ApiEnvelope<SellingUnitDto[]>>(`/api/v1/inventory/items/${itemId}/units`).pipe(unwrap());
+  }
+
+  saveUnit(itemId: string, unitId: string | null, body: SaveSellingUnitRequest): Observable<SellingUnitDto> {
+    return unitId
+      ? this.http.put<ApiEnvelope<SellingUnitDto>>(`/api/v1/inventory/items/${itemId}/units/${unitId}`, body).pipe(unwrap())
+      : this.http.post<ApiEnvelope<SellingUnitDto>>(`/api/v1/inventory/items/${itemId}/units`, body).pipe(unwrap());
+  }
+
+  removeUnit(itemId: string, unitId: string): Observable<boolean> {
+    return this.http.delete<ApiEnvelope<boolean>>(`/api/v1/inventory/items/${itemId}/units/${unitId}`).pipe(unwrap());
   }
 
   /** The item's picture as a blob (the request carries the session, so an img tag cannot fetch it by itself). */
