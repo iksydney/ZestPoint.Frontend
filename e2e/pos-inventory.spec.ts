@@ -36,16 +36,19 @@ async function stockOf(page: Page, item: string): Promise<string> {
   return (await row.getByTestId('on-hand').innerText()).replace(/\s+/g, ' ');
 }
 
-async function addPinCashier(page: Page, name: string, pin = '7391'): Promise<number> {
+async function addPinCashier(page: Page, name: string, pin = '7391'): Promise<string> {
   await page.goto('/app/staff');
   await page.getByTestId('add-staff').click();
   await page.getByTestId('new-name').fill(name);
   await page.getByTestId('new-pin').fill(pin);
   await page.getByTestId('new-role-cashier').check();
   await page.getByTestId('create-staff').click();
+  const shown = (await page.getByTestId('staff-added-code').innerText()).trim();       // the panel shown right after adding
+  await page.getByTestId('staff-added-done').click();
   const row = page.getByRole('row').filter({ hasText: name });
   await expect(row).toBeVisible();
-  return Number(await row.locator('td').nth(1).innerText());
+  expect((await row.locator('td').nth(1).innerText()).trim()).toBe(shown);
+  return shown;
 }
 
 test.describe('Point of sale and inventory (criteria 18-24)', () => {
@@ -154,7 +157,7 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
     await cashier.page.goto('/login');
     await cashier.page.getByTestId('login-slug').fill(who.slug);
     await cashier.page.getByTestId('mode-pin').click();
-    await cashier.page.getByTestId('login-code').fill(String(code));
+    await cashier.page.getByTestId('login-code').fill(code);
     await cashier.page.getByTestId('login-pin').fill('7391');
     await cashier.page.getByTestId('login-submit').click();
     await expect(cashier.page).toHaveURL(/\/app\/(dashboard|pos)$/);

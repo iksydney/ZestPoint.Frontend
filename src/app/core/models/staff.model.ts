@@ -58,7 +58,8 @@ export interface SaveBranchRequest {
 export interface StaffListItemDto {
   readonly id: string;
   readonly displayName: string;
-  readonly staffCode: number;
+  /** Sign-in code formatted "BHL-007". */
+  readonly staffCode: string;
   readonly email: string | null;
   readonly status: MembershipStatus;
   readonly isOwner: boolean;

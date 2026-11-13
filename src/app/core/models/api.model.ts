@@ -76,7 +76,8 @@ export interface TenantSummaryDto {
 export interface MembershipSummaryDto {
   readonly id: string;
   readonly displayName: string;
-  readonly staffCode: number;
+  /** Sign-in code formatted "BHL-007": the company's letters, a dash and the person's number. */
+  readonly staffCode: string;
   readonly isOwner: boolean;
   readonly roles: readonly string[];
 }
@@ -157,7 +158,8 @@ export interface PasswordLoginRequest {
 
 export interface PinLoginRequest {
   readonly tenantSlug: string;
-  readonly staffCode: number;
+  /** As typed: "BHL-007"; case and the dash are optional. */
+  readonly staffCode: string;
   readonly pin: string;
 }
 

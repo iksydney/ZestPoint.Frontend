@@ -141,11 +141,37 @@ type Tone = 'success' | 'warning' | 'danger' | 'primary';
     </zp-dialog>
 
     <!-- ===== Person panel ===== -->
+    <!-- Shown right after someone is added, so the code they sign in with is never missed. -->
+    <zp-dialog [open]="!!added()" title="Staff member added" (closed)="added.set(null)">
+      @if (added(); as a) {
+        <div class="space-y-3" data-testid="staff-added">
+          <p class="text-sm"><strong>{{ a.displayName }}</strong> has been added. Give them this staff code: they need it every time they sign in.</p>
+          <div class="rounded-lg border border-ink/15 bg-ink/5 p-4 text-center">
+            <p class="text-xs uppercase tracking-wide text-ink/70">Staff code</p>
+            <p class="font-mono text-3xl font-bold tracking-wider" data-testid="staff-added-code">{{ a.staffCode }}</p>
+          </div>
+          <div class="text-sm">
+            <p class="font-medium">How they sign in</p>
+            <ol class="ml-5 list-decimal space-y-1 text-ink/80">
+              <li>Open the sign-in page and choose <strong>Staff PIN</strong>.</li>
+              <li>Venue: <strong data-testid="staff-added-venue">{{ auth.tenant()?.slug }}</strong></li>
+              <li>Staff code: <strong>{{ a.staffCode }}</strong> (capital letters and the dash are optional)</li>
+              <li>{{ a.hasPin ? 'The PIN you set for them.' : 'The PIN from their invitation e-mail; they choose their own after accepting it.' }}</li>
+            </ol>
+          </div>
+          <div class="flex justify-end gap-2">
+            <button type="button" class="btn-outline" data-testid="staff-added-copy" (click)="copyCode(a.staffCode)">Copy code</button>
+            <button type="button" class="btn-primary" data-testid="staff-added-done" (click)="added.set(null)">Done</button>
+          </div>
+        </div>
+      }
+    </zp-dialog>
+
     <zp-dialog [open]="!!detail()" [title]="detail()?.displayName ?? 'Staff member'" [wide]="true" (closed)="detail.set(null)">
       @if (detail(); as d) {
         <div class="mb-3 flex flex-wrap items-center gap-2 text-sm">
           <zp-status-badge [tone]="statusTone(d)">{{ statusLabel(d) }}</zp-status-badge>
-          <span class="text-ink/70">Staff code {{ d.staffCode }}</span>
+          <span class="text-ink/70">Staff code <strong class="font-mono text-ink" data-testid="detail-staff-code">{{ d.staffCode }}</strong></span>
           @if (d.email) { <span class="text-ink/70">{{ d.email }}</span> }
           <span class="text-ink/70">{{ d.activeSessions }} active session(s)</span>
         </div>
@@ -224,7 +250,7 @@ export class StaffListComponent {
   private readonly rolesApi = inject(RolesApiService);
   private readonly branchesApi = inject(BranchesApiService);
   private readonly onboarding = inject(OnboardingService);
-  private readonly auth = inject(AuthService);
+  protected readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
@@ -263,6 +289,8 @@ export class StaffListComponent {
   protected readonly e = signal({ displayName: '', roleIds: [] as string[], hasAllBranches: false, branchIds: [] as string[] });
   protected readonly dError = signal<string | null>(null);
   protected readonly devLink = signal<string | null>(null);
+  /** The person just added; drives the "Staff member added" panel that shows their sign-in code. */
+  protected readonly added = signal<StaffDetailDto | null>(null);
   protected readonly devPin = signal<string | null>(null);
   protected readonly sessions = signal<SessionDto[]>([]);
   protected readonly newPin = signal('');
@@ -302,6 +330,11 @@ export class StaffListComponent {
 
   // ---- create ---------------------------------------------------------------------------------
 
+  protected async copyCode(code: string): Promise<void> {
+    try { await navigator.clipboard.writeText(code); this.toast.success('Staff code copied.'); }
+    catch { this.toast.error('Could not copy. Write the code down instead.'); }
+  }
+
   protected openCreate(): void {
     this.c.set(emptyCreate());
     this.cErrors.set({});
@@ -329,6 +362,7 @@ export class StaffListComponent {
       this.createOpen.set(false);
       this.toast.success(`${result.staff.displayName} added (staff code ${result.staff.staffCode}).`);
       if (result.devInviteLink) { this.devLink.set(result.devInviteLink); this.devPin.set(result.devDefaultPin); this.detail.set(result.staff); this.beginEdit(result.staff); }
+      else this.added.set(result.staff);
       this.reload();
       this.changed.emit();
       this.completeStaffStepIfNeeded();

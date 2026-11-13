@@ -92,14 +92,14 @@ export class ShiftStore {
     const branch = this.branches.branches().find((b) => b.id === req.branchId);
     const now = new Date().toISOString();
     const local: ShiftDto = {
-      id: req.id, number: 0, branchId: req.branchId, branchName: branch?.name ?? '', terminalId: req.terminalId, membershipId: this.auth.membership()?.id ?? '',
+      id: req.id, number: 0, branchId: req.branchId, branchName: branch?.name ?? '', terminalId: '' /* assigned by the server when this open syncs */, membershipId: this.auth.membership()?.id ?? '',
       staffName: this.auth.membership()?.displayName ?? '', status: 'Open', businessDate: now.slice(0, 10), openedAtUtc: now, openingFloat: req.openingFloat, closedAtUtc: null,
       expectedCash: null, countedCash: null, variance: null, closingNotes: null, reviewedByName: null, reviewedAtUtc: null, reviewNote: null,
       currencyCode: this.auth.tenant()?.currencyCode ?? '', rowVersion: '',
       cash: { openingFloat: req.openingFloat, cashSales: 0, cashRefunds: 0, cashIn: 0, cashOut: 0, expectedCash: req.openingFloat, cardSales: 0, transferSales: 0, otherSales: 0, paymentCount: 0 },
       movements: []
     };
-    await this.sync.enqueue('shift.open', { ...req, clientAtUtc: now }, `Start shift on ${req.terminalId}`);
+    await this.sync.enqueue('shift.open', { ...req, clientAtUtc: now }, `Start shift at ${branch?.name ?? 'this branch'}`);
     this._current.set(local); this._waiting.set(true); this._local.set(true);
     await this.save(local);
     return local;

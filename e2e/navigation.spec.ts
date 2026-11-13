@@ -38,23 +38,26 @@ async function expandAll(page: Page) {
   }
 }
 
-async function addPinStaff(page: Page, name: string, roleKey: string, pin = '7391'): Promise<number> {
+async function addPinStaff(page: Page, name: string, roleKey: string, pin = '7391'): Promise<string> {
   await page.goto('/app/staff');
   await page.getByTestId('add-staff').click();
   await page.getByTestId('new-name').fill(name);
   await page.getByTestId('new-pin').fill(pin);
   await page.getByTestId(`new-role-${roleKey}`).check();
   await page.getByTestId('create-staff').click();
+  const shown = (await page.getByTestId('staff-added-code').innerText()).trim();       // the panel shown right after adding
+  await page.getByTestId('staff-added-done').click();
   const row = page.getByRole('row').filter({ hasText: name });
   await expect(row).toBeVisible();
-  return Number(await row.locator('td').nth(1).innerText());
+  expect((await row.locator('td').nth(1).innerText()).trim()).toBe(shown);
+  return shown;
 }
 
-async function pinSignIn(page: Page, slug: string, code: number, pin = '7391') {
+async function pinSignIn(page: Page, slug: string, code: string, pin = '7391') {
   await page.goto('/login');
   await page.getByTestId('login-slug').fill(slug);
   await page.getByTestId('mode-pin').click();
-  await page.getByTestId('login-code').fill(String(code));
+  await page.getByTestId('login-code').fill(code);
   await page.getByTestId('login-pin').fill(pin);
   await page.getByTestId('login-submit').click();
   await expect(page).toHaveURL(/\/app\/(dashboard|pos)/);
@@ -176,13 +179,13 @@ test.describe('POS, Stock and Purchasing navigation', () => {
     await pinSignIn(cashier.page, who.slug, cashierCode);
     await cashier.page.goto('/app/pos/day-management');
     await expect(cashier.page.getByTestId('day-start')).toBeVisible();
-    await expect(cashier.page.getByTestId('day-start-btn')).toBeDisabled();            // needs a terminal and a confirmed float
-    await cashier.page.getByTestId('day-terminal').fill('Till 1');
+    await expect(cashier.page.getByTestId('day-start-btn')).toBeDisabled();            // needs a confirmed float; the till is assigned, not typed
     await cashier.page.getByTestId('day-float').fill('100');
     await cashier.page.getByTestId('day-float-confirm').check();
     await cashier.page.getByTestId('day-start-btn').click();
 
     await expect(cashier.page.getByTestId('day-status')).toHaveText('Open');
+    await expect(cashier.page.getByTestId('day-till')).toHaveText('Till 1');               // first to start at the branch
     await expect(cashier.page.getByTestId('day-expected')).toContainText('100.00');
     await cashier.page.getByTestId('move-reason').fill('Float top-up');
     await cashier.page.getByTestId('move-amount').fill('25');
@@ -225,7 +228,6 @@ test.describe('POS, Stock and Purchasing navigation', () => {
     await p.waitForLoadState('networkidle');
 
     await cashier.context.setOffline(true);
-    await p.getByTestId('day-terminal').fill('Till 9');
     await p.getByTestId('day-float').fill('50');
     await p.getByTestId('day-float-confirm').check();
     await p.getByTestId('day-start-btn').click();

@@ -15,7 +15,6 @@ import { BranchPickerComponent } from '../../shared/ui/ops-chrome.components';
 import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
-const TERMINAL_KEY = (tenant: string) => `zp.terminal.${tenant}`;
 
 /**
  * Start / End of Day: the cashier's own shift. The till total is never typed in: expected cash is calculated by the server from the
@@ -45,10 +44,10 @@ const TERMINAL_KEY = (tenant: string) => `zp.terminal.${tenant}`;
           @else {
             <p class="text-sm">Branch: <strong>{{ branches.active()!.name }}</strong> &middot; User: <strong>{{ auth.membership()?.displayName }}</strong></p>
             <form class="space-y-3" (submit)="$event.preventDefault(); start()">
-              <div><label class="app-label" for="d-terminal">Terminal</label><input id="d-terminal" class="app-input" data-testid="day-terminal" maxlength="40" [ngModel]="terminal()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="terminal.set($event)" placeholder="e.g. Till 1" /></div>
+              <p class="text-sm" data-testid="day-till-note">Till: <strong>given to you when you start</strong>. You get the lowest free till number at this branch (the first person to start is Till 1, the next Till 2).</p>
               <div><label class="app-label" for="d-float">Opening float ({{ currency() }})</label><input id="d-float" type="number" min="0" step="0.01" class="app-input" data-testid="day-float" [ngModel]="openingFloat()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="openingFloat.set(+$event)" /></div>
               <label class="flex items-start gap-2 text-sm"><input type="checkbox" class="mt-1" data-testid="day-float-confirm" [checked]="floatConfirmed()" (change)="floatConfirmed.set(!floatConfirmed())" /> I counted the float and it is correct.</label>
-              <button type="submit" class="btn-primary" data-testid="day-start-btn" [disabled]="saving() || readOnly() || !canOpen() || !terminal().trim() || !floatConfirmed()">Start shift</button>
+              <button type="submit" class="btn-primary" data-testid="day-start-btn" [disabled]="saving() || readOnly() || !canOpen() || !floatConfirmed()">Start shift</button>
               @if (!canOpen()) { <p class="text-sm text-ink/70">Your role cannot start shifts.</p> }
             </form>
           }
@@ -58,7 +57,8 @@ const TERMINAL_KEY = (tenant: string) => `zp.terminal.${tenant}`;
         <section class="no-print space-y-4" data-testid="day-current">
           <div class="app-card flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p class="text-sm text-ink/70">Shift #{{ s.number }} &middot; {{ s.branchName }} &middot; {{ s.terminalId }} &middot; {{ s.staffName }}</p>
+              <p class="text-lg font-semibold" data-testid="day-till">{{ s.terminalId || 'Till number comes when this device syncs' }}</p>
+              <p class="text-sm text-ink/70">Shift #{{ s.number }} &middot; {{ s.branchName }} &middot; {{ s.staffName }}</p>
               <p class="text-sm">Opened {{ s.openedAtUtc | tenantTime }} &middot; business date {{ s.businessDate }}</p>
             </div>
             <zp-status-badge [tone]="tone(s.status)" data-testid="day-status">{{ statusText(s.status) }}</zp-status-badge>
@@ -138,7 +138,7 @@ const TERMINAL_KEY = (tenant: string) => `zp.terminal.${tenant}`;
       <section class="no-print mt-8" data-testid="day-history">
         <h2 class="mb-2 text-lg font-semibold">Shift history</h2>
         <div class="app-card overflow-x-auto p-0"><table class="app-table">
-          <thead><tr><th>Shift</th><th>Date</th><th>Staff</th><th>Terminal</th><th>Status</th><th class="text-right">Expected</th><th class="text-right">Counted</th><th class="text-right">Difference</th><th></th></tr></thead>
+          <thead><tr><th>Shift</th><th>Date</th><th>Staff</th><th>Till</th><th>Status</th><th class="text-right">Expected</th><th class="text-right">Counted</th><th class="text-right">Difference</th><th></th></tr></thead>
           <tbody>@for (h of history(); track h.id) {
             <tr><td>#{{ h.number }}</td><td>{{ h.businessDate }}</td><td>{{ h.staffName }}</td><td>{{ h.branchName }} / {{ h.terminalId }}</td>
               <td><zp-status-badge [tone]="tone(h.status)">{{ statusText(h.status) }}</zp-status-badge></td>
@@ -205,7 +205,6 @@ export class DayManagementComponent implements OnInit {
   protected readonly selected = signal<ShiftDto | null>(null);
   protected readonly reviewing = signal<ShiftDto | null>(null);
 
-  protected readonly terminal = signal('');
   protected readonly openingFloat = signal(0);
   protected readonly floatConfirmed = signal(false);
   protected readonly moveKind = signal<CashMovementKind>('CashIn');
@@ -233,8 +232,6 @@ export class DayManagementComponent implements OnInit {
 
   ngOnInit(): void {
     void this.branches.load();
-    const tenant = this.auth.tenantId();
-    if (tenant) try { this.terminal.set(localStorage.getItem(TERMINAL_KEY(tenant)) ?? ''); } catch { /* storage may be blocked */ }
     void this.refresh();
   }
 
@@ -261,12 +258,11 @@ export class DayManagementComponent implements OnInit {
     this.saving.set(true);
     this.error.set(null);
     try {
-      await this.store.open({ id: this.openId, branchId: branch.id, terminalId: this.terminal().trim(), openingFloat: this.openingFloat(), openingFloatConfirmed: this.floatConfirmed() });
-      const tenant = this.auth.tenantId();
-      if (tenant) try { localStorage.setItem(TERMINAL_KEY(tenant), this.terminal().trim()); } catch { /* ignore */ }
+      // No till is chosen here: the server gives this cashier the lowest free till number at the branch.
+      const shift = await this.store.open({ id: this.openId, branchId: branch.id, openingFloat: this.openingFloat(), openingFloatConfirmed: this.floatConfirmed() });
       this.openId = crypto.randomUUID();
       this.floatConfirmed.set(false);
-      this.toast.success(this.store.waitingToSync() ? 'Shift started on this device. It will sync when you are online.' : 'Shift started.');
+      this.toast.success(this.store.waitingToSync() ? 'Shift started on this device. Your till number is given when it syncs.' : `Shift started. You are on ${shift.terminalId}.`);
       if (!this.store.waitingToSync()) await this.refresh();
     } catch (err) { this.error.set(toApiError(err).message); } finally { this.saving.set(false); }
   }

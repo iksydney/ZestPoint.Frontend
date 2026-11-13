@@ -12,6 +12,8 @@ import { BrandMarkComponent } from '../../shared/ui/brand-mark.component';
 
 const SLUG_KEY = 'zp.lastVenue';
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+/** Company letters (2-3), optional dash, number: "BHL-007", "bhl7". Mirrors StaffCodes.TryParse on the server. */
+const STAFF_CODE_RE = /^[A-Za-z]{2,3}\s*-?\s*\d{1,9}$/;
 
 type Mode = 'password' | 'pin';
 
@@ -64,7 +66,8 @@ type Mode = 'password' | 'pin';
           } @else {
             <div>
               <label class="app-label" for="l-code">Staff code</label>
-              <input id="l-code" inputmode="numeric" class="app-input" autocomplete="off" [ngModel]="staffCode()" (ngModelChange)="staffCode.set($event)" name="code" data-testid="login-code" />
+              <input id="l-code" class="app-input uppercase" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20" placeholder="e.g. BHL-007" aria-describedby="l-code-hint" [ngModel]="staffCode()" (ngModelChange)="staffCode.set($event)" name="code" data-testid="login-code" />
+              <p id="l-code-hint" class="mt-1 text-xs text-ink/70">Your venue&apos;s letters and your number, as shown when you were added. The dash is optional.</p>
             </div>
             <div>
               <label class="app-label" for="l-pin">PIN</label>
@@ -103,7 +106,7 @@ export class LoginComponent {
 
   protected readonly ready = computed(() => {
     if (!SLUG_RE.test(this.slug())) return false;
-    return this.mode() === 'password' ? !!this.email().trim() && !!this.password() : /^\d{1,6}$/.test(this.staffCode().trim()) && /^\d{4,12}$/.test(this.pin());
+    return this.mode() === 'password' ? !!this.email().trim() && !!this.password() : STAFF_CODE_RE.test(this.staffCode().trim()) && /^\d{4,12}$/.test(this.pin());
   });
 
   constructor() {
@@ -131,7 +134,7 @@ export class LoginComponent {
     const slug = this.slug();
     const request$ = this.mode() === 'password'
       ? this.auth.loginWithPassword({ tenantSlug: slug, email: this.email().trim(), password: this.password() })
-      : this.auth.loginWithPin({ tenantSlug: slug, staffCode: Number(this.staffCode()), pin: this.pin() });
+      : this.auth.loginWithPin({ tenantSlug: slug, staffCode: this.staffCode().trim().toUpperCase(), pin: this.pin() });
 
     request$.subscribe({
       next: () => {

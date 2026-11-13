@@ -10,23 +10,25 @@ async function ownerAtStaff(page: Page) {
   return who;
 }
 
-async function addPinStaff(page: Page, name: string, roleKey: string, pin = '7391'): Promise<number> {
+async function addPinStaff(page: Page, name: string, roleKey: string, pin = '7391'): Promise<string> {
   await page.getByTestId('add-staff').click();
   await page.getByTestId('new-name').fill(name);
   await page.getByTestId('new-pin').fill(pin);
   await page.getByTestId(`new-role-${roleKey}`).check();
   await page.getByTestId('create-staff').click();
+  const shown = (await page.getByTestId('staff-added-code').innerText()).trim();       // the panel shown right after adding
+  await page.getByTestId('staff-added-done').click();
   const row = page.getByRole('row').filter({ hasText: name });
   await expect(row).toBeVisible();
-  const code = await row.locator('td').nth(1).innerText();
-  return Number(code);
+  expect((await row.locator('td').nth(1).innerText()).trim()).toBe(shown);
+  return shown;
 }
 
-async function pinSignIn(page: Page, slug: string, code: number, pin = '7391') {
+async function pinSignIn(page: Page, slug: string, code: string, pin = '7391') {
   await page.goto('/login');
   await page.getByTestId('login-slug').fill(slug);
   await page.getByTestId('mode-pin').click();
-  await page.getByTestId('login-code').fill(String(code));
+  await page.getByTestId('login-code').fill(code);
   await page.getByTestId('login-pin').fill(pin);
   await page.getByTestId('login-submit').click();
 }
@@ -35,7 +37,7 @@ test.describe('Staff management and screen-level RBAC (criteria 13-17)', () => {
   test('an administrator adds staff with a role and the staff member signs in with venue + code + PIN', async ({ page, browser }) => {
     const who = await ownerAtStaff(page);
     const code = await addPinStaff(page, 'Tunde Bello', 'cashier');
-    expect(code).toBe(2);
+    expect(code).toMatch(/^[A-Z]{2,3}-002$/);                                   // company letters + number; the owner is 001
 
     const staff = await newContext(browser);
     await pinSignIn(staff.page, who.slug, code);

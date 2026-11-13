@@ -123,7 +123,7 @@ export interface PlatformUserListItemDto {
   companySlug: string;
   displayName: string;
   email: string | null;
-  staffCode: number;
+  staffCode: string;
   status: MembershipStatus;
   isOwner: boolean;
   roles: string[];

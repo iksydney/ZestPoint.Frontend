@@ -122,7 +122,8 @@ export interface ShiftDto {
   readonly movements: readonly CashMovementDto[];
 }
 
-export interface OpenShiftRequest { id: string; branchId: string; terminalId: string; openingFloat: number; openingFloatConfirmed: boolean }
+/** No till is sent: the server assigns the lowest free "Till N" at the branch and returns it as ShiftDto.terminalId. */
+export interface OpenShiftRequest { id: string; branchId: string; openingFloat: number; openingFloatConfirmed: boolean }
 export interface CashMovementRequest { id: string; kind: CashMovementKind; amount: number; reason: string }
 export interface CloseShiftRequest { countedCash: number; notes: string | null; confirm: boolean; rowVersion: string | null }
 export interface ReviewShiftRequest { approve: boolean; note: string }

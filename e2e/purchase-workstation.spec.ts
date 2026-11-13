@@ -39,23 +39,26 @@ async function ownerInApp(page: Page) {
   return who;
 }
 
-async function addPinStaff(page: Page, name: string, roleKey: string, pin: string): Promise<number> {
+async function addPinStaff(page: Page, name: string, roleKey: string, pin: string): Promise<string> {
   await page.goto('/app/staff');
   await page.getByTestId('add-staff').click();
   await page.getByTestId('new-name').fill(name);
   await page.getByTestId('new-pin').fill(pin);
   await page.getByTestId(`new-role-${roleKey}`).check();
   await page.getByTestId('create-staff').click();
+  const shown = (await page.getByTestId('staff-added-code').innerText()).trim();       // the panel shown right after adding
+  await page.getByTestId('staff-added-done').click();
   const row = page.getByRole('row').filter({ hasText: name });
   await expect(row).toBeVisible();
-  return Number(await row.locator('td').nth(1).innerText());
+  expect((await row.locator('td').nth(1).innerText()).trim()).toBe(shown);
+  return shown;
 }
 
-async function pinSignIn(page: Page, slug: string, code: number, pin: string) {
+async function pinSignIn(page: Page, slug: string, code: string, pin: string) {
   await page.goto('/login');
   await page.getByTestId('login-slug').fill(slug);
   await page.getByTestId('mode-pin').click();
-  await page.getByTestId('login-code').fill(String(code));
+  await page.getByTestId('login-code').fill(code);
   await page.getByTestId('login-pin').fill(pin);
   await page.getByTestId('login-submit').click();
   await expect(page).toHaveURL(/\/app\/(dashboard|pos)/);
