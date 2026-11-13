@@ -89,10 +89,48 @@ export interface ProductDto {
   minimumPrice?: number | null;
   /** Other ways this product is sold (a case of 12), each priced at the item's price times what it holds. */
   sellingUnits?: SellingUnitDto[];
+  /** Set when the product is a package: price is the total of its contents and stock comes from the contents. */
+  package?: ProductPackageDto | null;
   modifiers: ModifierDto[];
   available: number | null;
   rowVersion: string;
 }
+
+export interface PackagePartDto { name: string; quantity: number }
+
+/** A package as the till needs it. The three amounts are per one package and are zero unless `mixed`: the part of its price that is tax exempt, allows no discount, or both. */
+export interface ProductPackageDto {
+  contents: PackagePartDto[];
+  mixed: boolean;
+  splitExempt: number;
+  splitNoDiscount: number;
+  splitExemptNoDiscount: number;
+}
+
+/** A content row on the stock card's Package content tab. Prices are null for people who may not see selling prices. */
+export interface PackageContentDto {
+  contentItemId: string;
+  name: string;
+  sku: string | null;
+  quantity: number;
+  isPackage: boolean;
+  unitPrice: number | null;
+  lineValue: number | null;
+  taxExempt: boolean;
+  blockDiscount: boolean;
+  problem: string | null;
+}
+
+/** An item's package content; `price` is what the package sells for now (the total of its contents). */
+export interface PackageDto {
+  inventoryItemId: string;
+  contents: PackageContentDto[];
+  price: number | null;
+  problem: string | null;
+  usedIn: { itemId: string; name: string }[];
+}
+
+export interface SavePackageRequest { contents: { contentItemId: string; quantity: number }[] }
 
 /** A selling unit of an item (the Unit of Measure tab of the stock card). It has no price or stock of its own. */
 export interface SellingUnitDto {
@@ -176,6 +214,8 @@ export interface OrderLineDto {
   /** Set when the line sells a selling unit (a case): quantity counts units, each holding unitSize base units. */
   sellingUnitId?: string | null;
   unitSize?: number | null;
+  /** Set when the line sells a package: its contents as sold, and the tax / discount split of its price when they are mixed. */
+  package?: ProductPackageDto | null;
   /** True once the line has been sent (to the bar man, for a company that uses the bar man method). */
   confirmed: boolean;
   voidReason: string | null;
@@ -336,7 +376,7 @@ export interface VoidRequestDto {
   dateCreated: string;
 }
 
-export interface ReceiptLineDto { name: string; quantity: number; unitPrice: number; lineTotal: number; modifiers: string[] }
+export interface ReceiptLineDto { name: string; quantity: number; unitPrice: number; lineTotal: number; modifiers: string[]; contents?: PackagePartDto[] }
 
 export interface ReceiptDto {
   id: string;
@@ -461,6 +501,8 @@ export interface InventoryItemDto {
   notes?: string | null;
   onSpecial?: boolean;
   hasPicture?: boolean;
+  /** The item has package content: it holds no stock and sells for the total of its contents. */
+  isPackage?: boolean;
   /** Filled when one item is read (the card); absent in lists. */
   onOrderQuantity?: number | null;
   lastSoldAtUtc?: string | null;

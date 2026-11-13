@@ -20,7 +20,22 @@ export function recalculate(order: LocalOrder): LocalOrder {
   const lines: OrderLineDto[] = order.lines.map((l) => {
     if (l.status === 'Voided') return { ...l, lineTotal: 0 };
     const gross = round2((l.unitPrice + l.modifierTotal) * l.quantity);
-    const discount = Math.min(Math.max(0, l.discountAmount), gross);
+    let discount = Math.min(Math.max(0, l.discountAmount), gross);
+    if (l.package?.mixed) {
+      // A mixed package: each part of its price keeps the rule of the item it came from (same rule as the server).
+      const both = Math.min(gross, round2(l.package.splitExemptNoDiscount * l.quantity));
+      const fixedPart = Math.min(gross - both, round2(l.package.splitNoDiscount * l.quantity));
+      const exempt = Math.min(gross - both - fixedPart, round2(l.package.splitExempt * l.quantity));
+      const ordinary = gross - both - fixedPart - exempt;
+      const open = ordinary + exempt;
+      discount = Math.min(discount, open);
+      subtotal += gross;
+      lineDiscounts += discount;
+      taxableFixed += fixedPart;
+      discountable += open - discount;
+      taxableDiscountable += open === 0 ? 0 : ordinary - (discount * ordinary) / open;
+      return { ...l, lineTotal: round2(gross - discount) };
+    }
     subtotal += gross;
     lineDiscounts += discount;
     if (l.blockDiscount) { if (!l.taxExempt) taxableFixed += gross - discount; }

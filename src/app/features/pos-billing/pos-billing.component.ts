@@ -118,6 +118,11 @@ type Dialog = 'new' | 'serial' | 'unit' | 'modifiers' | 'pay' | 'void' | 'discou
                       <p class="font-medium">{{ l.productName }}</p>
                       @if (l.serialNumber) { <p class="font-mono text-xs text-ink/70">S/N {{ l.serialNumber }}</p> }
                       @for (m of l.modifiers; track m.id) { <p class="text-xs text-ink/70">+ {{ m.name }}</p> }
+                      @if (l.package; as pk) {
+                        <p class="text-xs text-ink/70" [attr.data-testid]="'contents-' + l.productName">@for (c of pk.contents; track $index) { {{ $index ? ', ' : '' }}{{ c.quantity * l.quantity }} x {{ c.name }} }</p>
+                        @if (pk.mixed && pk.splitExempt + pk.splitExemptNoDiscount > 0) { <span class="app-badge bg-ink/10 text-ink/80" [attr.data-testid]="'part-exempt-' + l.productName">part tax free</span> }
+                        @if (pk.mixed && pk.splitNoDiscount + pk.splitExemptNoDiscount > 0) { <span class="app-badge bg-ink/10 text-ink/80">part no discount</span> }
+                      }
                       @if (l.barState) {
                         <span class="app-badge" [class]="barTone(l.barState)" [attr.data-testid]="'bar-state-' + l.productName">{{ barLabel(l.barState) }}</span>
                         @if (l.barState === 'CantMake') { <p class="text-xs font-semibold text-danger" role="status">{{ l.barNote }}. Void this item or offer something else.</p> }
@@ -368,7 +373,10 @@ type Dialog = 'new' | 'serial' | 'unit' | 'modifiers' | 'pay' | 'void' | 'discou
           <p class="text-center">{{ r.branchName }}</p>
           <p class="text-center">Receipt #{{ r.number }}, bill #{{ r.orderNumber }}</p>
           <hr class="my-2 border-dashed border-slate-400" />
-          @for (l of r.lines; track $index) { <p class="flex justify-between gap-2"><span>{{ l.quantity }} x {{ l.name }}</span><span>{{ l.lineTotal | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p> }
+          @for (l of r.lines; track $index) {
+            <p class="flex justify-between gap-2"><span>{{ l.quantity }} x {{ l.name }}</span><span>{{ l.lineTotal | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p>
+            @for (c of l.contents ?? []; track $index) { <p class="pl-4 text-xs" data-testid="receipt-content">{{ c.quantity }} x {{ c.name }}</p> }
+          }
           <hr class="my-2 border-dashed border-slate-400" />
           <p class="flex justify-between"><span>Subtotal</span><span>{{ r.subtotal | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p>
           @if (r.discounts > 0) { <p class="flex justify-between"><span>Discounts</span><span>-{{ r.discounts | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p> }

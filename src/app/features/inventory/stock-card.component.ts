@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AliasKind, ItemAliasDto, StockGroupDto } from '../../core/models/nav-ops.model';
-import { InventoryItemDto, SaveInventoryItemRequest, SellingUnitDto, StockUnit, SupplierDto } from '../../core/models/ops.model';
+import { InventoryItemDto, PackageContentDto, PackageDto, SaveInventoryItemRequest, SellingUnitDto, StockUnit, SupplierDto } from '../../core/models/ops.model';
 import { BinDto } from '../../core/models/purchasing.model';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { TenantTimePipe } from '../../core/pipes/tenant-time.pipe';
@@ -18,7 +18,7 @@ import { utcToZoned, zonedToUtc } from '../../core/time-zone';
 import { ToastService } from '../../shared/ui/feedback';
 
 const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
-type Tab = 'details' | 'aliases' | 'units' | 'picture' | 'history' | 'sales' | 'purchases';
+type Tab = 'details' | 'aliases' | 'units' | 'package' | 'picture' | 'history' | 'sales' | 'purchases';
 type PriceKey = 'sellingPrice' | 'tradePrice' | 'wholesalePrice' | 'resellerPrice' | 'bundlePrice' | 'specialPrice';
 
 const PRICE_LEVELS: readonly { key: PriceKey; label: string; testId: string }[] = [
@@ -104,11 +104,13 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
               <button type="button" role="tab" class="rounded-t-lg px-3 py-2 text-sm font-semibold" [class]="tab() === t.key ? 'bg-primary/15 text-ink' : 'text-ink/70 hover:bg-ink/10'" [attr.aria-selected]="tab() === t.key"
                       [disabled]="t.needsItem && !saved()" [attr.title]="t.needsItem && !saved() ? 'Save the item first' : null" [attr.data-testid]="'sc-tab-' + t.key" (click)="tab.set(t.key)">{{ t.label }}</button>
             }
-            <span class="px-3 py-2 text-sm text-ink/40" title="Comes with the Package Content step">Package content</span>
           </div>
 
           @switch (tab()) {
             @case ('details') {
+              @if (item()?.isPackage) {
+                <p class="sys-alert sys-alert-info" role="status" data-testid="package-note">This item is a package. It sells for the total of its contents (see Package content) and holds no stock of its own: the Retail price shown is that total, and a special or minimum price set here is not used.</p>
+              }
               <!-- Prices -->
               @if (canPrice()) {
                 <div class="overflow-x-auto rounded-lg border border-ink/10">
@@ -218,6 +220,54 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
               </fieldset>
             }
 
+            @case ('package') {
+              <div class="space-y-3" data-testid="package-tab">
+                <p class="text-sm text-ink/80">What this item is made of when it is sold as a package (a hamper, a gift set). The package is made up at the sale: it sells for the total of its contents' prices at that moment, each content keeps its own tax and discount rule, and selling one takes the contents off the shelf. A content must have a selling price. A package may contain another package.</p>
+                @if (pkgUsedIn().length) { <p class="text-sm text-ink/80" data-testid="pkg-used-in">This item is inside: {{ pkgUsedIn().join(', ') }}.</p> }
+                <table class="app-table" data-testid="pkg-list">
+                  <thead><tr><th>Item</th><th class="text-right">Quantity</th>@if (canPrice()) { <th class="text-right">Each</th><th class="text-right">Value</th> }<th>Rules</th><th></th></tr></thead>
+                  <tbody>
+                    @for (r of pkgRows(); track r.contentItemId) {
+                      <tr [attr.data-testid]="'pkg-row-' + r.name">
+                        <td><span class="font-medium">{{ r.name }}</span> @if (r.sku) { <span class="font-mono text-xs text-ink/70">{{ r.sku }}</span> } @if (r.isPackage) { <span class="app-badge app-badge-primary">package</span> }
+                          @if (r.problem) { <p class="text-xs font-semibold text-danger">{{ r.problem }}</p> }</td>
+                        <td class="text-right">
+                          @if (readOnly()) { {{ r.quantity | number: '1.0-3' }} }
+                          @else { <input type="number" min="0" step="any" class="app-input ml-auto w-24 px-2 py-1 text-right" [attr.aria-label]="'Quantity of ' + r.name" [attr.data-testid]="'pkg-qty-' + r.name" [ngModel]="r.quantity" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setPkgQty(r.contentItemId, $event)" /> }
+                        </td>
+                        @if (canPrice()) { <td class="text-right font-mono">{{ r.unitPrice | number: '1.2-2' }}</td><td class="text-right font-mono">{{ r.unitPrice === null ? '' : (r.unitPrice * r.quantity | number: '1.2-2') }}</td> }
+                        <td>@if (r.taxExempt) { <span class="app-badge bg-ink/10 text-ink/80">no tax</span> } @if (r.blockDiscount) { <span class="app-badge bg-ink/10 text-ink/80">no discount</span> }</td>
+                        <td class="text-right">@if (!readOnly()) { <button type="button" class="btn-ghost px-2 py-0.5 text-sm text-danger" [attr.data-testid]="'pkg-remove-' + r.name" (click)="removePkgRow(r.contentItemId)">Remove</button> }</td>
+                      </tr>
+                    } @empty { <tr><td [attr.colspan]="canPrice() ? 6 : 4" class="py-4 text-center text-ink/70">Not a package: this item is sold as it is.</td></tr> }
+                  </tbody>
+                  @if (canPrice() && pkgRows().length) {
+                    <tfoot><tr><td colspan="3" class="text-right font-semibold">The package sells for</td><td class="text-right font-mono font-bold" data-testid="pkg-total">{{ pkgTotal() | number: '1.2-2' }}</td><td colspan="2"></td></tr></tfoot>
+                  }
+                </table>
+                @if (!readOnly()) {
+                  <div>
+                    <label class="app-label" for="sc-pkg-search">Add an item to the package</label>
+                    <input id="sc-pkg-search" class="app-input" placeholder="Type a name or part number" autocomplete="off" data-testid="pkg-search" [ngModel]="pkgSearch()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="searchPkg($event)" />
+                    @if (pkgResults().length) {
+                      <ul class="mt-1 divide-y divide-ink/10 rounded-lg border border-ink/15" data-testid="pkg-results">
+                        @for (c of pkgResults(); track c.id) {
+                          <li><button type="button" class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-ink/10" [attr.data-testid]="'pkg-result-' + c.name" (click)="addPkgRow(c)"><span>{{ c.name }} @if (c.sku) { <span class="font-mono text-xs text-ink/70">{{ c.sku }}</span> }</span>
+                            <span class="font-mono">{{ c.sellingPrice === null || c.sellingPrice === undefined ? 'no selling price' : (c.sellingPrice | number: '1.2-2') }}</span></button></li>
+                        }
+                      </ul>
+                    }
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" class="btn-primary" data-testid="pkg-save" [disabled]="!pkgDirty() || pkgBusy()" (click)="savePkg()">{{ pkgBusy() ? 'Saving...' : 'Save package content' }}</button>
+                    @if (pkgDirty()) { <span class="text-sm text-ink/70">Not saved yet.</span> }
+                    @if (pkgMsg()) { <span class="text-sm text-success" role="status" data-testid="pkg-msg">{{ pkgMsg() }}</span> }
+                  </div>
+                }
+                @if (pkgError()) { <p class="app-error" role="alert" data-testid="pkg-error">{{ pkgError() }}</p> }
+              </div>
+            }
+
             @case ('units') {
               <div class="space-y-3" data-testid="units-tab">
                 <p class="text-sm text-ink/80">Other ways this item is sold besides singly, for example Half case = 6, Case = 12. At the till one unit costs the item's price (or its special) times what it holds, and that many leave the shelf. Adding a unit never adds stock: stock comes in through purchasing, receiving and adjustments.</p>
@@ -317,7 +367,7 @@ export class StockCardComponent implements OnDestroy {
   readonly navigate = output<string>();
 
   protected readonly tabs: readonly { key: Tab; label: string; needsItem: boolean }[] = [
-    { key: 'details', label: 'Details', needsItem: false }, { key: 'aliases', label: 'Equivalent part numbers', needsItem: true }, { key: 'units', label: 'Unit of measure', needsItem: true }, { key: 'picture', label: 'Picture', needsItem: true },
+    { key: 'details', label: 'Details', needsItem: false }, { key: 'aliases', label: 'Equivalent part numbers', needsItem: true }, { key: 'units', label: 'Unit of measure', needsItem: true }, { key: 'package', label: 'Package content', needsItem: true }, { key: 'picture', label: 'Picture', needsItem: true },
     { key: 'history', label: 'History', needsItem: true }, { key: 'sales', label: 'Sales', needsItem: true }, { key: 'purchases', label: 'Purchases', needsItem: true }
   ];
   protected readonly levels = PRICE_LEVELS;
@@ -342,6 +392,17 @@ export class StockCardComponent implements OnDestroy {
   protected readonly aliasCode = signal('');
   protected readonly aliasSupplier = signal('');
   protected readonly aliasError = signal<string | null>(null);
+  protected readonly pkgRows = signal<readonly PackageContentDto[]>([]);
+  protected readonly pkgUsedIn = signal<readonly string[]>([]);
+  protected readonly pkgSearch = signal('');
+  protected readonly pkgResults = signal<readonly InventoryItemDto[]>([]);
+  protected readonly pkgDirty = signal(false);
+  protected readonly pkgBusy = signal(false);
+  protected readonly pkgError = signal<string | null>(null);
+  protected readonly pkgMsg = signal<string | null>(null);
+  /** The total of the rows on screen; rows without a known price count as nothing until the server prices them on save. */
+  protected readonly pkgTotal = computed(() => Math.round(this.pkgRows().reduce((s, r) => s + (r.unitPrice ?? 0) * r.quantity, 0) * 100) / 100);
+  private pkgSearchSeq = 0;
   protected readonly units = signal<readonly SellingUnitDto[]>([]);
   protected readonly unitName = signal('');
   protected readonly unitSize = signal<number | null>(null);
@@ -408,6 +469,13 @@ export class StockCardComponent implements OnDestroy {
     this.aliases.set([]);
     this.units.set([]);
     this.unitError.set(null);
+    this.pkgRows.set([]);
+    this.pkgUsedIn.set([]);
+    this.pkgResults.set([]);
+    this.pkgSearch.set('');
+    this.pkgDirty.set(false);
+    this.pkgError.set(null);
+    this.pkgMsg.set(null);
     this.revokePicture();
     this.binId.set(null);
     this.binAtLoad = null;
@@ -424,6 +492,7 @@ export class StockCardComponent implements OnDestroy {
     try {
       this.adopt(await firstValueFrom(this.inventory.item(id, this.branches.activeId() ?? undefined)));
       void firstValueFrom(this.extras.aliases(id)).then((a) => this.aliases.set(a)).catch(() => undefined);
+      void firstValueFrom(this.inventory.package(id)).then((p) => this.showPkg(p)).catch((err) => this.pkgError.set(toApiError(err).message));
       void firstValueFrom(this.inventory.units(id)).then((u) => this.units.set(u)).catch((err) => this.unitError.set(toApiError(err).message));
       void this.loadBinDefault(id);
     } catch (err) { this.loadError.set(toApiError(err).message); } finally { this.loading.set(false); }
@@ -522,6 +591,67 @@ export class StockCardComponent implements OnDestroy {
     if (!id) return;
     try { await firstValueFrom(this.extras.removeAlias(id, a.id)); this.aliases.update((l) => l.filter((x) => x.id !== a.id)); }
     catch (err) { this.aliasError.set(toApiError(err).message); }
+  }
+
+  // ---- Package content ----
+
+  private showPkg(p: PackageDto): void {
+    this.pkgRows.set(p.contents);
+    this.pkgUsedIn.set(p.usedIn.map((u) => u.name));
+    this.pkgDirty.set(false);
+    this.pkgError.set(p.problem);
+  }
+
+  protected searchPkg(text: string): void {
+    this.pkgSearch.set(text);
+    const term = text.trim();
+    const seq = ++this.pkgSearchSeq;
+    if (term.length < 2) { this.pkgResults.set([]); return; }
+    void firstValueFrom(this.inventory.items({ search: term, active: true, pageSize: 8 }))
+      .then((page) => { if (seq === this.pkgSearchSeq) this.pkgResults.set(page.items.filter((i) => i.id !== this.saved() && !this.pkgRows().some((r) => r.contentItemId === i.id))); })
+      .catch((err) => this.pkgError.set(toApiError(err).message));
+  }
+
+  protected addPkgRow(i: InventoryItemDto): void {
+    this.pkgRows.update((rows) => [...rows, {
+      contentItemId: i.id, name: i.name, sku: i.sku ?? null, quantity: 1, isPackage: i.isPackage ?? false, unitPrice: i.sellingPrice ?? null, lineValue: null,
+      taxExempt: i.taxExempt ?? false, blockDiscount: i.blockDiscount ?? false, problem: null
+    }]);
+    this.pkgResults.set([]);
+    this.pkgSearch.set('');
+    this.pkgDirty.set(true);
+    this.pkgMsg.set(null);
+  }
+
+  protected setPkgQty(id: string, value: unknown): void {
+    const quantity = this.unitNumber(value) ?? 0;
+    this.pkgRows.update((rows) => rows.map((r) => (r.contentItemId === id ? { ...r, quantity } : r)));
+    this.pkgDirty.set(true);
+    this.pkgMsg.set(null);
+  }
+
+  protected removePkgRow(id: string): void {
+    this.pkgRows.update((rows) => rows.filter((r) => r.contentItemId !== id));
+    this.pkgDirty.set(true);
+    this.pkgMsg.set(null);
+  }
+
+  protected async savePkg(): Promise<void> {
+    const id = this.saved();
+    if (!id || this.pkgBusy()) return;
+    this.pkgBusy.set(true);
+    this.pkgError.set(null);
+    this.pkgMsg.set(null);
+    try {
+      const p = await firstValueFrom(this.inventory.savePackage(id, { contents: this.pkgRows().map((r) => ({ contentItemId: r.contentItemId, quantity: r.quantity })) }));
+      this.showPkg(p);
+      this.item.update((i) => (i ? { ...i, isPackage: p.contents.length > 0 } : i));
+      if (p.price !== null) this.patch({ sellingPrice: p.price });
+      this.pkgMsg.set(p.contents.length ? 'Package content saved.' : 'This item is no longer a package.');
+    } catch (err) {
+      const e = toApiError(err);
+      this.pkgError.set(Object.values(e.fieldErrors ?? {})[0]?.[0] ?? e.message);
+    } finally { this.pkgBusy.set(false); }
   }
 
   // ---- Selling units (Unit of measure) ----

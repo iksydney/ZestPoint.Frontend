@@ -183,7 +183,7 @@ export class PosStore {
       unitPrice: unit ? round2(product.price * unit.size) : product.price, sellingUnitId: unit?.id ?? null, unitSize: unit?.size ?? null, quantity, seat, serialNumber, notes: null,
       modifiers: mods.map((m) => ({ id: m.id, name: m.name, priceDelta: m.priceDelta })), modifierTotal: round2(mods.reduce((s, m) => s + m.priceDelta, 0)),
       discountAmount: 0, lineTotal: 0, status: 'Active', confirmed: false, voidReason: null, voidPending: false,
-      taxExempt: product.taxExempt ?? false, onSpecial: product.onSpecial ?? false, blockDiscount: product.blockDiscount ?? false
+      taxExempt: product.taxExempt ?? false, onSpecial: product.onSpecial ?? false, blockDiscount: product.blockDiscount ?? false, package: product.package ?? null
     };
     await this.commit(
       recalculate({ ...o, lines: [...o.lines, line] }), 'order.line.add',

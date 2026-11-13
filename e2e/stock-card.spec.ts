@@ -272,4 +272,63 @@ test.describe('Stock card', () => {
     await expect(page.getByTestId('sync-pending')).toHaveCount(0, { timeout: 30_000 });
     await expect(page.getByTestId('bill-total')).toContainText('25,000.00');             // the server agrees
   });
+
+  test('a package is built on the Package content tab and the till sells it for the total of its contents, taxing only the taxable part', async ({ page }) => {
+    await ownerInApp(page);
+    await page.goto('/app/settings/operations');
+    await page.getByTestId('tax-name').fill('VAT');
+    await page.getByTestId('tax-rate').fill('10');
+    await page.getByTestId('settings-save').click();
+    await expect(page.getByTestId('settings-msg')).toHaveText('Saved.');
+
+    await page.goto('/app/inventory/items');
+    for (const [name, price, exempt] of [['Wine', '3000', false], ['Chocolate', '500', true], ['Ribbon', '', false], ['Gift hamper', '', false]] as const) {
+      await page.getByTestId('item-new').click();
+      await page.getByTestId('item-name').fill(name);
+      if (price) await page.getByTestId('item-price').fill(price);
+      if (exempt) await page.getByTestId('item-tax').selectOption('exempt');
+      await page.getByTestId('item-save').click();
+      await expect(page.getByTestId('item-' + name)).toBeVisible();
+    }
+
+    await page.getByTestId('item-edit-Gift hamper').click();
+    await page.getByTestId('sc-tab-package').click();
+    await expect(page.getByTestId('pkg-list')).toContainText('Not a package');
+    await expect(page.getByTestId('pkg-save')).toBeDisabled();
+    await page.getByTestId('pkg-search').fill('Wine');
+    await page.getByTestId('pkg-result-Wine').click();
+    await page.getByTestId('pkg-search').fill('Choc');
+    await page.getByTestId('pkg-result-Chocolate').click();
+    await page.getByTestId('pkg-qty-Chocolate').fill('2');
+    await expect(page.getByTestId('pkg-total')).toHaveText('4,000.00');                  // 3,000 + 2 x 500
+
+    // An item with no selling price cannot go in: the server says so and nothing is saved.
+    await page.getByTestId('pkg-search').fill('Ribbon');
+    await page.getByTestId('pkg-result-Ribbon').click();
+    await page.getByTestId('pkg-save').click();
+    await expect(page.getByTestId('pkg-error')).toContainText('no selling price');
+    await page.getByTestId('pkg-remove-Ribbon').click();
+    await page.getByTestId('pkg-save').click();
+    await expect(page.getByTestId('pkg-msg')).toHaveText('Package content saved.');
+    await expect(page.getByTestId('pkg-row-Chocolate')).toContainText('no tax');
+    await page.getByTestId('sc-tab-details').click();
+    await expect(page.getByTestId('package-note')).toBeVisible();
+    await expect(page.getByTestId('item-price')).toHaveValue('4000');
+    await page.getByTestId('sc-close').click();
+
+    // The till: one line, its contents under it, tax on the wine only.
+    await page.goto('/app/pos');
+    await expect(page.getByTestId('product-Gift hamper')).toContainText('4,000.00');
+    await page.getByTestId('new-bill').click();
+    await page.getByTestId('nb-label').fill('Hamper');
+    await page.getByTestId('nb-create').click();
+    await page.getByTestId('product-Gift hamper').click();
+    await expect(page.getByTestId('contents-Gift hamper')).toContainText('1 x Wine');
+    await expect(page.getByTestId('contents-Gift hamper')).toContainText('2 x Chocolate');
+    await expect(page.getByTestId('part-exempt-Gift hamper')).toBeVisible();
+    await expect(page.getByTestId('bill-total')).toContainText('4,300.00');             // 4,000 + 10% of the wine's 3,000
+    await expect(page.getByTestId('sync-pending')).toHaveCount(0, { timeout: 30_000 });
+    await expect(page.getByTestId('bill-total')).toContainText('4,300.00');             // the server agrees with the till's own sum
+    await expect(page.getByTestId('contents-Gift hamper')).toContainText('2 x Chocolate');
+  });
 });

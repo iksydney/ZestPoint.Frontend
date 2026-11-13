@@ -5,7 +5,7 @@ import { ApiEnvelope } from '../models/api.model';
 import {
   AddMeasurementRequest, AdjustStockRequest, AuditDto, BatchDto, CategoryDto, CompanySettingsDto, InventoryItemDto, MeasurementDto,
   MovementDto, OrderDto, OrderSummaryDto, PagedResult, PayRequest, ProductDto, PurchaseOrderDto, ReceiptDto, ReceiveGoodsRequest, RecipeDto,
-  SaveInventoryItemRequest, SaveSellingUnitRequest, SellingUnitDto, SavePurchaseOrderRequest, SaveProductRequest, SaveRecipeRequest, SaveSupplierRequest, SplitPreviewDto, SuggestedOrderDto,
+  SaveInventoryItemRequest, SaveSellingUnitRequest, SellingUnitDto, PackageDto, SavePackageRequest, SavePurchaseOrderRequest, SaveProductRequest, SaveRecipeRequest, SaveSupplierRequest, SplitPreviewDto, SuggestedOrderDto,
   SupplierDto, SyncOperationDto, SyncOperationResultDto, TransferStockRequest, UpdateCompanySettingsRequest, UsageRowDto, VarianceDto,
   VarianceSummaryRowDto, VoidAuthorizer, VoidRequestDto
 } from '../models/ops.model';
@@ -162,6 +162,16 @@ export class InventoryApi {
   /** One item with the stock card's own figures (on order, last sold, last ordered). */
   item(id: string, branchId?: string): Observable<InventoryItemDto> {
     return this.http.get<ApiEnvelope<InventoryItemDto>>(`/api/v1/inventory/items/${id}`, { params: q({ branchId }) }).pipe(unwrap());
+  }
+
+  /** The item's package content (what it is made of, and what that totals to now). */
+  package(itemId: string): Observable<PackageDto> {
+    return this.http.get<ApiEnvelope<PackageDto>>(`/api/v1/inventory/items/${itemId}/package`).pipe(unwrap());
+  }
+
+  /** Replaces the whole package content; an empty list makes the item an ordinary item again. */
+  savePackage(itemId: string, body: SavePackageRequest): Observable<PackageDto> {
+    return this.http.put<ApiEnvelope<PackageDto>>(`/api/v1/inventory/items/${itemId}/package`, body).pipe(unwrap());
   }
 
   units(itemId: string): Observable<SellingUnitDto[]> {
