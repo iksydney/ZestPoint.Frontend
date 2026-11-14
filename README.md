@@ -1,1 +1,0 @@
-"# ZestPoint.Frontend" 
