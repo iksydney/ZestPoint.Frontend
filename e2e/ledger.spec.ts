@@ -68,7 +68,8 @@ test.describe('Ledger', () => {
     await page.goto('/app/ledger/reports/trial-balance');
     await expect(page.getByRole('heading', { name: 'Trial Balance' })).toBeVisible();
     await expect(page.getByText('In balance')).toBeVisible();
-    await expect(page.locator('[data-nav="ledger.report.journal"]')).toHaveCount(1);
+    await page.locator('[data-nav="reports.finance"]').click();                            // the three ledger reports are on the Finance reports page
+    await expect(page.locator('[data-testid="hub-list"] [data-nav="ledger.report.journal"]')).toHaveCount(1);
     await page.goto('/app/ledger/reports/profit-and-loss');
     await expect(page.getByRole('heading', { name: 'Profit and Loss' })).toBeVisible();
 

@@ -143,7 +143,7 @@ test.describe('Subscriptions, entitlements and the platform interface (criteria 
 
     await page.goto('/app/pos');
     await expect(page.getByRole('link', { name: 'Point of Sale' })).toBeVisible();       // wait for the session restore to finish before judging the menu
-    await expect(page.getByRole('link', { name: 'Inventory' })).toHaveCount(0); // hidden from the menu
+    await expect(page.getByRole('link', { name: 'Stock Overview' })).toHaveCount(0); // hidden from the menu
     await page.goto('/app/inventory');                                         // typed straight into the address bar
     await expect(page).toHaveURL(/\/upgrade/);
     await expect(page.getByTestId('upgrade-prompt')).toContainText('Inventory management');

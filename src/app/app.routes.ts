@@ -116,6 +116,8 @@ export const routes: Routes = [
     loadComponent: () => import('./features/shell/app-shell.component').then((m) => m.AppShellComponent),
     children: [
       { path: '', pathMatch: 'full', canActivate: [landingGuard], children: [] },
+      // The reports of one area on one page. It lists only what the person may open; each report's own route and API stay guarded.
+      { path: 'reports/:area', title: 'Reports', loadComponent: () => import('./features/reports/report-hub.component').then((m) => m.ReportHubComponent) },
       {
         path: 'dashboard',
         title: 'Dashboard',

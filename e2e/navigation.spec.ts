@@ -2,28 +2,15 @@ import { Page, expect, test } from '@playwright/test';
 import { newContext, pick, registerViaUi } from './helpers';
 
 /** The menu contract: group, order, label and route of every screen (POS 9, Stock 22, Purchasing 16; Bar Orders is offered only to a company that uses the bar man method). */
-const POS: [string, string][] = [
-  ['Point of Sale', '/app/pos'], ['Start / End of Day', '/app/pos/day-management'], ['Summary Income Report', '/app/pos/reports/summary-income'], ['Daily Sales Report', '/app/pos/reports/daily-sales'],
-  ['Staff Sales Report', '/app/pos/reports/staff-sales'], ['Stock Groups Sales Report', '/app/pos/reports/stock-group-sales'], ['Sales Analysis Report', '/app/pos/reports/sales-analysis'], ['Multi-Currency Report', '/app/pos/reports/multi-currency'], ['Void History Report', '/app/pos/reports/void-history'],
-  ['Laybys', '/app/pos/laybys'], ['Layby Report', '/app/pos/reports/laybys'], ['Sales Back Orders', '/app/pos/back-orders'], ['Sales Back Order Report', '/app/pos/reports/sales-back-orders']
+/** The menu as the owner of a new company sees it: working screens by area, in order, each area's reports behind one Reports entry. */
+const AREAS: [string, string[], number][] = [
+  ['sell', ['Point of Sale', 'Start / End of Day'], 7],
+  ['customers', ['Customers', 'Laybys', 'Sales Back Orders'], 2],
+  ['stock', ['Stock Overview', 'Items', 'Stock Groups', 'Catalogue', 'Adjustments', 'Bulk Changes', 'Bin Locations', 'Labels', 'Consignment Out'], 17],
+  ['purchasing', ['Purchase Orders', 'Goods Receiving', 'Suppliers', 'Supplier Payments'], 12],
+  ['finance', ['Chart of Accounts'], 3],
+  ['admin', ['Staff', 'Branches', 'Settings', 'Branding', 'Subscription', 'Support'], 0]
 ];
-const STOCK: [string, string][] = [
-  ['Add / Modify Stock', '/app/inventory/items'], ['Stock Group Maintenance', '/app/inventory/groups'], ['Global Stock Maintenance', '/app/inventory/global-maintenance'], ['Stock Qty Adjustments', '/app/inventory/adjustments'],
-  ['Items Enquiry Report', '/app/inventory/reports/items-enquiry'], ['Stock Transactions Enquiry Report', '/app/inventory/reports/transactions'], ['Stock Quantities Report', '/app/inventory/reports/quantities'],
-  ['Selling Prices Report', '/app/inventory/reports/selling-prices'], ['Cost Prices Report', '/app/inventory/reports/cost-prices'], ['Stock Performance Report', '/app/inventory/reports/performance'],
-  ['Out of Stock Report', '/app/inventory/reports/out-of-stock'], ['Stock Re-Order Report', '/app/inventory/reports/re-order'], ['Stock Take Report', '/app/inventory/reports/stock-take'],
-  ['Stock Value Report', '/app/inventory/reports/stock-value'], ['Items History Report', '/app/inventory/reports/items-history'], ['Stock Labels Printing', '/app/inventory/reports/stock-labels'],
-  ['Stock Expiry Report', '/app/inventory/reports/expiry'], ['Web Store Stock Report', '/app/inventory/reports/web-store-stock'], ['Stock Aging Report', '/app/inventory/reports/stock-aging'], ['Bin Locations', '/app/inventory/bins'], ['Stock by Bin Report', '/app/inventory/reports/bin-stock'], ['Serial Numbers Report', '/app/inventory/reports/serial-numbers'],
-  ['Consignment Out', '/app/inventory/consignment'], ['Consignment Out Report', '/app/inventory/reports/consignment-out']
-];
-const PURCHASING: [string, string][] = [
-  ['Purchasing / Purchase Orders', '/app/purchasing/orders'], ['Goods Receiving', '/app/purchasing/receiving'], ['Payments to Suppliers', '/app/purchasing/payments'], ['Add / Modify Suppliers', '/app/purchasing/suppliers'],
-  ["Supplier's List Report", '/app/purchasing/reports/suppliers-list'], ['Purchases Report', '/app/purchasing/reports/purchases'], ['Purchase Orders Report', '/app/purchasing/reports/purchase-orders'],
-  ['Summary Purchases Report', '/app/purchasing/reports/summary-purchases'], ['Aged Suppliers Report', '/app/purchasing/reports/aged-suppliers'], ["Supplier's Statement of Account", '/app/purchasing/reports/statement-of-account'],
-  ['Purchase Analysis Report', '/app/purchasing/reports/purchase-analysis'], ['Back Orders Report', '/app/purchasing/reports/back-orders'], ['Stock On Order Report', '/app/purchasing/reports/stock-on-order'],
-  ['Purchases Tax Report', '/app/purchasing/reports/purchases-tax'], ['Purchase Payments Report', '/app/purchasing/reports/purchase-payments'], ['Equivalent Part Numbers Report', '/app/purchasing/reports/equivalent-part-numbers']
-];
-const GROUPS = [['pos', POS], ['stock', STOCK], ['purchasing', PURCHASING]] as const;
 
 async function ownerInApp(page: Page) {
   const who = await registerViaUi(page);
@@ -34,7 +21,7 @@ async function ownerInApp(page: Page) {
 }
 
 async function expandAll(page: Page) {
-  for (const [key] of GROUPS) {
+  for (const [key] of AREAS) {
     const header = page.getByTestId(`nav-group-${key}`);
     if ((await header.getAttribute('aria-expanded')) === 'false') await header.click();
   }
@@ -69,82 +56,135 @@ async function labelsOf(page: Page, group: string): Promise<string[]> {
   return page.locator(`[data-group-list="${group}"] a span.truncate`).allInnerTexts();
 }
 
-test.describe('POS, Stock and Purchasing navigation', () => {
-  test('the menu has three separate groups with every entry in the required order', async ({ page }) => {
+test.describe('Navigation', () => {
+  test('the menu shows working screens grouped by job, and each area keeps its reports on one page', async ({ page }) => {
     await ownerInApp(page);
     await page.goto('/app/dashboard');
     await expandAll(page);
 
-    for (const [key, entries] of GROUPS) expect(await labelsOf(page, key), key).toEqual(entries.map(([label]) => label));
-    expect(await page.locator('[data-group-list="pos"] a, [data-group-list="stock"] a, [data-group-list="purchasing"] a').count()).toBe(13 + 24 + 16);
+    for (const [key, screens, reports] of AREAS) {
+      expect(await labelsOf(page, key), key).toEqual(reports > 0 ? [...screens, 'Reports'] : screens);
+      if (reports > 0) await expect(page.locator(`[data-nav="reports.${key}"] .nav-count`), key).toHaveText(String(reports));
+    }
+    // No report is listed in the menu itself: the menu is the short list of places to work.
+    await expect(page.locator('[data-testid="main-nav"] [data-nav*=".report."]')).toHaveCount(0);
+    expect(await page.locator('[data-testid="main-nav"] a.nav-link').count()).toBeLessThanOrEqual(32);
 
-    // Legacy shortcut letters are shown beside the entries that have them.
-    await expect(page.locator('[data-nav="stock.report.value"] kbd')).toHaveText('v');
-    await expect(page.locator('[data-nav="purchasing.report.equivalent"] kbd')).toHaveText('q');
+    // An area can be folded away, and the choice is kept.
+    await page.getByTestId('nav-group-purchasing').click();
+    await expect(page.locator('[data-group-list="purchasing"]')).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByTestId('nav-group-purchasing')).toHaveAttribute('aria-expanded', 'false');
+    await page.getByTestId('nav-group-purchasing').click();
+
+    // The Reports page of an area lists each report with a line on what it shows, and can be narrowed by typing.
+    await page.locator('[data-nav="reports.sell"]').click();
+    await expect(page).toHaveURL(/\/app\/reports\/sell$/);
+    await expect(page.getByRole('heading', { name: 'Sell reports' })).toBeVisible();
+    await expect(page.getByTestId('hub-list').locator('a')).toHaveCount(7);
+    await expect(page.locator('[data-testid="hub-list"] [data-nav="pos.report.voids"]')).toContainText('who authorised it');
+    await expect(page.locator('[data-nav="reports.sell"]')).toHaveAttribute('aria-current', 'page');
+    await page.getByTestId('hub-filter').fill('daily');
+    await expect(page.getByTestId('hub-list').locator('a')).toHaveCount(1);
+    await page.locator('[data-testid="hub-list"] [data-nav="pos.report.daily"]').click();
+    await expect(page).toHaveURL(/\/app\/pos\/reports\/daily-sales/);
+    // On a report, the area's Reports entry stays marked and the breadcrumb leads back to the list.
+    await expect(page.locator('[data-nav="reports.sell"]')).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByTestId('breadcrumb')).toContainText('Sell');
+    await page.getByTestId('breadcrumb').getByRole('link', { name: 'Reports' }).click();
+    await expect(page).toHaveURL(/\/app\/reports\/sell$/);
+
+    // An area that does not exist, or has nothing the person may open, says so.
+    await page.goto('/app/reports/nowhere');
+    await expect(page.getByTestId('hub-none')).toBeVisible();
   });
 
-  test('every menu entry opens its own working screen', async ({ page }) => {
-    test.setTimeout(240_000);
+  test('every working screen in the menu and every report on the Reports pages opens', async ({ page }) => {
+    test.setTimeout(300_000);
     await ownerInApp(page);
     await page.goto('/app/dashboard');
     await expandAll(page);
 
-    for (const [, entries] of GROUPS) {
-      for (const [label, route] of entries) {
-        await page.locator(`a.nav-link:has-text("${label}")`).first().click();
-        await expect(page, label).toHaveURL(new RegExp(route.replace(/[/-]/g, '\\$&') + '(\\?.*)?$'));
-        await expect(page.locator('main h1').first(), label).toBeVisible();
-        await expect(page.getByRole('heading', { name: 'No access' }), label).toHaveCount(0);
-        await expect(page.getByTestId('report-error'), label).toHaveCount(0);
+    const check = async (what: string) => {
+      await expect(page.locator('main h1').first(), what).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'No access' }), what).toHaveCount(0);
+      await expect(page.getByTestId('report-error'), what).toHaveCount(0);
+    };
+
+    const screens = await page.locator('[data-testid="main-nav"] a.nav-link').evaluateAll((links) => links.map((a) => [a.getAttribute('data-nav')!, a.getAttribute('href')!]));
+    expect(screens.length).toBeGreaterThan(25);
+    for (const [key, href] of screens) {
+      await page.locator(`[data-testid="main-nav"] [data-nav="${key}"]`).click();
+      await expect(page, key).toHaveURL(new RegExp(href.replace(/[/-]/g, '\\$&') + '(\\?.*)?$'));
+      await check(key);
+    }
+
+    let reports = 0;
+    for (const [area, , count] of AREAS) {
+      if (count === 0) continue;
+      await page.goto(`/app/reports/${area}`);
+      await expect(page.getByTestId('hub-list').locator('a'), area).toHaveCount(count);
+      const cards = await page.getByTestId('hub-list').locator('a').evaluateAll((links) => links.map((a) => [a.getAttribute('data-nav')!, a.getAttribute('href')!]));
+      expect(cards.length, area).toBe(count);
+      for (const [key, href] of cards) {
+        await page.goto(href);
+        await expect(page, key).toHaveURL(new RegExp(href.replace(/[/-]/g, '\\$&') + '(\\?.*)?$'));
+        await check(key);
+        reports++;
       }
     }
+    expect(reports).toBe(41);
   });
 
-  test('legacy menu keys work only while focus is inside that menu group', async ({ page }) => {
+  test('search (Ctrl+K) reaches any screen or report, by its old name too, and the keyboard moves through the menu', async ({ page }) => {
     await ownerInApp(page);
     await page.goto('/app/dashboard');
-    await expandAll(page);
+    await expect(page.getByTestId('palette')).toHaveCount(0);
 
-    await page.locator('[data-nav="stock.items"]').focus();
-    await page.keyboard.press('v');
-    await expect(page).toHaveURL(/\/app\/inventory\/reports\/stock-value/);
-    await page.keyboard.press('5');
-    await expect(page).toHaveURL(/\/app\/inventory\/reports\/cost-prices/);
+    await page.keyboard.press('Control+k');
+    await expect(page.getByTestId('palette-input')).toBeFocused();
+    await page.keyboard.type('serial');
+    await expect(page.getByTestId('palette-results')).toContainText('Serial Numbers Report');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/app\/inventory\/reports\/serial-numbers/);
+    await expect(page.getByTestId('palette')).toHaveCount(0);
+    await expect(page.getByTestId('breadcrumb')).toContainText('Stock');
+    await expect(page.getByTestId('breadcrumb')).toContainText('Reports');
 
-    // The same keys do nothing from the search box, and a purchasing key does not fire from the stock group.
+    // The Search box in the menu opens the same thing; a screen is found by the name it used to have.
     await page.getByTestId('nav-search').click();
-    await page.keyboard.type('v');
-    await expect(page).toHaveURL(/\/app\/inventory\/reports\/cost-prices/);
-    await page.getByTestId('nav-search').fill('');
-    await page.locator('[data-nav="stock.items"]').focus();
-    await page.keyboard.press('y');
-    await expect(page).toHaveURL(/\/app\/inventory\/reports\/cost-prices/);
-
-    await page.locator('[data-nav="purchasing.orders"]').focus();
-    await page.keyboard.press('y');
-    await expect(page).toHaveURL(/\/app\/purchasing\/reports\/purchase-payments/);
-
-    // Arrow keys move through the menu.
-    await page.locator('[data-nav="stock.items"]').focus();
+    await page.getByTestId('palette-input').fill('add / modify stock');
+    await expect(page.locator('[data-testid="palette-results"] [data-nav="stock.items"]')).toContainText('Items');
+    await page.getByTestId('palette-input').fill('purch ord');
     await page.keyboard.press('ArrowDown');
-    await expect(page.locator('[data-nav="stock.groups"]')).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await page.locator('[data-testid="palette-results"] [data-nav="purchasing.orders"]').click();
+    await expect(page).toHaveURL(/\/app\/purchasing\/orders$/);
 
-    // Typing in a report's own filter box never navigates.
+    // Nothing found says so; Escape closes without going anywhere.
+    await page.keyboard.press('Control+k');
+    await page.getByTestId('palette-input').fill('zzzz-nothing');
+    await expect(page.getByTestId('palette-empty')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('palette')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/app\/purchasing\/orders$/);
+
+    // Ctrl+K works while typing in a field of the page; ordinary typing in a field never navigates.
     await page.goto('/app/inventory/reports/items-enquiry');
     await page.getByTestId('filter-search').fill('vvvv5');
     await expect(page).toHaveURL(/\/app\/inventory\/reports\/items-enquiry/);
-  });
+    await page.keyboard.press('Control+k');
+    await expect(page.getByTestId('palette-input')).toBeFocused();
+    await page.keyboard.press('Escape');
 
-  test('the menu search finds screens across the groups', async ({ page }) => {
-    await ownerInApp(page);
-    await page.goto('/app/dashboard');
-    await page.getByTestId('nav-search').fill('serial');
-    await expect(page.getByTestId('nav-results')).toContainText('Serial Numbers Report');
-    await page.getByTestId('nav-results').getByRole('link', { name: /Serial Numbers Report/ }).click();
-    await expect(page).toHaveURL(/\/app\/inventory\/reports\/serial-numbers/);
-    await expect(page.getByTestId('breadcrumb')).toContainText('Stock');
-    await page.getByTestId('nav-search').fill('zzzz-nothing');
-    await expect(page.getByTestId('nav-results')).toContainText('No screen matches');
+    // Arrow keys move through the menu.
+    await expandAll(page);
+    await page.locator('[data-nav="stock.items"]').focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator('[data-nav="stock.groups"]')).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowUp');
+    await expect(page.locator('[data-nav="inventory"]')).toBeFocused();
   });
 
   test('a cashier sees only the selling screens, and typed URLs for the rest are refused', async ({ page, browser }) => {
@@ -155,10 +195,18 @@ test.describe('POS, Stock and Purchasing navigation', () => {
     await pinSignIn(staff.page, who.slug, code);
     await expect(staff.page).toHaveURL(/\/app\/dashboard$/);
 
-    await expect(staff.page.getByTestId('nav-group-pos')).toBeVisible();
-    expect(await labelsOf(staff.page, 'pos')).toEqual(['Point of Sale', 'Start / End of Day', 'Laybys', 'Layby Report', 'Sales Back Orders', 'Sales Back Order Report']);   // till staff work back orders
-    await expect(staff.page.getByTestId('nav-group-stock')).toHaveCount(0);
+    await expect(staff.page.getByTestId('nav-group-sell')).toBeVisible();
+    expect(await labelsOf(staff.page, 'sell')).toEqual(['Point of Sale', 'Start / End of Day']);
+    expect(await labelsOf(staff.page, 'customers')).toEqual(['Customers', 'Laybys', 'Sales Back Orders', 'Reports']);   // till staff look after customers, laybys and back orders
+    await expect(staff.page.locator('[data-nav="stock.items"]')).toHaveCount(0);
     await expect(staff.page.getByTestId('nav-group-purchasing')).toHaveCount(0);
+    await expect(staff.page.getByTestId('nav-group-finance')).toHaveCount(0);
+    await expect(staff.page.getByTestId('nav-group-admin')).toHaveCount(0);
+    // Search offers them nothing more than the menu does.
+    await staff.page.keyboard.press('Control+k');
+    await staff.page.getByTestId('palette-input').fill('stock value');
+    await expect(staff.page.getByTestId('palette-empty')).toBeVisible();
+    await staff.page.keyboard.press('Escape');
     await expect(staff.page.getByTestId('quick-pos')).toBeVisible();
     await expect(staff.page.getByTestId('quick-stock.items')).toHaveCount(0);
 
@@ -433,10 +481,14 @@ test.describe('POS, Stock and Purchasing navigation', () => {
     await page.getByTestId('nav-open').click();
     const drawer = page.getByTestId('nav-drawer');
     await expect(drawer).toBeVisible();
-    await drawer.getByTestId('nav-group-stock').click();
-    await drawer.locator('[data-nav="stock.report.quantities"]').click();
-    await expect(page).toHaveURL(/\/app\/inventory\/reports\/quantities/);
+    await drawer.locator('[data-nav="reports.stock"]').click();
+    await expect(page).toHaveURL(/\/app\/reports\/stock$/);
     await expect(page.getByTestId('nav-drawer')).toHaveCount(0);                        // choosing a screen closes the drawer
+    await page.locator('[data-testid="hub-list"] [data-nav="stock.report.quantities"]').click();
+    await expect(page).toHaveURL(/\/app\/inventory\/reports\/quantities/);
+    await page.getByTestId('header-search').click();                                    // search is in the header on a phone
+    await expect(page.getByTestId('palette-input')).toBeVisible();
+    await page.keyboard.press('Escape');
 
     await page.goto('/app/inventory/reports/stock-value');
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

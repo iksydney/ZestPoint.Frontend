@@ -55,11 +55,11 @@ async function tableWith(page: Page, table: string, ...products: string[]): Prom
   }
 }
 
-/** The labels of the POS menu group, opened first so a hidden entry is really absent and not just collapsed. */
+/** The labels of the Sell area of the menu, opened first so a hidden entry is really absent and not just folded away. */
 async function posMenu(page: Page): Promise<string[]> {
-  const header = page.getByTestId('nav-group-pos');
+  const header = page.getByTestId('nav-group-sell');
   if ((await header.getAttribute('aria-expanded')) === 'false') await header.click();
-  return page.locator('[data-group-list="pos"] a span.truncate').allInnerTexts();
+  return page.locator('[data-group-list="sell"] a span.truncate').allInnerTexts();
 }
 
 async function ginOnHand(page: Page): Promise<string> {

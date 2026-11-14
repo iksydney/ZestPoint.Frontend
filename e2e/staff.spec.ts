@@ -55,7 +55,7 @@ test.describe('Staff management and screen-level RBAC (criteria 13-17)', () => {
     await expect(staff.page).toHaveURL(/\/app\/dashboard$/);
 
     const sidebar = staff.page.getByRole('navigation', { name: 'Main' }).first();
-    await expect(sidebar).toContainText('POS');
+    await expect(sidebar).toContainText('Point of Sale');
     await expect(sidebar).not.toContainText('Staff');
     await expect(sidebar).not.toContainText('Branding');
 

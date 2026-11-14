@@ -3,5 +3,8 @@
 export const environment = {
   production: false,
   apiBaseUrl: '',
-  siteUrl: 'http://localhost:4300'
+  siteUrl: 'http://localhost:4300',
+  // Guided tours do not start by themselves in the automated browser tests (one popping up would get in the way of every other test).
+  // The tour's own test switches them on with localStorage 'zp.tours.auto' = 'on'.
+  toursAutoStart: false
 };

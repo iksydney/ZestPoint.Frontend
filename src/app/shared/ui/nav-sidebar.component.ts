@@ -1,19 +1,20 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, output, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
-import { NAV_GROUPS, NavDefinition, NavGroup, NavGroupKey, NavIcon, navFor } from '../../core/navigation/app-nav';
+import { RouterLink } from '@angular/router';
+import { NavDefinition, NavIcon, navFor } from '../../core/navigation/app-nav';
+import { NavAreaKey, areaOf, helpFor, isReport, menuLabel, reportsRoute } from '../../core/navigation/nav-layout';
+import { NavService } from '../../core/navigation/nav.service';
 import { BrandMarkComponent } from './brand-mark.component';
 import { ICON_PATHS } from './icon-paths';
 
-
-
-type Section = { readonly kind: 'item'; readonly item: NavDefinition } | { readonly kind: 'group'; readonly group: NavGroup; readonly items: readonly NavDefinition[] };
+const OPEN_KEY = 'zp.nav.areas';
 
 /**
- * The application menu. It only ever receives screens the person may use (permission and module), grouped as POS, Stock and Purchasing.
- * Hiding an entry is a convenience: the route guards and the API refuse the same screen independently.
+ * The application menu: the working screens this person may use, grouped by the job being done (Sell, Customers, Stock, Purchasing,
+ * Finance, Admin). Reports are not listed here; each area has one Reports entry that opens a page of them. Search (Ctrl+K) reaches
+ * every screen and report by name.
  *
- * Keyboard: Up/Down/Home/End move between entries; Enter or Space opens a group. The legacy menu keys (1-9, letters) work ONLY while
- * focus is inside that group's list, so typing in a form field or anywhere else never triggers navigation.
+ * Keyboard: Up/Down/Home/End move between entries; Enter or Space opens or closes an area.
+ * The data-tour attributes are what the guided tour points at (core/tour/tours.ts): renaming one means updating the tour.
  */
 @Component({
   selector: 'zp-nav-sidebar',
@@ -21,145 +22,143 @@ type Section = { readonly kind: 'item'; readonly item: NavDefinition } | { reado
   imports: [RouterLink, BrandMarkComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <nav class="flex h-full flex-col gap-1 overflow-y-auto border-r border-ink/10 bg-panel p-3 text-ink" aria-label="Main" data-testid="main-nav" (keydown)="onKey($event)">
-      <div class="mb-2 flex items-center gap-2 px-1">
-        <zp-brand-mark [logoUrl]="logoUrl()" [initials]="initials()" [name]="name()" [size]="32" />
-        <span class="truncate text-sm font-bold">{{ name() }}</span>
+    <nav class="zp-nav flex h-full flex-col border-r border-ink/10 bg-panel text-ink" aria-label="Main" data-testid="main-nav" data-tour="nav" (keydown)="onKey($event)">
+      <div class="flex items-center gap-2.5 px-4 pb-3 pt-4">
+        <zp-brand-mark [logoUrl]="logoUrl()" [initials]="initials()" [name]="name()" [size]="34" />
+        <span class="truncate text-[15px] font-bold tracking-tight">{{ name() }}</span>
       </div>
 
-      <label class="sr-only" for="nav-search">Find a screen</label>
-      <input id="nav-search" type="search" class="app-input mb-2 py-1.5 text-sm" placeholder="Find a screen..." autocomplete="off" data-testid="nav-search" [value]="query()" (input)="query.set($any($event.target).value)" />
+      <div class="px-3 pb-2">
+        <button type="button" class="nav-search" data-testid="nav-search" data-tour="nav-search" aria-haspopup="dialog" (click)="search.emit()">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="icon('search')" /></svg>
+          <span class="flex-1 text-left">Search</span>
+          <kbd class="nav-kbd" aria-hidden="true">Ctrl K</kbd>
+        </button>
+      </div>
 
-      @if (query().trim()) {
-        <ul class="flex flex-col gap-0.5" data-testid="nav-results">
-          @for (n of matches(); track n.key) {
-            <li><a class="nav-link" [routerLink]="n.route" (click)="chosen.emit()" [class.nav-active]="isActive(n)" [attr.aria-current]="isActive(n) ? 'page' : null" [attr.data-nav]="n.key">
-              {{ n.label }} @if (groupLabel(n); as g) { <span class="ml-auto text-xs text-ink/60">{{ g }}</span> }</a></li>
-          } @empty { <li class="px-3 py-2 text-sm text-ink/70" role="status">No screen matches.</li> }
-        </ul>
-      } @else {
-        @for (s of sections(); track sectionKey(s)) {
-          @if (s.kind === 'item') {
-            <a class="nav-link" [routerLink]="s.item.route" (click)="chosen.emit()" [class.nav-active]="isActive(s.item)" [attr.aria-current]="isActive(s.item) ? 'page' : null" [attr.data-nav]="s.item.key" [attr.title]="s.item.description ?? s.item.label">
-              <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="icon(s.item.icon)" /></svg><span class="truncate">{{ s.item.label }}</span></a>
-          } @else {
-            <div class="mt-1" [attr.data-group]="s.group.key">
-              <button type="button" class="nav-link w-full font-semibold" [attr.aria-expanded]="isOpen(s.group.key)" [attr.aria-controls]="'nav-grp-' + s.group.key" [attr.data-testid]="'nav-group-' + s.group.key" (click)="toggle(s.group.key)">
-                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="icon(s.group.icon)" /></svg>
-                <span>{{ s.group.label }}</span>
-                <svg class="ml-auto h-4 w-4 shrink-0 transition-transform" [class.rotate-90]="isOpen(s.group.key)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
-              </button>
-              @if (isOpen(s.group.key)) {
-                <ul class="ml-3 mt-0.5 flex flex-col gap-0.5 border-l border-ink/10 pl-2" [id]="'nav-grp-' + s.group.key" [attr.data-group-list]="s.group.key">
-                  @for (n of s.items; track n.key) {
-                    <li><a class="nav-link text-[13px]" [routerLink]="n.route" (click)="chosen.emit()" [class.nav-active]="isActive(n)" [attr.aria-current]="isActive(n) ? 'page' : null" [attr.data-nav]="n.key"
-                           [attr.title]="n.label + (shownKey(n) ? ' (press ' + shownKey(n)!.toUpperCase() + ' while in this menu)' : '')" [attr.aria-keyshortcuts]="shownKey(n)">
-                      <span class="truncate">{{ n.label }}</span>
-                      @if (shownKey(n)) { <kbd class="ml-auto rounded border border-ink/25 px-1 text-[10px] font-semibold uppercase text-ink/70" aria-hidden="true">{{ shownKey(n) }}</kbd> }</a></li>
-                  }
-                </ul>
-              }
-            </div>
-          }
+      <div class="flex-1 overflow-y-auto px-3 pb-4">
+        @if (nav.home(); as home) {
+          <a class="nav-link" [routerLink]="home.route" (click)="chosen.emit()" [class.nav-active]="activeKey() === home.key" [attr.aria-current]="activeKey() === home.key ? 'page' : null" [attr.data-nav]="home.key" [attr.title]="help(home)">
+            <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="icon(home.icon)" /></svg><span class="truncate">{{ label(home) }}</span></a>
         }
-      }
+
+        @for (s of nav.sections(); track s.area.key) {
+          <section class="mt-4 rounded-xl" [attr.data-group]="s.area.key" [attr.data-tour]="'nav-area-' + s.area.key">
+            <h2 class="m-0">
+              <button type="button" class="nav-area" [attr.aria-expanded]="isOpen(s.area.key)" [attr.aria-controls]="'nav-area-' + s.area.key" [attr.data-testid]="'nav-group-' + s.area.key" [attr.title]="s.area.blurb" (click)="toggle(s.area.key)">
+                <span>{{ s.area.label }}</span>
+                <svg class="h-3.5 w-3.5 shrink-0 transition-transform duration-150" [class.rotate-90]="isOpen(s.area.key)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+              </button>
+            </h2>
+            @if (isOpen(s.area.key)) {
+              <ul class="mt-1 flex list-none flex-col gap-0.5 p-0" [id]="'nav-area-' + s.area.key" [attr.data-group-list]="s.area.key">
+                @for (n of s.screens; track n.key) {
+                  <li><a class="nav-link" [routerLink]="n.route" (click)="chosen.emit()" [class.nav-active]="activeKey() === n.key" [attr.aria-current]="activeKey() === n.key ? 'page' : null" [attr.data-nav]="n.key" [attr.title]="help(n)">
+                    <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="icon(n.icon)" /></svg><span class="truncate">{{ label(n) }}</span></a></li>
+                }
+                @if (s.reports.length) {
+                  <li><a class="nav-link" [routerLink]="reports(s.area.key)" (click)="chosen.emit()" [class.nav-active]="activeKey() === 'reports.' + s.area.key" [attr.aria-current]="activeKey() === 'reports.' + s.area.key ? 'page' : null"
+                         [attr.data-nav]="'reports.' + s.area.key" [attr.title]="s.area.label + ' reports'">
+                    <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="icon('chart')" /></svg><span class="truncate">Reports</span>
+                    <span class="nav-count" [attr.aria-label]="s.reports.length + ' reports'">{{ s.reports.length }}</span></a></li>
+                }
+              </ul>
+            }
+          </section>
+        }
+      </div>
     </nav>
   `,
   styles: [`
-    .nav-link { display: flex; align-items: center; gap: .5rem; border-radius: .5rem; padding: .5rem .75rem; font-size: .875rem; font-weight: 500; color: rgb(var(--ink-rgb) / .85); text-align: left; min-height: 2.25rem; }
-    .nav-link:hover { background: rgb(var(--ink-rgb) / .1); }
-    .nav-link:focus-visible { outline: 2px solid rgb(var(--primary-rgb)); outline-offset: 1px; }
-    .nav-active { background: rgb(var(--primary-rgb)); color: rgb(var(--on-primary-rgb)); }
-    .nav-active:hover { background: rgb(var(--primary-rgb)); }
-    .nav-active kbd { color: inherit; border-color: currentColor; }
-    .nav-icon { width: 1.1rem; height: 1.1rem; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-icon { width: 1.125rem; height: 1.125rem; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
+    .nav-search { display: flex; width: 100%; align-items: center; gap: .625rem; min-height: 2.5rem; border-radius: .625rem; border: 1px solid rgb(var(--ink-rgb) / .14); background: rgb(var(--ink-rgb) / .04);
+      padding: .5rem .625rem; font-size: .875rem; color: rgb(var(--ink-rgb) / .7); transition: background-color .12s, border-color .12s; }
+    .nav-search:hover { background: rgb(var(--ink-rgb) / .08); border-color: rgb(var(--ink-rgb) / .25); }
+    .nav-kbd { border-radius: .375rem; border: 1px solid rgb(var(--ink-rgb) / .2); padding: 0 .375rem; font-family: inherit; font-size: .6875rem; font-weight: 600; line-height: 1.25rem; color: rgb(var(--ink-rgb) / .6); }
+    .nav-area { display: flex; width: 100%; align-items: center; justify-content: space-between; border-radius: .5rem; padding: .375rem .625rem; min-height: 2rem;
+      font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: rgb(var(--ink-rgb) / .6); }
+    .nav-area:hover { color: rgb(var(--ink-rgb)); background: rgb(var(--ink-rgb) / .05); }
+    .nav-link { position: relative; display: flex; align-items: center; gap: .625rem; min-height: 2.5rem; border-radius: .625rem; padding: .5rem .625rem; font-size: .875rem; font-weight: 500;
+      color: rgb(var(--ink-rgb) / .82); text-decoration: none; transition: background-color .12s, color .12s; }
+    .nav-link:hover { background: rgb(var(--ink-rgb) / .07); color: rgb(var(--ink-rgb)); }
+    /* The current screen: a tinted row and an accent bar. The text stays the ink colour, so it is readable whatever brand colour a company picks. */
+    .nav-active, .nav-active:hover { background: rgb(var(--ink-rgb) / .1); color: rgb(var(--ink-rgb)); font-weight: 650; }
+    .nav-active::before { content: ''; position: absolute; left: 0; top: .5rem; bottom: .5rem; width: 3px; border-radius: 3px; background: rgb(var(--primary-rgb)); }
+    .nav-active .nav-icon { opacity: 1; }
+    .nav-count { margin-left: auto; border-radius: 999px; background: rgb(var(--ink-rgb) / .1); padding: 0 .5rem; font-size: .6875rem; font-weight: 600; line-height: 1.25rem; color: rgb(var(--ink-rgb) / .75); }
+    .nav-link:focus-visible, .nav-area:focus-visible, .nav-search:focus-visible { outline: 2px solid rgb(var(--primary-rgb)); outline-offset: 1px; }
+    @media (prefers-reduced-motion: reduce) { .nav-link, .nav-search, .nav-area svg { transition: none; } }
   `]
 })
 export class NavSidebarComponent {
-  private readonly router = inject(Router);
+  protected readonly nav = inject(NavService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
-  /** Only the screens this person may use. */
-  readonly items = input.required<readonly NavDefinition[]>();
   readonly name = input.required<string>();
   readonly initials = input.required<string>();
   readonly logoUrl = input<string | null>(null);
   readonly currentUrl = input('');
   /** Emitted after a link is followed (the mobile drawer closes itself). */
   readonly chosen = output<void>();
+  /** The person asked for search (the shell opens the search box). */
+  readonly search = output<void>();
 
-  protected readonly query = signal('');
-  private readonly open = signal<ReadonlySet<NavGroupKey>>(this.restore());
+  private readonly open = signal<ReadonlySet<NavAreaKey>>(this.restore());
 
-  protected readonly sections = computed<readonly Section[]>(() => {
-    const list: Section[] = [];
-    const seen = new Set<NavGroupKey>();
-    for (const n of this.items()) {
-      if (!n.group) { list.push({ kind: 'item', item: n }); continue; }
-      if (seen.has(n.group)) continue;
-      seen.add(n.group);
-      const group = NAV_GROUPS.find((g) => g.key === n.group)!;
-      list.push({ kind: 'group', group, items: this.items().filter((i) => i.group === n.group) });
-    }
-    return list;
-  });
-
-  protected readonly matches = computed(() => {
-    const q = this.query().trim().toLowerCase();
-    return this.items().filter((n) => `${n.label} ${n.description ?? ''} ${this.groupLabel(n) ?? ''}`.toLowerCase().includes(q));
+  /** The entry to mark as current: the screen itself, or its area's Reports entry for a report and for the Reports page. */
+  protected readonly activeKey = computed<string | null>(() => {
+    const path = this.currentUrl().split('?')[0]!.split('#')[0]!;
+    const hub = /^\/app\/reports\/([a-z]+)/.exec(path);
+    if (hub) return `reports.${hub[1]}`;
+    const here = navFor(this.currentUrl());
+    if (!here) return null;
+    return isReport(here) ? `reports.${areaOf(here)}` : here.key;
   });
 
   constructor() {
-    // The group that holds the current screen is always open, so the active entry is never hidden.
+    // The area that holds the current screen is always open, so the current entry is never hidden.
     effect(() => {
-      const group = navFor(this.currentUrl())?.group;
-      if (group && !this.open().has(group)) this.open.update((s) => new Set(s).add(group));
+      const key = this.activeKey();
+      if (!key) return;
+      const here = navFor(this.currentUrl());
+      const area = key.startsWith('reports.') ? (key.slice('reports.'.length) as NavAreaKey) : here ? areaOf(here) : null;
+      if (area && !this.open().has(area)) this.open.update((s) => new Set(s).add(area));
     }, { allowSignalWrites: true });
   }
 
   protected icon = (key: NavIcon): string => ICON_PATHS[key];
-  /** Letter keys are shown beside a link; the digit keys still work in the menu but are not displayed as numbering. */
-  protected shownKey = (n: NavDefinition): string | null => (n.shortcut && !/^\d$/.test(n.shortcut) ? n.shortcut : null);
-  protected groupLabel = (n: NavDefinition): string | null => NAV_GROUPS.find((g) => g.key === n.group)?.label ?? null;
-  protected sectionKey = (s: Section): string => (s.kind === 'item' ? s.item.key : `g:${s.group.key}`);
-  protected isActive = (n: NavDefinition): boolean => navFor(this.currentUrl())?.key === n.key;
-  protected isOpen = (key: NavGroupKey): boolean => this.open().has(key);
+  protected label = (n: NavDefinition): string => menuLabel(n);
+  protected help = (n: NavDefinition): string => helpFor(n);
+  protected reports = (area: NavAreaKey): string => reportsRoute(area);
+  protected isOpen = (key: NavAreaKey): boolean => this.open().has(key);
 
-  protected toggle(key: NavGroupKey): void {
-    this.open.update((s) => { const next = new Set(s); next.has(key) ? next.delete(key) : next.add(key); return next; });
-    try { sessionStorage.setItem('zp.nav.open', JSON.stringify([...this.open()])); } catch { /* storage may be blocked */ }
+  /** Opens an area from outside (the tour shows what is inside each one). */
+  expand(key: NavAreaKey): void {
+    if (!this.open().has(key)) this.open.update((s) => new Set(s).add(key));
+  }
+
+  protected toggle(key: NavAreaKey): void {
+    this.open.update((s) => { const next = new Set(s); if (next.has(key)) next.delete(key); else next.add(key); return next; });
+    try { localStorage.setItem(OPEN_KEY, JSON.stringify([...this.open()])); } catch { /* storage may be blocked: the menu still works */ }
   }
 
   protected onKey(event: KeyboardEvent): void {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     const target = event.target as HTMLElement;
-    const links = Array.from(this.host.nativeElement.querySelectorAll<HTMLElement>('a.nav-link, button.nav-link'));
-
-    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) && target.matches('a.nav-link, button.nav-link')) {
-      event.preventDefault();
-      const i = links.indexOf(target);
-      const next = event.key === 'ArrowDown' ? i + 1 : event.key === 'ArrowUp' ? i - 1 : event.key === 'Home' ? 0 : links.length - 1;
-      links[Math.max(0, Math.min(links.length - 1, next))]?.focus();
-      return;
-    }
-
-    // Legacy menu keys: only when focus is on an entry INSIDE a group's list (never in the search box or any other field).
-    if (event.key.length !== 1 || !target.matches('a.nav-link')) return;
-    const groupKey = target.closest<HTMLElement>('[data-group-list]')?.dataset['groupList'];
-    if (!groupKey) return;
-    const hit = this.items().find((n) => n.group === groupKey && n.shortcut === event.key.toLowerCase());
-    if (hit) {
-      event.preventDefault();
-      void this.router.navigateByUrl(hit.route);
-      this.chosen.emit();
-    }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) || !target.matches('a.nav-link, button.nav-area, button.nav-search')) return;
+    event.preventDefault();
+    const stops = Array.from(this.host.nativeElement.querySelectorAll<HTMLElement>('a.nav-link, button.nav-area, button.nav-search'));
+    const i = stops.indexOf(target);
+    const next = event.key === 'ArrowDown' ? i + 1 : event.key === 'ArrowUp' ? i - 1 : event.key === 'Home' ? 0 : stops.length - 1;
+    stops[Math.max(0, Math.min(stops.length - 1, next))]?.focus();
   }
 
-  private restore(): ReadonlySet<NavGroupKey> {
+  private restore(): ReadonlySet<NavAreaKey> {
     try {
-      const saved = sessionStorage.getItem('zp.nav.open');
-      if (saved) return new Set(JSON.parse(saved) as NavGroupKey[]);
+      const saved = localStorage.getItem(OPEN_KEY);
+      if (saved) return new Set(JSON.parse(saved) as NavAreaKey[]);
     } catch { /* ignore */ }
-    return new Set<NavGroupKey>(['pos']);
+    // A first visit shows every area open: a new person sees the whole of what they can do. They close what they do not need.
+    return new Set<NavAreaKey>(['sell', 'customers', 'stock', 'purchasing', 'finance', 'admin']);
   }
 }

@@ -45,12 +45,14 @@ async function confirmWithReason(page: Page, reason: string) {
   await page.getByTestId('action-confirm').click();
 }
 
-/** Types a screen name into the menu search, which lists exactly the screens the menu would offer. */
+/** Types a screen name into search, which lists exactly the screens and reports the person may use. */
 async function menuOffers(page: Page, label: string): Promise<boolean> {
-  await page.getByTestId('nav-search').fill(label);
-  await expect(page.getByTestId('nav-results')).toBeVisible();
-  const hit = await page.getByTestId('nav-results').getByRole('link', { name: label }).count();
-  await page.getByTestId('nav-search').fill('');
+  await page.getByTestId('nav-search').click();
+  await page.getByTestId('palette-input').fill(label);
+  await expect(page.getByTestId('palette-results')).toBeVisible();
+  const hit = await page.getByTestId('palette-results').getByRole('option').filter({ hasText: label }).count();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('palette')).toHaveCount(0);
   return hit > 0;
 }
 

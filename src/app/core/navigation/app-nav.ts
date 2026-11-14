@@ -28,9 +28,10 @@ export interface NavDefinition {
   readonly permission: string | readonly string[];
   /** Subscription module the screen belongs to; a `locked` module hides it from the menu. */
   readonly feature?: FeatureCode;
+  /** The legacy menu the screen sat in. Not what lays the menu out any more: see nav-layout.ts (areas, order, menu names, help text). */
   readonly group?: NavGroupKey;
   readonly kind: 'screen';
-  /** The key used in the legacy menu (digit or letter). Only active while the person is inside that menu group. */
+  /** The key this screen had in the legacy menu. No longer used: the menu keys were dropped for search (Ctrl+K) on 2026-11-14. Kept as a record. */
   readonly shortcut?: string;
   /** True when the screen works on the branch picked in the header. */
   readonly needsBranch?: boolean;
@@ -41,13 +42,6 @@ export interface NavDefinition {
   readonly data?: { readonly report: ReportDefinition };
   readonly description?: string;
 }
-
-export const NAV_GROUPS: readonly NavGroup[] = [
-  { key: 'pos', label: 'POS', icon: 'cart', kind: 'submenu' },
-  { key: 'stock', label: 'Stock', icon: 'box', kind: 'submenu' },
-  { key: 'purchasing', label: 'Purchasing', icon: 'truck', kind: 'submenu' },
-  { key: 'ledger', label: 'Ledger', icon: 'wallet', kind: 'submenu' }
-];
 
 const reportPage = () => import('../../features/reports/report-page.component').then((m) => m.ReportPageComponent);
 
@@ -179,7 +173,4 @@ export function navFor(url: string): NavDefinition | null {
   return best;
 }
 
-export const groupOf = (n: NavDefinition): NavGroup | null => NAV_GROUPS.find((g) => g.key === n.group) ?? null;
 
-/** The legacy menu number or letter, shown next to a label and used as the in-menu key. */
-export const shortcutLabel = (n: NavDefinition): string | null => n.shortcut ?? null;
