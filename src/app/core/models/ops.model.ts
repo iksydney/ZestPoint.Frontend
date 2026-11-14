@@ -45,6 +45,10 @@ export interface CompanySettingsDto {
   paymentProviderIsDemo: boolean;
   /** The bar man method is on: Send hands items to a bar man and stock is deducted when the bar man dispatches them. */
   barManMethodEnabled: boolean;
+  /** Layby rules: least first payment (percent of the total), days a layby may run, what is kept on cancelling (percent of what was paid). */
+  laybyMinDepositPercent: number;
+  laybyDays: number;
+  laybyCancelFeePercent: number;
   /** True for a bar-type business; only these can switch the method on. */
   barManMethodAvailable: boolean;
   rowVersion: string;
@@ -316,6 +320,8 @@ export interface OrderDto {
   /** The customer record on the bill, if one was chosen (separate from the free-text name). */
   customerId?: string | null;
   customer?: { id: string; number: number; name: string; phone: string; pointsBalance: number } | null;
+  /** Set when the bill is a layby: its items are fixed and it is paid in parts. */
+  layby?: { id: string; number: number; status: 'Active' | 'Completed' | 'Cancelled'; dueDate: string; minimumDeposit: number } | null;
   /** Loyalty points the lines on the bill are worth; the customer gets them when the bill is paid in full. */
   pointsOnBill?: number;
   /** Points this bill has given its customer so far. */
@@ -517,6 +523,8 @@ export interface InventoryItemDto {
   isPackage?: boolean;
   /** What customers are waiting for on sales back orders. */
   salesBackOrderQuantity?: number;
+  /** What is held for customers on active laybys: still counted, not available to sell. */
+  onLaybyQuantity?: number;
   /** Filled when one item is read (the card); absent in lists. */
   onOrderQuantity?: number | null;
   lastSoldAtUtc?: string | null;

@@ -53,6 +53,17 @@ import { ConfirmService, ToastService } from '../../shared/ui/feedback';
           </section>
         }
 
+        <section class="app-card space-y-3" data-testid="layby-section"><h2 class="font-semibold">Layby</h2>
+          <p class="text-sm text-ink/80">A customer reserves goods, pays in parts and collects when everything is paid. These rules apply to laybys started from now on.</p>
+          <div class="grid gap-3 sm:grid-cols-3">
+            <div><label class="app-label" for="s-lb-dep">Least first payment (% of the total)</label><input id="s-lb-dep" type="number" min="0" max="100" step="0.01" class="app-input" data-testid="layby-deposit" [ngModel]="v.laybyMinDepositPercent" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ laybyMinDepositPercent: +$event })" /></div>
+            <div><label class="app-label" for="s-lb-days">Days to pay it off</label><input id="s-lb-days" type="number" min="1" max="3650" class="app-input" data-testid="layby-days" [ngModel]="v.laybyDays" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ laybyDays: +$event })" />
+              <p class="mt-1 text-xs text-ink/70">Overdue laybys are flagged, never cancelled by themselves.</p></div>
+            <div><label class="app-label" for="s-lb-fee">Kept on cancelling (% of what was paid)</label><input id="s-lb-fee" type="number" min="0" max="100" step="0.01" class="app-input" data-testid="layby-fee" [ngModel]="v.laybyCancelFeePercent" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ laybyCancelFeePercent: +$event })" />
+              <p class="mt-1 text-xs text-ink/70">0 gives everything back.</p></div>
+          </div>
+        </section>
+
         <section class="app-card space-y-3" data-testid="controls-section"><h2 class="font-semibold">Shifts, adjustments and expiry</h2>
           <div class="grid gap-3 sm:grid-cols-2">
             <div><label class="app-label" for="s-cv">Till difference that needs a supervisor ({{ v.currencyCode }})</label><input id="s-cv" type="number" min="0" step="0.01" class="app-input" data-testid="shift-tolerance" [ngModel]="v.cashVarianceReviewThreshold" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ cashVarianceReviewThreshold: +$event })" />

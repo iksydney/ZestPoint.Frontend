@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, s
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
-import { CustomerDto, CustomersApi } from '../../core/services/customer.services';
+import { CustomerDto, CustomersApi, LaybysApi } from '../../core/services/customer.services';
 import { BarLineState, OrderKind, PaymentMethod, ProductDto, ReceiptDto, SellingUnitDto, VoidAuthorizer, VoidRequestDto } from '../../core/models/ops.model';
 import { splitEvenly } from '../../core/offline/order-calc';
 import { toApiError } from '../../core/services/api.util';
@@ -106,9 +106,15 @@ type Dialog = 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 'pay' | 'vo
             <div>
               <h2 class="font-semibold">{{ o.label ?? 'Bill' }} <span class="text-sm font-normal text-ink/70">{{ o.numberPending ? '(not synced yet)' : '#' + o.number }}</span></h2>
               <p class="text-xs text-ink/70">{{ o.kind }}@if (o.tableLabel) { , table {{ o.tableLabel }} } @if (o.ownerName) { , {{ o.ownerName }} }</p>
+              @if (o.layby; as lb) {
+                <p class="mt-1 text-sm font-semibold" data-testid="bill-layby">Layby #{{ lb.number }}@if (lb.status === 'Active') { , due {{ lb.dueDate }}@if (o.amountPaid === 0) { . First payment at least {{ lb.minimumDeposit | currency: store.currency() : 'symbol-narrow' : '1.2-2' }} } } @else { : {{ lb.status.toLowerCase() }} }</p>
+                @if (lb.status === 'Active') { <p class="text-xs text-ink/70">Its items are fixed. Take payments here or on the Laybys screen.</p> }
+              }
+              @if (laybyError()) { <p class="app-error" role="alert" data-testid="layby-error">{{ laybyError() }}</p> }
               <p class="mt-1 text-sm" data-testid="bill-customer">
                 @if (o.customer; as c) { <span class="font-medium">{{ c.name }}</span> <span class="text-ink/70">{{ c.pointsBalance }} points@if (o.pointsEarned) { , {{ o.pointsEarned }} from this bill } @else if (o.pointsOnBill) { , {{ o.pointsOnBill }} more when paid }</span> }
-                @if (canCustomers() && canEdit() && !readOnly() && (o.status === 'Open' || o.status === 'PartiallyPaid')) { <button type="button" class="btn-ghost px-1 py-0 text-sm underline" data-testid="bill-customer-btn" (click)="openCustomer()">{{ o.customer ? 'Change customer' : 'Add customer' }}</button> }
+                @if (canLayby() && !readOnly() && o.customer && !o.layby && o.status === 'Open' && o.amountPaid === 0) { <button type="button" class="btn-outline ml-1 px-2 py-0 text-sm" data-testid="bill-layby-btn" [disabled]="laybyBusy()" (click)="startLayby()">Layby</button> }
+                @if (canCustomers() && canEdit() && !readOnly() && !o.layby && (o.status === 'Open' || o.status === 'PartiallyPaid')) { <button type="button" class="btn-ghost px-1 py-0 text-sm underline" data-testid="bill-customer-btn" (click)="openCustomer()">{{ o.customer ? 'Change customer' : 'Add customer' }}</button> }
               </p>
             </div>
             <zp-status-badge [tone]="o.status === 'Paid' ? 'success' : o.status === 'Open' || o.status === 'PartiallyPaid' ? 'primary' : 'danger'"><span data-testid="bill-status">{{ o.status }}</span></zp-status-badge>
@@ -453,6 +459,24 @@ export class PosBillingComponent implements OnInit {
   protected readonly serialText = signal('');
   private serialChosen: string | null = null;
 
+  // ---- Layby: the bill, with its customer, becomes a layby; its items are then fixed and it is paid in parts ----
+  private readonly laybysApi = inject(LaybysApi);
+  protected readonly canLayby = computed(() => this.auth.hasPermission(this.perms.POS_LAYBY_MANAGE));
+  protected readonly laybyBusy = signal(false);
+  protected readonly laybyError = signal<string | null>(null);
+
+  protected async startLayby(): Promise<void> {
+    this.laybyBusy.set(true);
+    this.laybyError.set(null);
+    try {
+      await this.store.serverAction(async (id) => {
+        await firstValueFrom(this.laybysApi.start(id));
+        return firstValueFrom(this.ordersApi.get(id));
+      }, 'Laybys');
+    } catch (err) { this.laybyError.set(toApiError(err).message); }
+    finally { this.laybyBusy.set(false); }
+  }
+
   // ---- The customer record on the bill ----
   private readonly customersApi = inject(CustomersApi);
   protected readonly canCustomers = computed(() => this.auth.hasPermission(this.perms.CUSTOMERS_USE));
@@ -639,6 +663,7 @@ export class PosBillingComponent implements OnInit {
   }
 
   protected pick(p: ProductDto): void {
+    if (this.store.current()?.layby) { this.laybyError.set('This bill is on layby: its items are fixed. Start a new bill for anything else.'); return; }
     this.serialChosen = null;
     if (p.tracksSerials) {
       this.pending.set(p);

@@ -5,7 +5,7 @@ import { newContext, pick, registerViaUi } from './helpers';
 const POS: [string, string][] = [
   ['Point of Sale', '/app/pos'], ['Start / End of Day', '/app/pos/day-management'], ['Summary Income Report', '/app/pos/reports/summary-income'], ['Daily Sales Report', '/app/pos/reports/daily-sales'],
   ['Staff Sales Report', '/app/pos/reports/staff-sales'], ['Stock Groups Sales Report', '/app/pos/reports/stock-group-sales'], ['Sales Analysis Report', '/app/pos/reports/sales-analysis'], ['Multi-Currency Report', '/app/pos/reports/multi-currency'], ['Void History Report', '/app/pos/reports/void-history'],
-  ['Sales Back Orders', '/app/pos/back-orders'], ['Sales Back Order Report', '/app/pos/reports/sales-back-orders']
+  ['Laybys', '/app/pos/laybys'], ['Layby Report', '/app/pos/reports/laybys'], ['Sales Back Orders', '/app/pos/back-orders'], ['Sales Back Order Report', '/app/pos/reports/sales-back-orders']
 ];
 const STOCK: [string, string][] = [
   ['Add / Modify Stock', '/app/inventory/items'], ['Stock Group Maintenance', '/app/inventory/groups'], ['Global Stock Maintenance', '/app/inventory/global-maintenance'], ['Stock Qty Adjustments', '/app/inventory/adjustments'],
@@ -75,7 +75,7 @@ test.describe('POS, Stock and Purchasing navigation', () => {
     await expandAll(page);
 
     for (const [key, entries] of GROUPS) expect(await labelsOf(page, key), key).toEqual(entries.map(([label]) => label));
-    expect(await page.locator('[data-group-list="pos"] a, [data-group-list="stock"] a, [data-group-list="purchasing"] a').count()).toBe(11 + 22 + 16);
+    expect(await page.locator('[data-group-list="pos"] a, [data-group-list="stock"] a, [data-group-list="purchasing"] a').count()).toBe(13 + 22 + 16);
 
     // Legacy shortcut letters are shown beside the entries that have them.
     await expect(page.locator('[data-nav="stock.report.value"] kbd')).toHaveText('v');
@@ -155,7 +155,7 @@ test.describe('POS, Stock and Purchasing navigation', () => {
     await expect(staff.page).toHaveURL(/\/app\/dashboard$/);
 
     await expect(staff.page.getByTestId('nav-group-pos')).toBeVisible();
-    expect(await labelsOf(staff.page, 'pos')).toEqual(['Point of Sale', 'Start / End of Day', 'Sales Back Orders', 'Sales Back Order Report']);   // till staff work back orders
+    expect(await labelsOf(staff.page, 'pos')).toEqual(['Point of Sale', 'Start / End of Day', 'Laybys', 'Layby Report', 'Sales Back Orders', 'Sales Back Order Report']);   // till staff work back orders
     await expect(staff.page.getByTestId('nav-group-stock')).toHaveCount(0);
     await expect(staff.page.getByTestId('nav-group-purchasing')).toHaveCount(0);
     await expect(staff.page.getByTestId('quick-pos')).toBeVisible();

@@ -68,6 +68,57 @@ const q = (filter: object): HttpParams => {
   return params;
 };
 
+export type LaybyStatus = 'Active' | 'Completed' | 'Cancelled';
+
+export interface LaybyDto {
+  id: string;
+  number: number;
+  branchId: string;
+  orderId: string;
+  orderNumber: number;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  status: LaybyStatus;
+  startedAtUtc: string;
+  /** yyyy-MM-dd */
+  dueDate: string;
+  overdue: boolean;
+  total: number;
+  minimumDeposit: number;
+  /** What the customer has paid so far; for a cancelled layby, what was kept. */
+  paid: number;
+  balance: number;
+  /** The goods, in words. */
+  items: string;
+  completedAtUtc: string | null;
+  cancelledAtUtc: string | null;
+  cancelReason: string | null;
+  cancelFee: number | null;
+  refundedOnCancel: number | null;
+  cancelAuthorisedByName: string | null;
+  rowVersion: string;
+}
+
+@Injectable({ providedIn: 'root' })
+export class LaybysApi {
+  private readonly http = inject(HttpClient);
+
+  list(filter: { branchId?: string; status?: LaybyStatus | ''; overdueOnly?: boolean; search?: string; page?: number; pageSize?: number }): Observable<PagedResult<LaybyDto>> {
+    return this.http.get<ApiEnvelope<PagedResult<LaybyDto>>>('/api/v1/laybys', { params: q({ ...filter, overdueOnly: filter.overdueOnly ? true : undefined }) }).pipe(unwrap());
+  }
+
+  /** Turns an open bill that has a customer and no payment yet into a layby. */
+  start(orderId: string): Observable<LaybyDto> {
+    return this.http.post<ApiEnvelope<LaybyDto>>('/api/v1/laybys', { orderId }).pipe(unwrap());
+  }
+
+  /** Cancels with a supervisor's or administrator's typed credentials; they are sent once and kept nowhere. */
+  cancel(id: string, reason: string, authorizer: { staffCode?: string; pin?: string; email?: string; password?: string }): Observable<LaybyDto> {
+    return this.http.post<ApiEnvelope<LaybyDto>>(`/api/v1/laybys/${id}/cancel`, { reason, authorizer }).pipe(unwrap());
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class CustomersApi {
   private readonly http = inject(HttpClient);

@@ -69,6 +69,12 @@ export const REPORTS = {
     status: { label: 'Status', options: opts(['', 'Waiting'], ['Supplied', 'Supplied'], ['Cancelled', 'Cancelled'], ['all', 'All']) }
   },
 
+  /** Laybys: what each is worth, what is paid and what is still owed. Active ones unless another status is chosen. */
+  laybys: {
+    path: 'pos/reports/laybys', period: 'none', branch: true, search: 'Customer, phone or layby number',
+    status: { label: 'Status', options: opts(['', 'Active'], ['overdue', 'Overdue'], ['completed', 'Completed'], ['cancelled', 'Cancelled'], ['all', 'All']) }
+  },
+
   // ---- Stock -------------------------------------------------------------------------------------
   itemsEnquiry: {
     path: 'inventory/reports/items-enquiry', period: 'none', branch: true, group: true, search: 'Name, SKU, barcode or other part number', itemIdColumn: 'itemId',
