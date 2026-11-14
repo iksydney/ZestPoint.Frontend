@@ -83,7 +83,7 @@ export const REPORTS = {
   },
   transactions: {
     path: 'inventory/reports/transactions', period: 'range', branch: true, group: true, item: true, search: 'Reference, note or document id', itemIdColumn: 'itemId', desc: true, sort: 'date',
-    view: { label: 'Movement type', default: '', options: opts(['', 'All movements'], ['Receipt', 'Receipt'], ['Sale', 'Sale'], ['SaleReversal', 'Sale reversal'], ['Adjustment', 'Adjustment'], ['Waste', 'Waste'], ['Spillage', 'Spillage'], ['Breakage', 'Breakage'], ['TransferIn', 'Transfer in'], ['TransferOut', 'Transfer out'], ['Return', 'Return'], ['AuditCorrection', 'Audit correction'], ['Opening', 'Opening stock']) }
+    view: { label: 'Movement type', default: '', options: opts(['', 'All movements'], ['Receipt', 'Receipt'], ['Sale', 'Sale'], ['SaleReversal', 'Sale reversal'], ['Adjustment', 'Adjustment'], ['Waste', 'Waste'], ['Spillage', 'Spillage'], ['Breakage', 'Breakage'], ['TransferIn', 'Transfer in'], ['TransferOut', 'Transfer out'], ['Return', 'Return'], ['ConsignmentOut', 'Consignment out'], ['ConsignmentReturn', 'Consignment return'], ['AuditCorrection', 'Audit correction'], ['Opening', 'Opening stock']) }
   },
   quantities: {
     path: 'inventory/reports/quantities', period: 'none', branch: true, group: true, search: 'Name, SKU, barcode or other part number', itemIdColumn: 'itemId',
@@ -170,6 +170,12 @@ export const REPORTS = {
   equivalentPartNumbers: {
     path: 'purchasing/reports/equivalent-part-numbers', period: 'none', supplier: true, item: true, search: 'Part number, item or SKU',
     view: { label: 'Code type', default: '', options: opts(['', 'All codes'], ['Equivalent', 'Equivalent part numbers'], ['SupplierPartNumber', 'Supplier part numbers']) }
+  },
+
+  /** Goods agents are holding on consignment. Those still out unless All is chosen. */
+  consignmentOut: {
+    path: 'inventory/reports/consignment-out', period: 'none', branch: true, item: true, search: 'Agent or item',
+    status: { label: 'Show', options: opts(['', 'Still out'], ['all', 'All']) }
   },
 
   // ---- Ledger ------------------------------------------------------------------------------------

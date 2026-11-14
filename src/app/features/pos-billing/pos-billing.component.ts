@@ -110,6 +110,7 @@ type Dialog = 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 'pay' | 'vo
                 <p class="mt-1 text-sm font-semibold" data-testid="bill-layby">Layby #{{ lb.number }}@if (lb.status === 'Active') { , due {{ lb.dueDate }}@if (o.amountPaid === 0) { . First payment at least {{ lb.minimumDeposit | currency: store.currency() : 'symbol-narrow' : '1.2-2' }} } } @else { : {{ lb.status.toLowerCase() }} }</p>
                 @if (lb.status === 'Active') { <p class="text-xs text-ink/70">Its items are fixed. Take payments here or on the Laybys screen.</p> }
               }
+              @if (o.consignmentSaleId) { <p class="mt-1 text-xs text-ink/70" data-testid="bill-consignment">Consignment goods sold by an agent, at the agreed prices. Take payment; nothing else can be changed.</p> }
               @if (laybyError()) { <p class="app-error" role="alert" data-testid="layby-error">{{ laybyError() }}</p> }
               <p class="mt-1 text-sm" data-testid="bill-customer">
                 @if (o.customer; as c) { <span class="font-medium">{{ c.name }}</span> <span class="text-ink/70">{{ c.pointsBalance }} points@if (o.pointsEarned) { , {{ o.pointsEarned }} from this bill } @else if (o.pointsOnBill) { , {{ o.pointsOnBill }} more when paid }</span> }
@@ -664,6 +665,7 @@ export class PosBillingComponent implements OnInit {
 
   protected pick(p: ProductDto): void {
     if (this.store.current()?.layby) { this.laybyError.set('This bill is on layby: its items are fixed. Start a new bill for anything else.'); return; }
+    if (this.store.current()?.consignmentSaleId) { this.laybyError.set('This bill is for consignment goods an agent sold: its items and prices are fixed. Start a new bill for anything else.'); return; }
     this.serialChosen = null;
     if (p.tracksSerials) {
       this.pending.set(p);

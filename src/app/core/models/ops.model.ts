@@ -16,7 +16,7 @@ export type StockUnit = 'Milliliter' | 'Gram' | 'Each';
 export type InventoryItemKind = 'Ingredient' | 'FinishedGood';
 export type StockMovementType =
   | 'Opening' | 'Receipt' | 'Sale' | 'SaleReversal' | 'Adjustment' | 'Waste' | 'Spillage' | 'Breakage'
-  | 'TransferOut' | 'TransferIn' | 'Return' | 'AuditCorrection';
+  | 'TransferOut' | 'TransferIn' | 'Return' | 'AuditCorrection' | 'ConsignmentOut' | 'ConsignmentReturn';
 export type PurchaseOrderStatus = 'Draft' | 'Submitted' | 'Approved' | 'PartiallyReceived' | 'Received' | 'Cancelled';
 export type MeasurementSource = 'Scale' | 'Manual' | 'Demo';
 export type VarianceSeverity = 'None' | 'Warning' | 'Investigate' | 'Escalate';
@@ -320,6 +320,8 @@ export interface OrderDto {
   /** The customer record on the bill, if one was chosen (separate from the free-text name). */
   customerId?: string | null;
   customer?: { id: string; number: number; name: string; phone: string; pointsBalance: number } | null;
+  /** Set when the bill came from an agent's report of consignment goods sold: its items and prices are fixed. */
+  consignmentSaleId?: string | null;
   /** Set when the bill is a layby: its items are fixed and it is paid in parts. */
   layby?: { id: string; number: number; status: 'Active' | 'Completed' | 'Cancelled'; dueDate: string; minimumDeposit: number } | null;
   /** Loyalty points the lines on the bill are worth; the customer gets them when the bill is paid in full. */
@@ -525,6 +527,8 @@ export interface InventoryItemDto {
   salesBackOrderQuantity?: number;
   /** What is held for customers on active laybys: still counted, not available to sell. */
   onLaybyQuantity?: number;
+  /** What agents are holding on consignment: off the shelf, still the company's. */
+  consignmentOutQuantity?: number;
   /** Filled when one item is read (the card); absent in lists. */
   onOrderQuantity?: number | null;
   lastSoldAtUtc?: string | null;

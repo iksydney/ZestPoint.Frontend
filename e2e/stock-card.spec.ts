@@ -88,7 +88,9 @@ test.describe('Stock card', () => {
     await expect(page.getByTestId('special-live')).toBeVisible();
     await expect(page.getByTestId('fig-on-hand')).toHaveText('0');
     await expect(page.getByTestId('fig-last-sold')).toHaveText('Never');
-    await expect(page.getByTestId('card-figures')).toContainText('Not tracked yet');     // layby, back orders, consignment: later steps
+    await expect(page.getByTestId('fig-layby')).toHaveText('0');                         // layby, back orders and consignment are live figures now
+    await expect(page.getByTestId('fig-back-orders')).toHaveText('0');
+    await expect(page.getByTestId('fig-consignment')).toHaveText('0');
 
     // The picture: uploaded, shown, removed.
     await page.getByTestId('sc-tab-picture').click();

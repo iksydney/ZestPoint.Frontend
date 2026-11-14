@@ -13,7 +13,8 @@ const STOCK: [string, string][] = [
   ['Selling Prices Report', '/app/inventory/reports/selling-prices'], ['Cost Prices Report', '/app/inventory/reports/cost-prices'], ['Stock Performance Report', '/app/inventory/reports/performance'],
   ['Out of Stock Report', '/app/inventory/reports/out-of-stock'], ['Stock Re-Order Report', '/app/inventory/reports/re-order'], ['Stock Take Report', '/app/inventory/reports/stock-take'],
   ['Stock Value Report', '/app/inventory/reports/stock-value'], ['Items History Report', '/app/inventory/reports/items-history'], ['Stock Labels Printing', '/app/inventory/reports/stock-labels'],
-  ['Stock Expiry Report', '/app/inventory/reports/expiry'], ['Web Store Stock Report', '/app/inventory/reports/web-store-stock'], ['Stock Aging Report', '/app/inventory/reports/stock-aging'], ['Bin Locations', '/app/inventory/bins'], ['Stock by Bin Report', '/app/inventory/reports/bin-stock'], ['Serial Numbers Report', '/app/inventory/reports/serial-numbers']
+  ['Stock Expiry Report', '/app/inventory/reports/expiry'], ['Web Store Stock Report', '/app/inventory/reports/web-store-stock'], ['Stock Aging Report', '/app/inventory/reports/stock-aging'], ['Bin Locations', '/app/inventory/bins'], ['Stock by Bin Report', '/app/inventory/reports/bin-stock'], ['Serial Numbers Report', '/app/inventory/reports/serial-numbers'],
+  ['Consignment Out', '/app/inventory/consignment'], ['Consignment Out Report', '/app/inventory/reports/consignment-out']
 ];
 const PURCHASING: [string, string][] = [
   ['Purchasing / Purchase Orders', '/app/purchasing/orders'], ['Goods Receiving', '/app/purchasing/receiving'], ['Payments to Suppliers', '/app/purchasing/payments'], ['Add / Modify Suppliers', '/app/purchasing/suppliers'],
@@ -75,7 +76,7 @@ test.describe('POS, Stock and Purchasing navigation', () => {
     await expandAll(page);
 
     for (const [key, entries] of GROUPS) expect(await labelsOf(page, key), key).toEqual(entries.map(([label]) => label));
-    expect(await page.locator('[data-group-list="pos"] a, [data-group-list="stock"] a, [data-group-list="purchasing"] a').count()).toBe(13 + 22 + 16);
+    expect(await page.locator('[data-group-list="pos"] a, [data-group-list="stock"] a, [data-group-list="purchasing"] a').count()).toBe(13 + 24 + 16);
 
     // Legacy shortcut letters are shown beside the entries that have them.
     await expect(page.locator('[data-nav="stock.report.value"] kbd')).toHaveText('v');

@@ -198,7 +198,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
                     @if (canCost()) { <div class="flex justify-between gap-3 py-1.5"><dt>Average cost</dt><dd class="font-mono" data-testid="fig-average-cost">{{ item()?.averageCost ?? 0 | number: '1.2-4' }}</dd></div> }
                     <div class="flex justify-between gap-3 py-1.5"><dt>Qty on hand @if (branches.active()) { <span class="text-xs text-ink/60">({{ branches.active()!.name }})</span> }</dt><dd class="font-mono" data-testid="fig-on-hand">{{ item()?.onHand ?? 0 | number: '1.0-3' }}</dd></div>
                     <div class="flex justify-between gap-3 py-1.5"><dt>Purchase orders qty</dt><dd class="font-mono" data-testid="fig-on-order">{{ item()?.onOrderQuantity ?? 0 | number: '1.0-3' }}</dd></div>
-                    <div class="flex justify-between gap-3 py-1.5"><dt>Consignment out</dt><dd class="text-ink/60">Not tracked yet</dd></div>
+                    <div class="flex justify-between gap-3 py-1.5"><dt>Consignment out</dt><dd data-testid="fig-consignment">{{ item()?.consignmentOutQuantity ?? 0 }}</dd></div>
                     <div class="flex justify-between gap-3 py-1.5"><dt>Qty on layby</dt><dd data-testid="fig-layby">{{ item()?.onLaybyQuantity ?? 0 }}</dd></div>
                     <div class="flex justify-between gap-3 py-1.5"><dt>Sales back orders qty</dt><dd data-testid="fig-back-orders">{{ item()?.salesBackOrderQuantity ?? 0 }}</dd></div>
                     <div class="flex justify-between gap-3 py-1.5"><dt>Last sold</dt><dd data-testid="fig-last-sold">{{ (item()?.lastSoldAtUtc | tenantTime) || 'Never' }}</dd></div>

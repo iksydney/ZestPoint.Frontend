@@ -118,6 +118,9 @@ export const APP_NAV: readonly NavDefinition[] = [
   report('stock.report.bins', 'Stock by Bin Report', 'inventory/reports/bin-stock', 'stock', REPORTS.binStock, P.INVENTORY_REPORT_BIN_STOCK, FEATURES.INVENTORY, 'n', 'grid'),
   { key: 'stock.report.serials', label: 'Serial Numbers Report', route: '/app/inventory/reports/serial-numbers', icon: 'list', permission: P.INVENTORY_REPORT_SERIAL_NUMBERS, feature: FEATURES.INVENTORY, group: 'stock', kind: 'screen', shortcut: 's',
     data: { report: REPORTS.serialNumbers }, load: () => import('../../features/inventory/serials.component').then((m) => m.SerialsComponent) },
+  { key: 'stock.consignment', label: 'Consignment Out', route: '/app/inventory/consignment', icon: 'truck', permission: P.INVENTORY_CONSIGNMENT_MANAGE, feature: FEATURES.INVENTORY, group: 'stock', kind: 'screen', shortcut: 'c', needsBranch: true,
+    load: () => import('../../features/inventory/consignments.component').then((m) => m.ConsignmentsComponent), description: 'Goods sent to agents to sell for you: send, record sold and returned.' },
+  report('stock.report.consignment', 'Consignment Out Report', 'inventory/reports/consignment-out', 'stock', REPORTS.consignmentOut, P.INVENTORY_CONSIGNMENT_MANAGE, FEATURES.INVENTORY, 'o', 'truck'),
 
   // ---- Purchasing --------------------------------------------------------------------------------
   { key: 'purchasing.orders', label: 'Purchasing / Purchase Orders', route: '/app/purchasing/orders', icon: 'truck', permission: [P.INVENTORY_PURCHASE_MANAGE, P.INVENTORY_PURCHASE_APPROVE], feature: FEATURES.INVENTORY, group: 'purchasing', kind: 'screen', needsBranch: true, quickAccess: true,
