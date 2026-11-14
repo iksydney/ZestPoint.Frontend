@@ -99,6 +99,15 @@ export const TOURS: readonly TourDefinition[] = [
     ]
   },
   {
+    key: 'pos.tips', nav: 'pos.tips', title: 'Tips', version: 1,
+    steps: [
+      { id: 'what', title: 'Where tips go', body: 'A tip taken with a payment belongs to whoever served that bill. The business holds it until it is paid to them or given away, and both are recorded here so nothing goes missing.' },
+      { id: 'totals', target: '[data-testid="tips-totals"]', optional: true, title: 'The four figures', body: 'Collected, paid to staff, donated, and what is still being held. Held is always collected less the other two.' },
+      { id: 'staff', target: '[data-testid="tips-staff"]', optional: true, title: 'By staff member', body: 'What each person was tipped and what is held for them. Pay out records money handed to them; it cannot be more than what is held.' },
+      { id: 'entries', target: '[data-testid="tips-entries"]', title: 'Payouts and donations', body: 'Every entry stays here with who recorded it. A mistake is reversed with a reason, never deleted. The Tips report shows any period.' }
+    ]
+  },
+  {
     key: 'pos.laybys', nav: 'pos.laybys', title: 'Laybys', version: 1,
     steps: [
       { id: 'how', title: 'How a layby starts', body: 'At the till: put a customer on the bill and press Layby. The goods are held for them and the bill is fixed. This screen is where you take the payments.' },

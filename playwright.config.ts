@@ -33,6 +33,7 @@ export default defineConfig({
       reuseExistingServer: !process.env['CI'],
       env: {
         ASPNETCORE_ENVIRONMENT: 'Development',
+        Payments__Provider: 'stub',
         ASPNETCORE_URLS: `http://localhost:${API_PORT}`,
         ConnectionStrings__DefaultConnection: e2eConnectionString(),
         Database__MigrateOnStartup: 'true', // creates zestpoint_e2e on the first run and brings it up to date on later ones

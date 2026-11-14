@@ -49,9 +49,9 @@ type Mode = 'password' | 'pin';
 
           <div role="tablist" aria-label="Sign-in method" class="grid grid-cols-2 gap-1 rounded-lg border border-ink/15 p-1 text-sm">
             <button type="button" role="tab" [attr.aria-selected]="mode() === 'password'" class="rounded-md px-2 py-1.5 font-medium"
-                    [class]="mode() === 'password' ? 'bg-primary text-on-primary' : 'text-ink/80'" (click)="mode.set('password')" data-testid="mode-password">Owner / admin</button>
+                    [class]="(mode() === 'password' ? 'bg-primary text-on-primary' : 'text-ink/80') + (wrongSide() === 'password' ? ' ring-2 ring-primary ring-offset-2 ring-offset-transparent animate-pulse' : '')" (click)="mode.set('password')" data-testid="mode-password">Owner / admin</button>
             <button type="button" role="tab" [attr.aria-selected]="mode() === 'pin'" class="rounded-md px-2 py-1.5 font-medium"
-                    [class]="mode() === 'pin' ? 'bg-primary text-on-primary' : 'text-ink/80'" (click)="mode.set('pin')" data-testid="mode-pin">Staff PIN</button>
+                    [class]="(mode() === 'pin' ? 'bg-primary text-on-primary' : 'text-ink/80') + (wrongSide() === 'pin' ? ' ring-2 ring-primary ring-offset-2 ring-offset-transparent animate-pulse' : '')" (click)="mode.set('pin')" data-testid="mode-pin">Staff PIN</button>
           </div>
 
           @if (mode() === 'password') {
@@ -75,6 +75,18 @@ type Mode = 'password' | 'pin';
             </div>
           }
 
+          @if (wrongSide() === 'pin') {
+            <div class="sys-alert sys-alert-info text-sm" role="alert" data-testid="login-wrong-side">
+              <p><strong>{{ email().trim() }}</strong> looks like a staff code, not an e-mail address. Staff sign in with <strong>Staff PIN</strong> (the button above), using their staff code and PIN. This side is for the owner and administrators.</p>
+              <button type="button" class="btn-primary mt-2 w-full" data-testid="login-switch-pin" (click)="switchToPin()">Use Staff PIN with this code</button>
+            </div>
+          } @else if (wrongSide() === 'password') {
+            <div class="sys-alert sys-alert-info text-sm" role="alert" data-testid="login-wrong-side">
+              <p>That looks like an e-mail address. The owner and administrators sign in with <strong>Owner / admin</strong> (the button above), using their e-mail and password. Staff use the staff code they were given, like BHL-007.</p>
+              <button type="button" class="btn-primary mt-2 w-full" data-testid="login-switch-password" (click)="switchToPassword()">Use Owner / admin with this e-mail</button>
+            </div>
+          }
+          @if (hint()) { <p class="text-sm text-ink/80" role="status" data-testid="login-hint">{{ hint() }}</p> }
           @if (error()) { <p class="app-error" role="alert" data-testid="login-error">{{ error() }}</p> }
           <button type="submit" class="btn-primary w-full" [disabled]="busy() || !ready()" data-testid="login-submit">{{ busy() ? 'Signing in...' : 'Sign in' }}</button>
         </form>
@@ -104,7 +116,45 @@ export class LoginComponent {
   protected readonly venueState = signal<'idle' | 'found' | 'missing'>('idle');
   protected readonly vars = computed(() => (this.venue() ? themeVariables(this.venue()!) : {}));
 
+  /** Someone typing on the wrong side: a staff code in the e-mail box, or an e-mail address in the staff code box. Says which button they need. */
+  protected readonly wrongSide = computed<'pin' | 'password' | null>(() => {
+    if (this.mode() === 'password') { const v = this.email().trim(); return v && !v.includes('@') && STAFF_CODE_RE.test(v) ? 'pin' : null; }
+    return this.staffCode().includes('@') ? 'password' : null;
+  });
+
+  /** What is still missing or mistyped, in plain words, before the button can be pressed. Nothing while the boxes are empty. */
+  protected readonly hint = computed<string | null>(() => {
+    if (this.wrongSide()) return null;
+    if (this.slug() && !SLUG_RE.test(this.slug())) return 'The venue address is the short name of your business, in small letters without spaces, for example la-bodega.';
+    if (this.mode() === 'password') {
+      const v = this.email().trim();
+      return v && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) ? 'The e-mail address should look like name@example.com.' : null;
+    }
+    const code = this.staffCode().trim();
+    if (code && !STAFF_CODE_RE.test(code)) return 'A staff code is your venue\'s letters and your number, like BHL-007. Ask your manager if you do not have it.';
+    if (this.pin() && !/^\d+$/.test(this.pin())) return 'A PIN is numbers only.';
+    if (this.pin() && this.pin().length < 4) return 'A PIN has at least 4 numbers.';
+    return null;
+  });
+
+  protected switchToPin(): void {
+    this.staffCode.set(this.email().trim().toUpperCase());
+    this.email.set('');
+    this.password.set('');
+    this.error.set(null);
+    this.mode.set('pin');
+  }
+
+  protected switchToPassword(): void {
+    this.email.set(this.staffCode().trim().toLowerCase());
+    this.staffCode.set('');
+    this.pin.set('');
+    this.error.set(null);
+    this.mode.set('password');
+  }
+
   protected readonly ready = computed(() => {
+    if (this.wrongSide()) return false;
     if (!SLUG_RE.test(this.slug())) return false;
     return this.mode() === 'password' ? !!this.email().trim() && !!this.password() : STAFF_CODE_RE.test(this.staffCode().trim()) && /^\d{4,12}$/.test(this.pin());
   });
@@ -146,7 +196,13 @@ export class LoginComponent {
       error: (e: unknown) => {
         this.busy.set(false);
         this.pin.set('');
-        this.error.set(toApiError(e).message);
+        // Say what was wrong with what was typed, not that "fields" need correcting.
+        const failed = toApiError(e);
+        const field = Object.entries(failed.fieldErrors)[0];
+        const names: Record<string, string> = { email: 'E-mail', password: 'Password', staffCode: 'Staff code', pin: 'PIN', tenantSlug: 'Venue address' };
+        this.error.set(failed.status === 0 ? 'No connection to the server. Check the internet on this device and try again.'
+          : field ? `${names[field[0]] ?? 'What you typed'}: ${field[1][0] ?? 'please check it.'}`
+          : failed.message);
       }
     });
   }

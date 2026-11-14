@@ -15,6 +15,12 @@ export interface ReportDefinition {
   readonly itemRequired?: boolean;
   readonly supplier?: boolean;
   readonly supplierRequired?: boolean;
+  /** A staff member picker; the text is its label. */
+  readonly staff?: string;
+  /** Payments history: payment method, a yes/no kind of filter, and an amount range. */
+  readonly method?: { readonly label: string; readonly options: readonly FilterOption[] };
+  readonly flag?: { readonly label: string; readonly options: readonly FilterOption[] };
+  readonly amount?: boolean;
   readonly search?: string;
   readonly status?: { readonly label: string; readonly options: readonly FilterOption[] };
   readonly view?: { readonly label: string; readonly options: readonly FilterOption[]; readonly default: string };
@@ -61,7 +67,20 @@ export const REPORTS = {
     view: { label: 'Show', default: 'currency', options: opts(['currency', 'By currency'], ['transactions', 'Bills in other currencies']) }
   },
   /** Every voided item with who asked and who authorised it. Read by people who may authorise voids. */
-  voidHistory: { path: 'pos/reports/void-history', period: 'range', branch: true, search: 'Item or reason' },
+  voidHistory: { path: 'pos/reports/void-history', period: 'range', branch: true, staff: 'Asked or authorised by', search: 'Item or reason' },
+  /** Every payment, with the filters an audit needs. */
+  paymentsHistory: {
+    path: 'pos/reports/payments-history', period: 'range', branch: true, staff: 'Staff member', amount: true, search: 'Bill number, customer, table or reference',
+    view: { label: 'Staff member as', default: '', options: opts(['', 'Served the bill or took the payment'], ['served', 'Served the bill'], ['took', 'Took the payment']) },
+    method: { label: 'Method', options: opts(['', 'All methods'], ['Cash', 'Cash'], ['Card', 'Card'], ['Transfer', 'Transfer']) },
+    status: { label: 'Status', options: opts(['', 'All'], ['Succeeded', 'Succeeded'], ['Failed', 'Failed'], ['Pending', 'Pending'], ['refunded', 'With a refund']) },
+    flag: { label: 'Only', options: opts(['', 'Everything'], ['tips', 'Payments with a tip'], ['refunded', 'Payments with a refund'], ['reference', 'With a reference'], ['noreference', 'Card or transfer without a reference']) }
+  },
+  /** Tips collected per person, per bill, and what went out of them. */
+  tips: {
+    path: 'pos/reports/tips', period: 'range', branch: true, staff: 'Staff member',
+    view: { label: 'Show', default: 'staff', options: opts(['staff', 'By staff member'], ['bills', 'Every bill with a tip'], ['payouts', 'Payouts and donations']) }
+  },
 
   /** What customers are waiting for. Waiting ones unless another status is chosen. */
   salesBackOrders: {

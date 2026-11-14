@@ -31,7 +31,7 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
   imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, BarDockComponent, CommandPaletteComponent, TourHostComponent, LockScreenComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="grid min-h-screen grid-cols-1 bg-canvas text-ink md:grid-cols-[17rem_1fr] print:block" [attr.inert]="lock.locked() ? '' : null">
+    <div class="grid min-h-screen grid-cols-[minmax(0,1fr)] bg-canvas text-ink md:grid-cols-[17rem_minmax(0,1fr)] print:block" [attr.inert]="lock.locked() ? '' : null">
       <div class="hidden md:block print:hidden">
         <zp-nav-sidebar class="block h-screen md:sticky md:top-0" [currentUrl]="url()" [name]="branding()?.shortName ?? 'ZestPoint'" [initials]="branding()?.initialsFallback ?? 'ZP'" [logoUrl]="branding()?.logoUrl ?? null" (search)="openSearch()" />
       </div>
@@ -113,7 +113,8 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
         }
         <zp-account-banner class="block px-4 pt-3 sm:px-6 print:hidden" />
         <!-- Room at the bottom so the floating bar button never covers the last control of a screen. -->
-        <main class="min-w-0 flex-1 p-4 sm:p-6" [class.pb-24]="bar.active()"><router-outlet /></main>
+        <!-- Anything wider than the screen (a big table) scrolls inside this area; the page itself never scrolls sideways, even on the smallest phone. -->
+        <main class="relative min-w-0 flex-1 overflow-x-auto p-3 min-[360px]:p-4 sm:p-6" [class.pb-24]="bar.active()"><router-outlet /></main>
         <zp-bar-dock />
         <zp-toast-host />
         <zp-confirm-host />

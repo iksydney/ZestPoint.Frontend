@@ -61,6 +61,11 @@ export interface ReportQuery {
   status?: string;
   type?: string;
   buckets?: string;
+  /** Payments history. */
+  method?: string;
+  flag?: string;
+  minAmount?: string;
+  maxAmount?: string;
   warningDays?: number;
   compare?: boolean;
   sort?: string;

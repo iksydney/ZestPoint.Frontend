@@ -1,3 +1,6 @@
+import { HttpClient } from '@angular/common/http';
+import { ApiEnvelope } from '../../core/models/api.model';
+import { unwrap } from '../../core/services/api.util';
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, TemplateRef, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -66,6 +69,11 @@ const PAGE_SIZES = [25, 50, 100, 200] as const;
           <select id="rf-sup" class="app-input" data-testid="filter-supplier" (change)="set('supplierId', $any($event.target).value)">
             <option value="" [selected]="!draft().supplierId">{{ definition().supplierRequired ? 'Choose a supplier...' : 'All suppliers' }}</option>@for (s of suppliers(); track s.id) { <option [value]="s.id" [selected]="draft().supplierId === s.id">{{ s.name }}</option> }</select></div>
       }
+      @if (definition().staff; as staffLabel) {
+        <div><label class="app-label" for="rf-staff">{{ staffLabel }}</label>
+          <select id="rf-staff" class="app-input" data-testid="filter-staff" (change)="set('staffId', $any($event.target).value)">
+            <option value="" [selected]="!draft().staffId">Everyone</option>@for (p of staff(); track p.id) { <option [value]="p.id" [selected]="draft().staffId === p.id">{{ p.name }}</option> }</select></div>
+      }
       @if (definition().item && itemOptions().length > 0) {
         <zp-search-select label="Item" [options]="itemOptions()" [value]="draft().itemId ?? null" placeholder="Search items" testId="filter-item" (valueChange)="set('itemId', $event)" />
       }
@@ -78,6 +86,20 @@ const PAGE_SIZES = [25, 50, 100, 200] as const;
         <div><label class="app-label" for="rf-status">{{ st.label }}</label>
           <select id="rf-status" class="app-input" data-testid="filter-status" (change)="set('status', $any($event.target).value)">
             @for (o of st.options; track o.value) { <option [value]="o.value" [selected]="(draft().status ?? st.options[0].value) === o.value">{{ o.label }}</option> }</select></div>
+      }
+      @if (definition().method; as md) {
+        <div><label class="app-label" for="rf-method">{{ md.label }}</label>
+          <select id="rf-method" class="app-input" data-testid="filter-method" (change)="set('method', $any($event.target).value)">
+            @for (o of md.options; track o.value) { <option [value]="o.value" [selected]="(draft().method ?? '') === o.value">{{ o.label }}</option> }</select></div>
+      }
+      @if (definition().flag; as fl) {
+        <div><label class="app-label" for="rf-flag">{{ fl.label }}</label>
+          <select id="rf-flag" class="app-input" data-testid="filter-flag" (change)="set('flag', $any($event.target).value)">
+            @for (o of fl.options; track o.value) { <option [value]="o.value" [selected]="(draft().flag ?? '') === o.value">{{ o.label }}</option> }</select></div>
+      }
+      @if (definition().amount) {
+        <div><label class="app-label" for="rf-min">Amount from</label><input id="rf-min" type="number" min="0" step="0.01" class="app-input" data-testid="filter-min-amount" [value]="draft().minAmount ?? ''" (input)="set('minAmount', $any($event.target).value)" /></div>
+        <div><label class="app-label" for="rf-max">Amount to</label><input id="rf-max" type="number" min="0" step="0.01" class="app-input" data-testid="filter-max-amount" [value]="draft().maxAmount ?? ''" (input)="set('maxAmount', $any($event.target).value)" /></div>
       }
       @if (definition().warningDays; as w) {
         <div><label class="app-label" for="rf-warn">{{ w.label }}</label><input id="rf-warn" type="number" min="1" max="730" class="app-input" data-testid="filter-warning" [value]="draft().warningDays ?? ''" [placeholder]="'' + w.default" (input)="set('warningDays', $any($event.target).value)" /></div>
@@ -214,6 +236,7 @@ export class ReportViewComponent implements OnInit {
   readonly loaded = output<ReportDto>();
 
   protected readonly auth = inject(AuthService);
+  private readonly http = inject(HttpClient);
   protected readonly branches = inject(BranchContextService);
   private readonly api = inject(ReportApi);
   private readonly groupApi = inject(StockGroupApi);
@@ -232,6 +255,7 @@ export class ReportViewComponent implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly groups = signal<readonly SelectOption[]>([]);
   protected readonly suppliers = signal<readonly SupplierDto[]>([]);
+  protected readonly staff = signal<readonly { id: string; name: string }[]>([]);
   protected readonly itemOptions = signal<readonly SelectOption[]>([]);
   protected readonly hidden = signal<ReadonlySet<string>>(new Set());
   private readonly selected = signal<ReadonlyMap<string, ReportRow>>(new Map());
@@ -381,6 +405,7 @@ export class ReportViewComponent implements OnInit {
     const d = this.definition();
     const tasks: Promise<void>[] = [];
     if (d.group) tasks.push(firstValueFrom(this.groupApi.list(true)).then((l) => this.groups.set(l.map((g) => ({ value: g.id, label: g.name + (g.isActive ? '' : ' (inactive)') })))).catch(() => undefined));
+    if (d.staff) tasks.push(firstValueFrom(this.http.get<ApiEnvelope<{ id: string; name: string }[]>>('/api/v1/me/colleagues').pipe(unwrap())).then((l) => this.staff.set(l)).catch(() => undefined));
     if (d.supplier) tasks.push(firstValueFrom(this.inventory.suppliers()).then((l) => this.suppliers.set(l)).catch(() => undefined));
     if (d.item) tasks.push(firstValueFrom(this.inventory.items({ pageSize: 500 })).then((p) => this.itemOptions.set(p.items.map((i: InventoryItemDto) => ({ value: i.id, label: i.name, description: i.sku ?? undefined })))).catch(() => undefined));
     await Promise.all(tasks);
@@ -443,7 +468,7 @@ export class ReportViewComponent implements OnInit {
     if (!this.syncUrl()) return {};
     const m = this.route.snapshot.queryParamMap;
     const q: Record<string, unknown> = {};
-    for (const key of ['from', 'to', 'asOf', 'branchId', 'groupId', 'itemId', 'staffId', 'supplierId', 'search', 'status', 'type', 'buckets', 'sort']) { const v = m.get(key); if (v) q[key] = v; }
+    for (const key of ['from', 'to', 'asOf', 'branchId', 'groupId', 'itemId', 'staffId', 'supplierId', 'search', 'status', 'type', 'buckets', 'sort', 'method', 'flag', 'minAmount', 'maxAmount']) { const v = m.get(key); if (v) q[key] = v; }
     for (const key of ['warningDays', 'page', 'pageSize']) { const v = m.get(key); if (v && !Number.isNaN(Number(v))) q[key] = Number(v); }
     for (const key of ['compare', 'desc']) if (m.get(key) === 'true') q[key] = true;
     return q as ReportQuery;

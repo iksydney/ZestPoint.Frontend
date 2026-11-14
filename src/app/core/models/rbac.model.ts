@@ -63,6 +63,7 @@ export const SCREEN_PERMISSIONS = {
   PRODUCTS_MANAGE: 'products.manage',
 
   POS_LAYBY_MANAGE: 'pos.layby.manage',
+  POS_TIPS_MANAGE: 'pos.tips.manage',
   INVENTORY_CONSIGNMENT_MANAGE: 'inventory.consignment.manage',
   CUSTOMERS_USE: 'customers.use',
   CUSTOMERS_MANAGE: 'customers.manage',

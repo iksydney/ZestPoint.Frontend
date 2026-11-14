@@ -80,7 +80,7 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
     expect(await stockOf(page, 'Demo Gin 700ml')).toContain('2,000');
   });
 
-  test('the bill splits evenly into shares that sum exactly to the balance', async ({ page }) => {
+  test('a payment is split into parts with different payment types that must add up to the balance', async ({ page }) => {
     await shopWithDemoData(page);
     await openPos(page);
     await startBill(page, 'Even split');
@@ -89,9 +89,72 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
 
     await page.getByTestId('pay').click();
     await page.getByTestId('split-4').click();
-    await expect(page.getByTestId('shares')).toContainText('675.00 + 675.00 + 675.00 + 675.00');
+    await expect(page.getByTestId('shares')).toContainText('675.00 + 675.00 + 675.00 + 675.00');   // equal parts that add up exactly
+    await page.getByTestId('split-3').click();
+    await expect(page.getByTestId('split-parts').locator('[data-testid^="part-amount-"]')).toHaveCount(3);
+    await expect(page.getByTestId('part-amount-0')).toHaveValue('900');
+    await expect(page.getByTestId('split-left')).toContainText('add up to');
+
+    // Each part its own way: cash, card, transfer. Typing an amount moves the difference to the last part.
+    await page.getByTestId('part-method-1').selectOption('Card');
+    await page.getByTestId('part-method-2').selectOption('Transfer');
+    await page.getByTestId('part-amount-0').fill('1000');
+    await expect(page.getByTestId('part-amount-2')).toHaveValue('800');
+    await expect(page.getByTestId('pay-confirm')).toBeEnabled();
+
+    // Parts that do not add up cannot be confirmed, and the box says by how much.
+    await page.getByTestId('part-amount-2').fill('500');
+    await expect(page.getByTestId('split-left')).toContainText('300.00 still to share out');
+    await expect(page.getByTestId('pay-confirm')).toBeDisabled();
+    await page.getByTestId('part-amount-2').fill('900');
+    await expect(page.getByTestId('split-left')).toContainText('100.00 too much');
+    await expect(page.getByTestId('pay-confirm')).toBeDisabled();
+    await page.getByTestId('part-amount-2').fill('800');
+
+    // Cash handed over for the cash part, with its change.
+    await page.getByTestId('part-tendered-0').fill('1500');
+    await expect(page.getByTestId('part-change-0')).toContainText('500.00');
+
+    await expect(page.getByTestId('pay-confirm')).toHaveText('Confirm 3 payments');
+    await page.getByTestId('pay-confirm').click();
+    await expect(page.getByTestId('bill-status')).toHaveText('Paid');
+    await waitForSync(page);
+
+    // The receipt lists the three payments, and they add up to the bill.
+    await page.getByTestId('receipt').click();
+    const receipt = page.getByTestId('receipt-view');
+    await expect(receipt).toContainText('Cash');
+    await expect(receipt).toContainText('1,000.00');
+    await expect(receipt).toContainText('Card');
+    await expect(receipt).toContainText('900.00');
+    await expect(receipt).toContainText('Transfer');
+    await expect(receipt).toContainText('800.00');
+    await expect(page.getByTestId('receipt-total')).toContainText('2,700.00');
+  });
+
+  test('a split that fails part way keeps what was recorded and leaves the rest to pay', async ({ page }) => {
+    await shopWithDemoData(page);
+    await openPos(page);
+    await startBill(page, 'Part way');
+    for (let i = 0; i < 2; i++) await page.getByTestId('product-Demo Canned Beans').click();
+    await expect(page.getByTestId('bill-total')).toContainText('1,800.00');
+
+    await page.getByTestId('pay').click();
     await page.getByTestId('split-2').click();
-    await expect(page.getByTestId('pay-amount')).toHaveValue('1350');
+    await page.getByTestId('part-method-1').selectOption('Card');
+    await page.getByTestId('part-reference-1').fill('tok_decline');                      // the development stub declines this one
+    await page.getByTestId('pay-confirm').click();
+    await expect(page.getByTestId('pay-error')).toContainText('1 of 2 payments were recorded');
+    await expect(page.getByTestId('pay-due')).toContainText('900.00');                   // the cash part stands; half is still due
+    await expect(page.getByTestId('split-parts').locator('[data-testid^="part-amount-"]')).toHaveCount(1);
+
+    // The rest is paid another way: back to one payment, in cash.
+    await page.getByTestId('split-off').click();
+    await page.getByTestId('method-Cash').click();
+    await page.getByTestId('pay-amount').fill('900');
+    await page.getByTestId('pay-tendered').fill('900');
+    await page.getByTestId('pay-confirm').click();
+    await expect(page.getByTestId('bill-status')).toHaveText('Paid');
   });
 
   test('selling works offline, shows what is waiting, and syncs exactly once when the connection returns', async ({ page, context }) => {

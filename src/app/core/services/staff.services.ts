@@ -135,7 +135,7 @@ export class BranchesApiService {
 export class AuditApiService {
   private readonly http = inject(HttpClient);
 
-  list(filter: { action?: string; page?: number; pageSize?: number }): Observable<PagedResult<AuditLogDto>> {
+  list(filter: { action?: string; actor?: string; from?: string; to?: string; search?: string; entityType?: string; page?: number; pageSize?: number }): Observable<PagedResult<AuditLogDto>> {
     return this.http.get<ApiEnvelope<PagedResult<AuditLogDto>>>('/api/v1/audit', { params: toParams(filter) }).pipe(unwrap());
   }
 }

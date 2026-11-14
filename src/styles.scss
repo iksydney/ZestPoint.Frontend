@@ -123,6 +123,26 @@ html { scroll-behavior: smooth; }
   .zp-error { @apply mt-1.5 text-sm text-red-700 dark:text-red-400; }
 }
 
+/* Small screens (owner's rule, 2026-11-14: the smallest phones must be able to use every screen).
+   A box that scrolls its own content sideways (a wide table) must also hold what is absolutely placed inside it, such as labels that
+   only screen readers see. Without this those escape the box and make the whole page scroll sideways on a narrow phone. */
+.overflow-x-auto:not(.absolute):not(.fixed):not(.sticky),
+.overflow-auto:not(.absolute):not(.fixed):not(.sticky),
+.overflow-hidden:not(.absolute):not(.fixed):not(.sticky) { position: relative; }
+
+/* Very narrow phones (320px): tables and buttons take a little less room, nothing is cut off. */
+@media (max-width: 359px) {
+  .app-table th, .app-table td { padding-left: .5rem; padding-right: .5rem; }
+  .app-card { padding: .75rem; }
+  h1 { overflow-wrap: anywhere; }
+}
+
+/* Touch devices: controls are big enough to press, and iOS does not zoom the page when a box is tapped (it does under 16px). */
+@media (pointer: coarse) {
+  .app-input, select.app-input, .zp-control { font-size: 16px; min-height: 2.75rem; }
+  .btn-primary, .btn-outline, .btn-ghost { min-height: 2.5rem; }
+}
+
 /* Printing: report and label screens print their content only. Anything marked no-print, and the application chrome, is left out. */
 @media print {
   .no-print { display: none !important; }

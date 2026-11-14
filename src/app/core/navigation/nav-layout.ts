@@ -26,7 +26,7 @@ export interface NavArea {
 export const NAV_HOME = 'dashboard';
 
 export const NAV_AREAS: readonly NavArea[] = [
-  { key: 'sell', label: 'Sell', icon: 'cart', blurb: 'Take orders and payments, and open and close the day.', screens: ['pos', 'pos.day', 'pos.bar'] },
+  { key: 'sell', label: 'Sell', icon: 'cart', blurb: 'Take orders and payments, and open and close the day.', screens: ['pos', 'pos.day', 'pos.bar', 'pos.tips'] },
   { key: 'customers', label: 'Customers', icon: 'users', blurb: 'The people you sell to: their points, their laybys and what they are waiting for.', screens: ['customers', 'pos.laybys', 'pos.backorders'] },
   {
     key: 'stock', label: 'Stock', icon: 'box', blurb: 'What you hold and sell: items, groups, counts and where things are.',
@@ -85,6 +85,9 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
   'pos.report.analysis': 'Sales by hour, by product and by member of staff, to see what sells when.',
   'pos.report.currency': 'Sales and payments by currency.',
   'pos.report.voids': 'Every voided item: what, why, who asked and who authorised it.',
+  'pos.tips': 'Tips collected per staff member; record what is paid to them or donated.',
+  'pos.report.tips': 'Tips per staff member and per bill, and every payout or donation.',
+  'pos.report.payments': 'Every payment taken, filtered by date, staff, method, amount and more.',
 
   'customers': 'Customer records, found by phone or name, with their loyalty points.',
   'pos.laybys': 'Goods customers are paying off: take a payment or cancel a layby.',

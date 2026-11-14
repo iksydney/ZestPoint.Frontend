@@ -43,6 +43,11 @@ interface BillRow {
 
 const q3 = (value: number): number => Math.round(value * 1000) / 1000;
 
+/** One part of a split payment: how it is paid, how much, and (cash) what was handed over or (card, transfer) its reference. */
+interface PayPart { readonly method: PaymentMethod; readonly amount: number; readonly tendered: number; readonly reference: string }
+
+const cents = (value: number): number => Math.round(value * 100) / 100;
+
 type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 'pay' | 'void' | 'discount' | 'split' | 'merge' | 'transfer' | 'receipt' | 'approvals' | 'tip' | null;
 
 /**
@@ -331,42 +336,90 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
       }
     </zp-dialog>
 
-    <!-- Payment -->
+    <!-- Payment: one payment, or split into parts (each with its own payment type) that must add up to what is due -->
     <zp-dialog [open]="dialog() === 'pay'" title="Take payment" [wide]="true" (closed)="dialog.set(null)">
       @if (store.current(); as o) {
         <div class="space-y-4">
-          <p class="text-lg">Balance due: <strong data-testid="pay-due">{{ o.balance | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</strong></p>
-          <div class="flex flex-wrap gap-2" role="group" aria-label="Payment method">
-            @for (m of methods(); track m.method) {
-              <button type="button" class="btn-outline" [class.ring-2]="payMethod() === m.method" [attr.data-testid]="'method-' + m.method" (click)="payMethod.set(m.method)">{{ m.label }}</button>
-            }
-          </div>
+          <p class="text-lg">Balance due: <strong data-testid="pay-due">{{ o.balance | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</strong>
+            @if (payTip() > 0) { <span class="text-sm text-ink/80" data-testid="pay-with-tip"> + tip = {{ toAllocate() | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</span> }</p>
+
+          @if (!parts().length) {
+            <div class="flex flex-wrap gap-2" role="group" aria-label="Payment method">
+              @for (m of methods(); track m.method) {
+                <button type="button" class="btn-outline" [class.ring-2]="payMethod() === m.method" [attr.data-testid]="'method-' + m.method" (click)="payMethod.set(m.method)">{{ m.label }}</button>
+              }
+            </div>
+          }
 
           <div class="grid gap-3 sm:grid-cols-2">
-            <div><label class="app-label" for="pay-amount">Amount</label><input id="pay-amount" type="number" step="0.01" min="0" class="app-input" data-testid="pay-amount" [ngModel]="payAmount()" (ngModelChange)="payAmount.set(+$event)" /></div>
-            <div><label class="app-label" for="pay-tip">Tip (optional)</label><input id="pay-tip" type="number" step="0.01" min="0" class="app-input" data-testid="pay-tip" [ngModel]="payTip()" (ngModelChange)="payTip.set(+$event)" /></div>
+            @if (!parts().length) {
+              <div><label class="app-label" for="pay-amount">Amount</label><input id="pay-amount" type="number" step="0.01" min="0" class="app-input" data-testid="pay-amount" [ngModel]="payAmount()" (ngModelChange)="payAmount.set(+$event)" /></div>
+            }
+            <div><label class="app-label" for="pay-tip">Tip (optional)</label><input id="pay-tip" type="number" step="0.01" min="0" class="app-input" data-testid="pay-tip" [ngModel]="payTip()" (ngModelChange)="setPayTip(+$event)" />
+              @if (payTip() > 0) { <p class="mt-1 text-xs text-ink/70" data-testid="pay-tip-note">The tip is added to the amount to collect. It is kept for {{ store.current()?.ownerName ?? 'whoever served this bill' }}.</p> }</div>
           </div>
-          <div class="flex flex-wrap items-center gap-2 text-sm">
-            <span>Split the balance evenly:</span>
-            @for (n of [2, 3, 4, 5]; track n) { <button type="button" class="btn-ghost px-2 py-1" [attr.data-testid]="'split-' + n" (click)="applyShare(n)">{{ n }} ways</button> }
-          </div>
-          @if (shares().length) { <p class="text-sm text-ink/80" data-testid="shares">Shares: {{ shareText() }} (sums exactly to the balance)</p> }
 
-          @if (payMethod() === 'Cash') {
+          <div class="flex flex-wrap items-center gap-2 text-sm" role="group" aria-label="Split the payment">
+            <span>Split into:</span>
+            @for (n of [2, 3, 4, 5]; track n) { <button type="button" class="btn-ghost px-2 py-1" [class.ring-2]="parts().length === n" [attr.data-testid]="'split-' + n" (click)="startSplit(n)">{{ n }} parts</button> }
+            @if (parts().length) { <button type="button" class="btn-ghost px-2 py-1 underline" data-testid="split-off" (click)="parts.set([])">One payment</button> }
+          </div>
+
+          @if (parts().length) {
+            <div class="space-y-2" data-testid="split-parts">
+              <p class="text-sm text-ink/80">Each part can be paid a different way (cash, card, transfer). Change the amounts as the customers are paying; the parts must add up to what is due. <span data-testid="shares">Shares: {{ shareText() }}</span></p>
+              @for (p of parts(); track $index) {
+                <div class="grid items-end gap-2 rounded-lg border border-ink/15 p-2 sm:grid-cols-[2rem_8rem_1fr_1fr_auto]" [attr.data-testid]="'part-' + $index">
+                  <span class="pb-2 text-sm font-semibold" aria-hidden="true">{{ $index + 1 }}</span>
+                  <div><label class="app-label" [for]="'pp-m-' + $index">Paid by</label>
+                    <select class="app-input" [id]="'pp-m-' + $index" [attr.data-testid]="'part-method-' + $index" [ngModel]="p.method" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchPart($index, { method: $event })">
+                      @for (m of methods(); track m.method) { <option [value]="m.method">{{ m.label }}</option> }</select></div>
+                  <div><label class="app-label" [for]="'pp-a-' + $index">Amount</label><input type="number" step="0.01" min="0" class="app-input" [id]="'pp-a-' + $index" [attr.data-testid]="'part-amount-' + $index" [ngModel]="p.amount" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setPartAmount($index, +$event)" /></div>
+                  @if (p.method === 'Cash') {
+                    <div><label class="app-label" [for]="'pp-t-' + $index">Cash handed over</label><input type="number" step="0.01" min="0" class="app-input" [id]="'pp-t-' + $index" [attr.data-testid]="'part-tendered-' + $index" [ngModel]="p.tendered" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchPart($index, { tendered: +$event })" />
+                      @if (p.tendered > p.amount) { <p class="mt-0.5 text-xs" [attr.data-testid]="'part-change-' + $index">Change: {{ p.tendered - p.amount | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</p> }
+                      @if (p.tendered < p.amount) { <p class="mt-0.5 text-xs text-danger">Less than the amount.</p> }</div>
+                  } @else {
+                    <div><label class="app-label" [for]="'pp-r-' + $index">{{ store.settings()?.paymentProviderIsDemo ? 'Payment token' : p.method === 'Card' ? 'Slip or approval number (optional)' : 'Transfer reference (optional)' }}</label>
+                      <input class="app-input font-mono" maxlength="60" autocomplete="off" [id]="'pp-r-' + $index" [attr.data-testid]="'part-reference-' + $index" [ngModel]="p.reference" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchPart($index, { reference: $event })" /></div>
+                  }
+                  <button type="button" class="btn-ghost px-2" [attr.aria-label]="'Remove part ' + ($index + 1)" [attr.data-testid]="'part-remove-' + $index" [disabled]="parts().length <= 2" (click)="removePart($index)">x</button>
+                </div>
+              }
+              <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <button type="button" class="btn-outline px-2 py-1" data-testid="part-add" [disabled]="parts().length >= 8" (click)="addPart()">Add a part</button>
+                <span [class]="splitLeft() === 0 ? 'font-semibold' : 'font-semibold text-danger'" role="status" data-testid="split-left">
+                  @if (splitLeft() === 0) { The parts add up to {{ toAllocate() | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}. }
+                  @else if (splitLeft() > 0) { {{ splitLeft() | currency: store.currency() : 'symbol-narrow' : '1.2-2' }} still to share out. }
+                  @else { {{ -splitLeft() | currency: store.currency() : 'symbol-narrow' : '1.2-2' }} too much. }
+                </span>
+              </div>
+              @if (splitNeedsOnline() && !online()) { <p class="sys-alert sys-alert-warning" role="status">You are offline. Card and transfer parts need a connection; make them cash or wait until you are back online.</p> }
+              @if (!store.settings()?.paymentProviderIsDemo && splitNeedsOnline()) { <p class="text-xs text-ink/70">Take the card and transfer parts on your machine or bank first; confirming here records them, it does not move the money.</p> }
+            </div>
+          } @else if (payMethod() === 'Cash') {
             <div><label class="app-label" for="pay-tendered">Cash handed over</label><input id="pay-tendered" type="number" step="0.01" min="0" class="app-input" data-testid="pay-tendered" [ngModel]="tendered()" (ngModelChange)="tendered.set(+$event)" />
               <p class="mt-1 text-sm" data-testid="pay-change">Change: {{ change() | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</p></div>
           } @else {
             @if (store.settings()?.paymentProviderIsDemo) {
+              <!-- Only when the API runs with the development stub (the automated tests). A business never sees this. -->
               <p class="sys-alert sys-alert-warning" role="status" data-testid="demo-payment-note">Development payment stub: no real money moves. Use token tok_ok (approve), tok_decline or tok_pending.</p>
+              <div><label class="app-label" for="pay-token">Payment token</label><input id="pay-token" class="app-input" data-testid="pay-token" [ngModel]="token()" (ngModelChange)="token.set($event)" /></div>
+            } @else {
+              <p class="text-sm text-ink/80" role="note" data-testid="pay-outside-note">Take this {{ payMethod() === 'Card' ? 'on your card machine' : 'as a bank transfer' }} first. Confirm here once {{ payMethod() === 'Card' ? 'the machine shows it was approved' : 'you have seen the money arrive' }}: this records the payment, it does not move the money.</p>
+              <div><label class="app-label" for="pay-reference">{{ payMethod() === 'Card' ? 'Slip or approval number' : 'Transfer reference' }} (optional)</label><input id="pay-reference" class="app-input font-mono" maxlength="60" autocomplete="off" data-testid="pay-reference" [ngModel]="token()" (ngModelChange)="token.set($event)" /></div>
             }
-            <div><label class="app-label" for="pay-token">Payment token</label><input id="pay-token" class="app-input" data-testid="pay-token" [ngModel]="token()" (ngModelChange)="token.set($event)" /></div>
             @if (!online()) { <p class="sys-alert sys-alert-warning" role="status">You are offline. Card and transfer payments need a connection; take cash or wait until you are back online.</p> }
           }
 
           @if (payError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="pay-error">{{ payError() }}</p> }
           <div class="flex justify-end gap-2">
             <button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button>
-            <button type="button" class="btn-primary touch-target" data-testid="pay-confirm" [disabled]="paying() || payAmount() <= 0 || (payMethod() !== 'Cash' && !online())" (click)="submitPay()">{{ paying() ? 'Processing...' : 'Confirm payment' }}</button>
+            @if (parts().length) {
+              <button type="button" class="btn-primary touch-target" data-testid="pay-confirm" [disabled]="paying() || !splitReady()" (click)="submitSplitPay()">{{ paying() ? 'Processing...' : 'Confirm ' + parts().length + ' payments' }}</button>
+            } @else {
+              <button type="button" class="btn-primary touch-target" data-testid="pay-confirm" [disabled]="paying() || payAmount() <= 0 || (payMethod() !== 'Cash' && !online())" (click)="submitPay()">{{ paying() ? 'Processing...' : 'Confirm payment' }}</button>
+            }
           </div>
         </div>
       }
@@ -673,7 +726,16 @@ export class PosBillingComponent implements OnInit {
   });
   protected readonly mergeCandidates = computed(() => this.store.bills().filter((b) => b.id !== this.store.current()?.id && !b.numberPending));
   protected readonly change = computed(() => Math.max(0, Math.round((this.tendered() - this.payAmount()) * 100) / 100));
-  protected readonly shareText = computed(() => this.shares().map((s) => s.toFixed(2)).join(' + '));
+  /** A split payment in the making; empty when the bill is paid in one go. */
+  protected readonly parts = signal<readonly PayPart[]>([]);
+  protected readonly shareText = computed(() => this.parts().map((p) => p.amount.toFixed(2)).join(' + '));
+  /** What the parts must add up to: the balance, and the tip when one was typed. */
+  protected readonly toAllocate = computed(() => cents((this.store.current()?.balance ?? 0) + this.payTip()));
+  /** Positive: still to share out. Negative: the parts are too much. Zero: they balance. */
+  protected readonly splitLeft = computed(() => cents(this.toAllocate() - this.parts().reduce((sum, p) => sum + p.amount, 0)));
+  protected readonly splitNeedsOnline = computed(() => this.parts().some((p) => p.method !== 'Cash'));
+  protected readonly splitReady = computed(() => this.parts().length >= 2 && this.splitLeft() === 0 && this.parts().every((p) => p.amount > 0 && (p.method !== 'Cash' || p.tendered >= p.amount))
+    && (!this.splitNeedsOnline() || this.online()));
 
   protected readonly methods = computed(() => {
     const s = this.store.settings();
@@ -890,19 +952,103 @@ export class PosBillingComponent implements OnInit {
     this.payAmount.set(o.balance);
     this.payTip.set(0);
     this.tendered.set(o.balance);
-    this.token.set('tok_ok');
+    this.token.set(this.store.settings()?.paymentProviderIsDemo ? 'tok_ok' : '');
     this.payError.set(null);
     this.shares.set([]);
+    this.parts.set([]);
     this.dialog.set('pay');
   }
 
-  protected applyShare(n: number): void {
+  /** A tip is collected with the payment, so the amount to take (and the cash expected) goes up by it. */
+  protected setPayTip(tip: number): void {
     const o = this.store.current();
     if (!o) return;
-    const s = splitEvenly(o.balance, n);
-    this.shares.set(s);
-    this.payAmount.set(s[0]!);
-    this.tendered.set(s[0]!);
+    const clean = Number.isFinite(tip) && tip > 0 ? Math.round(tip * 100) / 100 : 0;
+    if (this.parts().length) {
+      // In a split, the tip is one more thing to share out: the last part takes it.
+      const change = clean - this.payTip();
+      this.payTip.set(clean);
+      this.parts.update((list) => list.map((x, n) => (n === list.length - 1 ? { ...x, amount: Math.max(0, cents(x.amount + change)), tendered: x.method === 'Cash' ? Math.max(0, cents(x.amount + change)) : x.tendered } : x)));
+      return;
+    }
+    const before = this.payAmount() - this.payTip();
+    this.payTip.set(clean);
+    const amount = Math.round((Math.max(0, before) + clean) * 100) / 100;
+    this.payAmount.set(amount);
+    this.tendered.set(amount);
+  }
+
+  private blankReference(): string { return this.store.settings()?.paymentProviderIsDemo ? 'tok_ok' : ''; }
+
+  /** Splits what is due into equal parts that add up exactly; each starts as the method chosen above and can then be changed. */
+  protected startSplit(n: number): void {
+    if (!this.store.current()) return;
+    const method = this.methods().some((m) => m.method === this.payMethod()) ? this.payMethod() : this.methods()[0]?.method ?? 'Cash';
+    this.payError.set(null);
+    this.parts.set(splitEvenly(this.toAllocate(), n).map((amount) => ({ method, amount, tendered: amount, reference: this.blankReference() })));
+  }
+
+  protected patchPart(i: number, p: Partial<PayPart>): void {
+    this.parts.update((list) => list.map((x, n) => (n === i ? { ...x, ...p } : x)));
+  }
+
+  /**
+   * A part's amount is typed: the last part takes up the difference so the parts keep adding up (unless it is the last part being
+   * typed, or that would make it negative; then the line under the parts says how much is over or still to share).
+   */
+  protected setPartAmount(i: number, value: number): void {
+    const amount = Number.isFinite(value) && value > 0 ? cents(value) : 0;
+    this.parts.update((list) => {
+      const next = list.map((x, n) => (n === i ? { ...x, amount, tendered: x.method === 'Cash' ? amount : x.tendered } : x));
+      const last = next.length - 1;
+      if (i === last) return next;
+      const rest = cents(this.toAllocate() - next.slice(0, last).reduce((sum, x) => sum + x.amount, 0));
+      return rest < 0 ? next : next.map((x, n) => (n === last ? { ...x, amount: rest, tendered: x.method === 'Cash' ? rest : x.tendered } : x));
+    });
+  }
+
+  protected addPart(): void {
+    const left = Math.max(0, this.splitLeft());
+    this.parts.update((list) => [...list, { method: list[list.length - 1]?.method ?? 'Cash', amount: left, tendered: left, reference: this.blankReference() }]);
+  }
+
+  protected removePart(i: number): void {
+    this.parts.update((list) => {
+      const gone = list[i]!.amount;
+      const next = list.filter((_, n) => n !== i);
+      const last = next.length - 1;
+      return next.map((x, n) => (n === last ? { ...x, amount: cents(x.amount + gone), tendered: x.method === 'Cash' ? cents(x.amount + gone) : x.tendered } : x));
+    });
+  }
+
+  /**
+   * Records every part, one after another. A part that is recorded is taken off the list at once, so if a later one fails (a card
+   * declined, the connection lost) the box stays open with exactly what is still to pay and nothing is taken twice.
+   */
+  protected async submitSplitPay(): Promise<void> {
+    if (!this.store.current() || !this.splitReady() || this.paying()) return;
+    this.paying.set(true);
+    this.payError.set(null);
+    const count = this.parts().length;
+    let done = 0;
+    try {
+      while (this.parts().length > 0) {
+        const part = this.parts()[0]!;
+        const tip = this.payTip();   // the tip goes with the first part; after that it is part of the balance
+        if (part.method === 'Cash') await this.store.payCash(part.amount, part.tendered, tip);
+        else await this.store.payOnline({ method: part.method, amount: part.amount, tip, token: part.reference.trim() || null });
+        done++;
+        this.payTip.set(0);
+        this.parts.update((list) => list.slice(1));
+      }
+      this.dialog.set(null);
+      this.toast.success(`${count} payments recorded.`);
+    } catch (err) {
+      const why = err instanceof Error && !('status' in err) ? err.message : toApiError(err).message;
+      this.payError.set(done > 0 ? `${done} of ${count} payments were recorded. The next one was not: ${why} What is listed below is still to pay.` : why);
+    } finally {
+      this.paying.set(false);
+    }
   }
 
   protected async submitPay(): Promise<void> {

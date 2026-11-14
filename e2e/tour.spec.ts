@@ -133,6 +133,8 @@ test.describe('Guided tours', () => {
     for (const tour of TOURS) {
       if (tour.nav) {
         await page.locator(`[data-testid="main-nav"] [data-nav="${tour.nav}"]`).click();
+        // The screen asked for is the one on show before its tour is asked for (the heading of the last screen is not enough).
+        await expect(page.locator(`[data-testid="main-nav"] [data-nav="${tour.nav}"]`).first(), tour.key).toHaveAttribute('aria-current', 'page');
         await expect(page.locator('main h1').first(), tour.key).toBeVisible();
       } else await page.goto('/app/dashboard');
       await page.getByTestId('help-open').click();
