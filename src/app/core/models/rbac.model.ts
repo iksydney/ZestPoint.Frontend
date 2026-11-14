@@ -62,6 +62,9 @@ export const SCREEN_PERMISSIONS = {
 
   PRODUCTS_MANAGE: 'products.manage',
 
+  CUSTOMERS_USE: 'customers.use',
+  CUSTOMERS_MANAGE: 'customers.manage',
+
   LEDGER_VIEW: 'ledger.view',
   LEDGER_ACCOUNTS_MANAGE: 'ledger.accounts.manage',
 

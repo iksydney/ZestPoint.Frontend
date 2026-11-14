@@ -79,6 +79,9 @@ export const APP_NAV: readonly NavDefinition[] = [
   report('pos.report.analysis', 'Sales Analysis Report', 'pos/reports/sales-analysis', 'pos', REPORTS.salesAnalysis, P.REPORTS_SALES_ANALYSIS_VIEW, FEATURES.ADVANCED_ANALYTICS, '5', 'chart'),
   report('pos.report.currency', 'Multi-Currency Report', 'pos/reports/multi-currency', 'pos', REPORTS.multiCurrency, P.REPORTS_MULTI_CURRENCY_VIEW, FEATURES.FINANCIAL_REPORTING, '6', 'globe'),
   report('pos.report.voids', 'Void History Report', 'pos/reports/void-history', 'pos', REPORTS.voidHistory, P.POS_VOID_APPROVE, FEATURES.CORE_POS, '7', 'clipboard', 'Every void: what, why, who asked and who authorised it.'),
+  { key: 'pos.backorders', label: 'Sales Back Orders', route: '/app/pos/back-orders', icon: 'inbox', permission: P.CUSTOMERS_USE, feature: FEATURES.CORE_POS, group: 'pos', kind: 'screen', shortcut: '8', needsBranch: true,
+    load: () => import('../../features/customers/sales-back-orders.component').then((m) => m.SalesBackOrdersComponent), description: 'What customers are waiting for; put one on a bill when it can be supplied.' },
+  report('pos.report.backorders', 'Sales Back Order Report', 'pos/reports/sales-back-orders', 'pos', REPORTS.salesBackOrders, P.CUSTOMERS_USE, FEATURES.CORE_POS, '9', 'clipboard'),
 
   // ---- Stock -------------------------------------------------------------------------------------
   { key: 'stock.items', label: 'Add / Modify Stock', route: '/app/inventory/items', icon: 'edit', permission: P.INVENTORY_ITEMS_MANAGE, feature: FEATURES.INVENTORY, group: 'stock', kind: 'screen', quickAccess: true,
@@ -146,6 +149,8 @@ export const APP_NAV: readonly NavDefinition[] = [
   { key: 'inventory', label: 'Inventory', route: '/app/inventory', icon: 'box', permission: P.INVENTORY_VIEW, feature: FEATURES.INVENTORY, kind: 'screen', needsBranch: true,
     description: 'Stock levels, receiving, transfers, purchasing, audits and weigh-scale checks.' },
   { key: 'catalog', label: 'Catalogue', route: '/app/catalog', icon: 'recipe', permission: P.PRODUCTS_MANAGE, feature: FEATURES.CORE_POS, kind: 'screen' },
+  { key: 'customers', label: 'Customers', route: '/app/customers', icon: 'users', permission: P.CUSTOMERS_USE, feature: FEATURES.CORE_POS, kind: 'screen',
+    load: () => import('../../features/customers/customers.component').then((m) => m.CustomersComponent), description: 'Customer records and their loyalty points.' },
   { key: 'subscription', label: 'Subscription', route: '/app/subscription', icon: 'card', permission: P.SUBSCRIPTIONS_VIEW, kind: 'screen' },
   { key: 'support', label: 'Support', route: '/app/support', icon: 'list', permission: P.SUPPORT_VIEW, kind: 'screen',
     description: 'Ask ZestPoint for help and follow your requests.' },

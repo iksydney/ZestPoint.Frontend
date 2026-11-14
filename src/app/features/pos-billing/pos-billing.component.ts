@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, s
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
+import { CustomerDto, CustomersApi } from '../../core/services/customer.services';
 import { BarLineState, OrderKind, PaymentMethod, ProductDto, ReceiptDto, SellingUnitDto, VoidAuthorizer, VoidRequestDto } from '../../core/models/ops.model';
 import { splitEvenly } from '../../core/offline/order-calc';
 import { toApiError } from '../../core/services/api.util';
@@ -17,7 +18,7 @@ import { BranchPickerComponent, SyncStatusComponent } from '../../shared/ui/ops-
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 import { VoidAuthoriserComponent } from './void-authoriser.component';
 
-type Dialog = 'new' | 'serial' | 'unit' | 'modifiers' | 'pay' | 'void' | 'discount' | 'split' | 'merge' | 'transfer' | 'receipt' | 'approvals' | 'tip' | null;
+type Dialog = 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 'pay' | 'void' | 'discount' | 'split' | 'merge' | 'transfer' | 'receipt' | 'approvals' | 'tip' | null;
 
 /**
  * Three-panel point of sale: open bills | catalogue | the bill being built. Works offline for everything except card/transfer
@@ -105,6 +106,10 @@ type Dialog = 'new' | 'serial' | 'unit' | 'modifiers' | 'pay' | 'void' | 'discou
             <div>
               <h2 class="font-semibold">{{ o.label ?? 'Bill' }} <span class="text-sm font-normal text-ink/70">{{ o.numberPending ? '(not synced yet)' : '#' + o.number }}</span></h2>
               <p class="text-xs text-ink/70">{{ o.kind }}@if (o.tableLabel) { , table {{ o.tableLabel }} } @if (o.ownerName) { , {{ o.ownerName }} }</p>
+              <p class="mt-1 text-sm" data-testid="bill-customer">
+                @if (o.customer; as c) { <span class="font-medium">{{ c.name }}</span> <span class="text-ink/70">{{ c.pointsBalance }} points@if (o.pointsEarned) { , {{ o.pointsEarned }} from this bill } @else if (o.pointsOnBill) { , {{ o.pointsOnBill }} more when paid }</span> }
+                @if (canCustomers() && canEdit() && !readOnly() && (o.status === 'Open' || o.status === 'PartiallyPaid')) { <button type="button" class="btn-ghost px-1 py-0 text-sm underline" data-testid="bill-customer-btn" (click)="openCustomer()">{{ o.customer ? 'Change customer' : 'Add customer' }}</button> }
+              </p>
             </div>
             <zp-status-badge [tone]="o.status === 'Paid' ? 'success' : o.status === 'Open' || o.status === 'PartiallyPaid' ? 'primary' : 'danger'"><span data-testid="bill-status">{{ o.status }}</span></zp-status-badge>
           </div>
@@ -221,6 +226,37 @@ type Dialog = 'new' | 'serial' | 'unit' | 'modifiers' | 'pay' | 'void' | 'discou
           }
         </div>
       }
+    </zp-dialog>
+
+    <!-- The customer record on the bill: found by phone or name, or added on the spot. Separate from the bill's own name. -->
+    <zp-dialog [open]="dialog() === 'customer'" title="Customer on this bill" (closed)="dialog.set(null)">
+      <div class="space-y-3">
+        <div>
+          <label class="app-label" for="cust-search">Find a customer</label>
+          <input id="cust-search" class="app-input" placeholder="Phone or name" autocomplete="off" inputmode="search" data-testid="cust-search" [ngModel]="custSearch()" (ngModelChange)="findCustomers($event)" />
+          @if (custResults().length) {
+            <ul class="mt-1 divide-y divide-ink/10 rounded-lg border border-ink/15" data-testid="cust-results">
+              @for (c of custResults(); track c.id) {
+                <li><button type="button" class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-ink/10 touch-target" [attr.data-testid]="'cust-pick-' + c.name" [disabled]="custBusy()" (click)="setCustomer(c.id)"><span class="font-medium">{{ c.name }}</span><span class="font-mono text-sm">{{ c.phone }}</span><span class="text-sm text-ink/70">{{ c.pointsBalance }} points</span></button></li>
+              }
+            </ul>
+          } @else if (custSearch().trim().length >= 2 && !custLooking()) { <p class="mt-1 text-sm text-ink/70" data-testid="cust-none">Nobody found. Add them below.</p> }
+        </div>
+        <form class="rounded-lg border border-ink/15 p-3" autocomplete="off" (submit)="$event.preventDefault(); addCustomer()">
+          <p class="mb-2 text-sm font-semibold">New customer</p>
+          <div class="grid gap-2 sm:grid-cols-2">
+            <div><label class="app-label" for="cust-new-name">Name</label><input id="cust-new-name" name="zp-new-customer" class="app-input" maxlength="120" autocomplete="off" data-testid="cust-new-name" [ngModel]="custName()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="custName.set($event)" /></div>
+            <div><label class="app-label" for="cust-new-phone">Phone</label><input id="cust-new-phone" name="zp-new-customer-phone" class="app-input font-mono" maxlength="30" inputmode="tel" autocomplete="off" data-testid="cust-new-phone" [ngModel]="custPhone()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="custPhone.set($event)" /></div>
+          </div>
+          <button type="submit" class="btn-primary mt-2" data-testid="cust-add" [disabled]="custBusy() || !custName().trim() || !custPhone().trim()">Add and put on the bill</button>
+        </form>
+        @if (custError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="cust-error">{{ custError() }}</p> }
+        <div class="flex justify-between gap-2">
+          @if (store.current()?.customer) { <button type="button" class="btn-outline" data-testid="cust-remove" [disabled]="custBusy()" (click)="setCustomer(null)">Take the customer off</button> } @else { <span></span> }
+          <button type="button" class="btn-ghost" (click)="dialog.set(null)">Close</button>
+        </div>
+        <p class="text-xs text-ink/70">The customer earns each item's loyalty points when the bill is paid in full. Needs a connection.</p>
+      </div>
     </zp-dialog>
 
     <!-- Modifiers -->
@@ -385,6 +421,7 @@ type Dialog = 'new' | 'serial' | 'unit' | 'modifiers' | 'pay' | 'void' | 'discou
           <p class="flex justify-between font-bold"><span>TOTAL</span><span data-testid="receipt-total">{{ r.total | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p>
           @for (p of r.payments; track p.id) { <p class="flex justify-between"><span>{{ p.method }}{{ p.isDemo ? ' (DEMO)' : '' }}</span><span>{{ p.amount | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p> }
           @if (r.change > 0) { <p class="flex justify-between"><span>Change</span><span>{{ r.change | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p> }
+          @if (r.loyaltyCustomer) { <p class="mt-1" data-testid="receipt-loyalty">{{ r.loyaltyCustomer }}: {{ r.pointsEarned ?? 0 }} points from this bill, {{ r.pointsBalance ?? 0 }} in all</p> }
           @if (r.isDemoPayment) { <p class="mt-1 text-center font-bold">DEMONSTRATION PAYMENT: NO REAL MONEY MOVED</p> }
           @if (r.footer) { <p class="mt-2 whitespace-pre-line text-center">{{ r.footer }}</p> }
           @if (r.printCount > 0) { <p class="mt-1 text-center">Reprint {{ r.printCount }}</p> }
@@ -415,6 +452,62 @@ export class PosBillingComponent implements OnInit {
   protected readonly chosenMods = signal<readonly string[]>([]);
   protected readonly serialText = signal('');
   private serialChosen: string | null = null;
+
+  // ---- The customer record on the bill ----
+  private readonly customersApi = inject(CustomersApi);
+  protected readonly canCustomers = computed(() => this.auth.hasPermission(this.perms.CUSTOMERS_USE));
+  protected readonly custSearch = signal('');
+  protected readonly custResults = signal<readonly CustomerDto[]>([]);
+  protected readonly custLooking = signal(false);
+  protected readonly custName = signal('');
+  protected readonly custPhone = signal('');
+  protected readonly custBusy = signal(false);
+  protected readonly custError = signal<string | null>(null);
+  private custSeq = 0;
+
+  protected openCustomer(): void {
+    this.custSearch.set('');
+    this.custResults.set([]);
+    this.custName.set('');
+    this.custPhone.set('');
+    this.custError.set(null);
+    this.dialog.set('customer');
+  }
+
+  protected findCustomers(text: string): void {
+    this.custSearch.set(text);
+    const mine = ++this.custSeq;
+    if (text.trim().length < 2) { this.custResults.set([]); return; }
+    this.custLooking.set(true);
+    void firstValueFrom(this.customersApi.list({ search: text.trim(), pageSize: 8 }))
+      .then((r) => { if (mine === this.custSeq) this.custResults.set(r.items); })
+      .catch((err) => this.custError.set(toApiError(err).message))
+      .finally(() => { if (mine === this.custSeq) this.custLooking.set(false); });
+  }
+
+  /** Puts a customer on the bill (or takes them off). The bill must have reached the server first, so this needs a connection. */
+  protected async setCustomer(customerId: string | null): Promise<void> {
+    this.custBusy.set(true);
+    this.custError.set(null);
+    try {
+      await this.store.serverAction((id) => firstValueFrom(this.customersApi.setOnOrder(id, customerId)), 'Customers');
+      this.dialog.set(null);
+    } catch (err) { this.custError.set(toApiError(err).message); }
+    finally { this.custBusy.set(false); }
+  }
+
+  protected async addCustomer(): Promise<void> {
+    this.custBusy.set(true);
+    this.custError.set(null);
+    try {
+      const made = await firstValueFrom(this.customersApi.create({ name: this.custName().trim(), phone: this.custPhone().trim(), isActive: true }));
+      await this.store.serverAction((id) => firstValueFrom(this.customersApi.setOnOrder(id, made.id)), 'Customers');
+      this.dialog.set(null);
+    } catch (err) {
+      const e = toApiError(err);
+      this.custError.set(Object.values(e.fieldErrors ?? {})[0]?.[0] ?? e.message);
+    } finally { this.custBusy.set(false); }
+  }
   private unitChosen: SellingUnitDto | null = null;
 
   protected readonly payMethod = signal<PaymentMethod>('Cash');

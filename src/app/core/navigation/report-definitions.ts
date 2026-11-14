@@ -63,6 +63,12 @@ export const REPORTS = {
   /** Every voided item with who asked and who authorised it. Read by people who may authorise voids. */
   voidHistory: { path: 'pos/reports/void-history', period: 'range', branch: true, search: 'Item or reason' },
 
+  /** What customers are waiting for. Waiting ones unless another status is chosen. */
+  salesBackOrders: {
+    path: 'pos/reports/sales-back-orders', period: 'none', branch: true, search: 'Customer, phone or item',
+    status: { label: 'Status', options: opts(['', 'Waiting'], ['Supplied', 'Supplied'], ['Cancelled', 'Cancelled'], ['all', 'All']) }
+  },
+
   // ---- Stock -------------------------------------------------------------------------------------
   itemsEnquiry: {
     path: 'inventory/reports/items-enquiry', period: 'none', branch: true, group: true, search: 'Name, SKU, barcode or other part number', itemIdColumn: 'itemId',

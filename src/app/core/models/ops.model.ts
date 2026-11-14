@@ -313,6 +313,13 @@ export interface OrderDto {
   label: string | null;
   tableLabel: string | null;
   customerName: string | null;
+  /** The customer record on the bill, if one was chosen (separate from the free-text name). */
+  customerId?: string | null;
+  customer?: { id: string; number: number; name: string; phone: string; pointsBalance: number } | null;
+  /** Loyalty points the lines on the bill are worth; the customer gets them when the bill is paid in full. */
+  pointsOnBill?: number;
+  /** Points this bill has given its customer so far. */
+  pointsEarned?: number;
   notes: string | null;
   ownerMembershipId: string;
   ownerName: string | null;
@@ -383,6 +390,10 @@ export interface ReceiptDto {
   number: number;
   orderNumber: number;
   issuedAtUtc: string;
+  /** Loyalty: the customer on the bill, what this bill earned them and their balance; absent when no customer was chosen. */
+  loyaltyCustomer?: string | null;
+  pointsEarned?: number | null;
+  pointsBalance?: number | null;
   companyName: string;
   shortName: string;
   initialsFallback: string;
@@ -504,6 +515,8 @@ export interface InventoryItemDto {
   hasPicture?: boolean;
   /** The item has package content: it holds no stock and sells for the total of its contents. */
   isPackage?: boolean;
+  /** What customers are waiting for on sales back orders. */
+  salesBackOrderQuantity?: number;
   /** Filled when one item is read (the card); absent in lists. */
   onOrderQuantity?: number | null;
   lastSoldAtUtc?: string | null;

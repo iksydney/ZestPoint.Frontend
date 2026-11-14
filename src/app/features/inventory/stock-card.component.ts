@@ -143,7 +143,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
                 <!-- Left block -->
                 <div class="space-y-3">
                   <div class="grid gap-2 sm:grid-cols-2">
-                    <div><label class="app-label" for="sc-points">Points value</label><input id="sc-points" type="number" min="0" step="0.01" class="app-input" data-testid="item-points" [ngModel]="f().pointsValue" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ pointsValue: n($event) ?? 0 })" /><p class="app-hint">Loyalty points per unit. Earning starts when customers and loyalty are set up.</p></div>
+                    <div><label class="app-label" for="sc-points">Points value</label><input id="sc-points" type="number" min="0" step="0.01" class="app-input" data-testid="item-points" [ngModel]="f().pointsValue" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ pointsValue: n($event) ?? 0 })" /><p class="app-hint">Loyalty points a customer earns per unit when their bill is paid.</p></div>
                     <div><label class="app-label" for="sc-tax">Tax</label><select id="sc-tax" class="app-input" data-testid="item-tax" [ngModel]="f().taxExempt ? 'exempt' : 'taxable'" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ taxExempt: $event === 'exempt' })"><option value="taxable">Taxable (company rate)</option><option value="exempt">Tax exempt</option></select></div>
                     <div><label class="app-label" for="sc-sales-ac">Sales A/C</label><select id="sc-sales-ac" class="app-input" data-testid="item-sales-ac" [ngModel]="f().salesAccountId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ salesAccountId: $event || null })">
             <option [ngValue]="null">As the stock group says</option>@for (a of salesAccounts(); track a.id) { <option [ngValue]="a.id">{{ a.code }} {{ a.name }}</option> }</select>
@@ -200,7 +200,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
                     <div class="flex justify-between gap-3 py-1.5"><dt>Purchase orders qty</dt><dd class="font-mono" data-testid="fig-on-order">{{ item()?.onOrderQuantity ?? 0 | number: '1.0-3' }}</dd></div>
                     <div class="flex justify-between gap-3 py-1.5"><dt>Consignment out</dt><dd class="text-ink/60">Not tracked yet</dd></div>
                     <div class="flex justify-between gap-3 py-1.5"><dt>Qty on layby</dt><dd class="text-ink/60">Not tracked yet</dd></div>
-                    <div class="flex justify-between gap-3 py-1.5"><dt>Sales back orders qty</dt><dd class="text-ink/60">Not tracked yet</dd></div>
+                    <div class="flex justify-between gap-3 py-1.5"><dt>Sales back orders qty</dt><dd data-testid="fig-back-orders">{{ item()?.salesBackOrderQuantity ?? 0 }}</dd></div>
                     <div class="flex justify-between gap-3 py-1.5"><dt>Last sold</dt><dd data-testid="fig-last-sold">{{ (item()?.lastSoldAtUtc | tenantTime) || 'Never' }}</dd></div>
                     <div class="flex justify-between gap-3 py-1.5"><dt>Last purchase</dt><dd>{{ (item()?.lastReceiptAtUtc | tenantTime) || 'Never' }}</dd></div>
                     <div class="flex justify-between gap-3 py-1.5"><dt>Last order</dt><dd>{{ (item()?.lastOrderedAtUtc | tenantTime) || 'Never' }}</dd></div>
