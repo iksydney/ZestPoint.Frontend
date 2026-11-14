@@ -1,3 +1,5 @@
+import { IdleLockService } from '../../core/services/idle-lock.service';
+import { LockScreenComponent } from '../../shared/ui/lock-screen.component';
 import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
@@ -26,10 +28,10 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
 @Component({
   selector: 'zp-app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, BarDockComponent, CommandPaletteComponent, TourHostComponent],
+  imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, BarDockComponent, CommandPaletteComponent, TourHostComponent, LockScreenComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="grid min-h-screen grid-cols-1 bg-canvas text-ink md:grid-cols-[17rem_1fr] print:block">
+    <div class="grid min-h-screen grid-cols-1 bg-canvas text-ink md:grid-cols-[17rem_1fr] print:block" [attr.inert]="lock.locked() ? '' : null">
       <div class="hidden md:block print:hidden">
         <zp-nav-sidebar class="block h-screen md:sticky md:top-0" [currentUrl]="url()" [name]="branding()?.shortName ?? 'ZestPoint'" [initials]="branding()?.initialsFallback ?? 'ZP'" [logoUrl]="branding()?.logoUrl ?? null" (search)="openSearch()" />
       </div>
@@ -56,6 +58,14 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
             <button type="button" class="btn-ghost px-2 md:hidden" aria-label="Search screens and reports" data-testid="header-search" (click)="openSearch()">
               <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M21 21l-4.3-4.3M11 18a7 7 0 100-14 7 7 0 000 14" /></svg>
             </button>
+
+            <!-- Bar man method: the bell. It rings (with the number) when an order this person sent is ready, or one is waiting at the bar. -->
+            @if (bar.active()) {
+              <button type="button" class="btn-ghost relative px-2" data-testid="bar-bell" [attr.data-count]="bar.bellCount()" [attr.aria-label]="bar.bellCount() ? bar.bellCount() + ' bar order(s) need you' : 'Bar orders'" (click)="bar.openPanel()">
+                <svg class="h-5 w-5" [class.text-primary]="bar.bellCount() > 0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1112 0c0 5 2 6 2 7H4c0-1 2-2 2-7M10 20a2 2 0 004 0" /></svg>
+                @if (bar.bellCount() > 0) { <span class="absolute -right-0.5 -top-0.5 min-w-[1.125rem] rounded-full bg-danger px-1 text-center text-[11px] font-bold leading-[1.125rem] text-white" aria-hidden="true">{{ bar.bellCount() }}</span> }
+              </button>
+            }
 
             <div class="relative">
               <button type="button" class="btn-ghost flex items-center gap-1.5 px-2 text-sm" aria-haspopup="menu" [attr.aria-expanded]="help()" data-testid="help-open" data-tour="help" (click)="help.set(!help())">
@@ -111,6 +121,7 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
     </div>
     <zp-command-palette [open]="searching()" (closed)="searching.set(false)" />
     <zp-tour-host />
+    <zp-lock-screen />
   `,
   styles: [`
     .help-item { display: flex; width: 100%; flex-direction: column; gap: .125rem; border-radius: .5rem; padding: .5rem .625rem; text-align: left; font-size: .875rem; color: rgb(var(--ink-rgb)); min-height: 2.75rem; }
@@ -124,6 +135,7 @@ export class AppShellComponent {
   private readonly tour = inject(TourService);
   private readonly toast = inject(ToastService);
   protected readonly bar = inject(BarStore);
+  protected readonly lock = inject(IdleLockService);
 
   protected readonly appTour = APP_TOUR;
   protected readonly branding = this.auth.branding;
@@ -160,7 +172,7 @@ export class AppShellComponent {
 
   constructor() {
     // Finds out whether the company uses the bar man method and, if this person takes part in it, starts the live connection.
-    void this.bar.start();
+    this.lock.start(); void this.bar.start();
 
     // A tour the person has not seen starts once the screen they landed on has had a moment to draw. Never during first-time set-up.
     effect((onCleanup) => {

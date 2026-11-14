@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, HostListener, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BarOrderDto } from '../../core/models/ops.model';
 import { BarStore, elapsed, placeOf } from '../../core/services/bar.services';
@@ -109,6 +109,17 @@ export class BarDockComponent {
 
   protected readonly open = signal(false);
   protected readonly tab = signal<'bar' | 'mine'>('bar');
+
+  constructor() {
+    // The bell in the header opens the panel: on what is calling this person if anything is, otherwise on the bar's queue.
+    effect(() => {
+      if (this.bar.panelRequests() === 0) return;
+      untracked(() => {
+        this.show(this.bar.attention().length > 0 || !this.bar.isBarMan() ? 'mine' : 'bar');
+        void this.bar.refresh();
+      });
+    }, { allowSignalWrites: true });
+  }
   protected readonly busy = signal(false);
   private readonly focusId = signal<string | null>(null);
 

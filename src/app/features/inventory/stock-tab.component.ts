@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import {
-  BatchDto, InventoryItemDto, MovementDto, SaveInventoryItemRequest, StockMovementType, StockUnit, SupplierDto
+  BatchDto, InventoryItemDto, MovementDto, StockMovementType, StockUnit, SupplierDto
 } from '../../core/models/ops.model';
 import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
@@ -13,28 +13,24 @@ import { InventoryApi } from '../../core/services/ops.services';
 import { SyncAgentService } from '../../core/services/sync-agent.service';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
+import { StockCardComponent } from './stock-card.component';
 
-type Dialog = 'item' | 'adjust' | 'receive' | 'transfer' | 'history' | null;
+type Dialog = 'adjust' | 'receive' | 'transfer' | 'history' | null;
 
 const UNIT_LABEL: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
-
-const blankItem = (): SaveInventoryItemRequest => ({
-  name: '', sku: null, kind: 'Ingredient', baseUnit: 'Milliliter', containerSize: null, tareGrams: null, densityGPerMl: null, minimumLevel: 0,
-  reorderLevel: 0, targetDaysOfStock: 14, averageCost: 0, supplierId: null, tracksBatches: false, isActive: true, rowVersion: null
-});
 
 /** Stock levels, item set-up, adjustments, goods received, transfers and batch/expiry view for the active branch. */
 @Component({
   selector: 'zp-stock-tab',
   standalone: true,
-  imports: [CurrencyPipe, DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent],
+  imports: [CurrencyPipe, DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent, StockCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mb-3 flex flex-wrap items-center gap-2">
       <input class="app-input max-w-xs" type="search" placeholder="Search items" aria-label="Search items" data-testid="stock-search" [ngModel]="search()" (ngModelChange)="search.set($event); load()" />
       <label class="flex items-center gap-2 text-sm"><input type="checkbox" data-testid="low-only" [checked]="lowOnly()" (change)="lowOnly.set(!lowOnly()); load()" /> Low stock only</label>
       <span class="ml-auto flex flex-wrap gap-2">
-        @if (canAdjust() && !readOnly()) { <button type="button" class="btn-primary" data-testid="new-item" (click)="openItem(null)">New item</button> }
+        @if (canManageItems() && !readOnly()) { <button type="button" class="btn-primary" data-testid="new-item" (click)="openItem(null)">New stock item</button> }
         @if (canPurchase() && !readOnly()) { <button type="button" class="btn-outline" data-testid="receive-goods" (click)="openReceive()">Receive goods</button> }
         @if (canAdjust() && canTransfer() && !readOnly()) { <button type="button" class="btn-outline" (click)="openTransfer()">Transfer</button> }
       </span>
@@ -62,8 +58,8 @@ const blankItem = (): SaveInventoryItemRequest => ({
                 <button type="button" class="btn-ghost px-2 py-1 text-sm" (click)="openHistory(i)">History</button>
                 @if (canAdjust() && !readOnly()) {
                   <button type="button" class="btn-outline px-2 py-1 text-sm" [attr.data-testid]="'adjust-' + i.name" (click)="openAdjust(i)">Adjust</button>
-                  <button type="button" class="btn-ghost px-2 py-1 text-sm" (click)="openItem(i)">Edit</button>
                 }
+                @if (canManageItems() && !readOnly()) { <button type="button" class="btn-ghost px-2 py-1 text-sm" [attr.data-testid]="'edit-item-' + i.name" (click)="openItem(i)">Edit</button> }
               </td>
             </tr>
           } @empty { <tr><td colspan="7" class="py-8 text-center text-ink/70">{{ loading() ? 'Loading...' : 'No stock items yet.' }}</td></tr> }
@@ -80,37 +76,10 @@ const blankItem = (): SaveInventoryItemRequest => ({
       </div>
     }
 
-    <!-- Item -->
-    <zp-dialog [open]="dialog() === 'item'" [title]="editingId() ? 'Edit item' : 'New stock item'" [wide]="true" (closed)="dialog.set(null)">
-      <form class="grid gap-3 sm:grid-cols-2" (submit)="$event.preventDefault(); saveItem()">
-        <div class="sm:col-span-2"><label class="app-label" for="it-name">Name</label><input id="it-name" class="app-input" data-testid="item-name" [ngModel]="item().name" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchItem({ name: $event })" />
-          @if (fe()['name']) { <p class="app-error" role="alert">{{ fe()['name'] }}</p> }</div>
-        <div><label class="app-label" for="it-unit">Unit</label>
-          <select id="it-unit" class="app-input" data-testid="item-unit" [ngModel]="item().baseUnit" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchItem({ baseUnit: $event })" [disabled]="!!editingId()">
-            <option value="Milliliter">Millilitres (liquids)</option><option value="Gram">Grams</option><option value="Each">Each (counted)</option></select></div>
-        <div><label class="app-label" for="it-kind">Kind</label>
-          <select id="it-kind" class="app-input" [ngModel]="item().kind" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchItem({ kind: $event })"><option value="Ingredient">Ingredient</option><option value="FinishedGood">Finished good (resold as is)</option></select></div>
-        <div><label class="app-label" for="it-sku">SKU</label><input id="it-sku" class="app-input" [ngModel]="item().sku" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchItem({ sku: $event || null })" />
-          @if (fe()['sku']) { <p class="app-error" role="alert">{{ fe()['sku'] }}</p> }</div>
-        <div><label class="app-label" for="it-cost">Average cost per {{ unit(item().baseUnit) }}</label><input id="it-cost" type="number" min="0" step="0.0001" class="app-input" [ngModel]="item().averageCost" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchItem({ averageCost: +$event })" /></div>
-        <div><label class="app-label" for="it-min">Minimum level</label><input id="it-min" type="number" min="0" class="app-input" [ngModel]="item().minimumLevel" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchItem({ minimumLevel: +$event })" /></div>
-        <div><label class="app-label" for="it-reorder">Reorder level</label><input id="it-reorder" type="number" min="0" class="app-input" data-testid="item-reorder" [ngModel]="item().reorderLevel" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchItem({ reorderLevel: +$event })" />
-          @if (fe()['reorderLevel']) { <p class="app-error" role="alert">{{ fe()['reorderLevel'] }}</p> }</div>
-        <div><label class="app-label" for="it-days">Days of cover to order up to</label><input id="it-days" type="number" min="1" max="365" class="app-input" [ngModel]="item().targetDaysOfStock" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchItem({ targetDaysOfStock: +$event })" /></div>
-        <div><label class="app-label" for="it-sup">Supplier</label>
-          <select id="it-sup" class="app-input" [ngModel]="item().supplierId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchItem({ supplierId: $event || null })"><option [ngValue]="null">None</option>@for (s of suppliers(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select></div>
-        @if (item().baseUnit === 'Milliliter') {
-          <div><label class="app-label" for="it-cs">Bottle size (ml)</label><input id="it-cs" type="number" min="0" class="app-input" [ngModel]="item().containerSize" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchItem({ containerSize: $event ? +$event : null })" /></div>
-          <div><label class="app-label" for="it-tare">Empty bottle weight (g)</label><input id="it-tare" type="number" min="0" class="app-input" data-testid="item-tare" [ngModel]="item().tareGrams" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchItem({ tareGrams: $event ? +$event : null })" /></div>
-          <div><label class="app-label" for="it-dens">Density (g per ml)</label><input id="it-dens" type="number" min="0.01" max="100" step="0.01" class="app-input" data-testid="item-density" [ngModel]="item().densityGPerMl" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchItem({ densityGPerMl: $event ? +$event : null })" />
-            <p class="mt-1 text-xs text-ink/70">Needed to turn a weighed bottle into millilitres. Liquids differ (gin is about 0.94), so it is never assumed.</p>
-            @if (fe()['baseUnit']) { <p class="app-error" role="alert">{{ fe()['baseUnit'] }}</p> }</div>
-        }
-        <label class="flex items-center gap-2 text-sm"><input type="checkbox" [checked]="item().tracksBatches" (change)="patchItem({ tracksBatches: !item().tracksBatches })" /> Track batches and expiry</label>
-        <label class="flex items-center gap-2 text-sm"><input type="checkbox" [checked]="item().isActive" (change)="patchItem({ isActive: !item().isActive })" /> Active</label>
-        <div class="flex justify-end gap-2 sm:col-span-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="item-save" [disabled]="saving()">Save item</button></div>
-      </form>
-    </zp-dialog>
+    <!-- New item and Edit open the stock card, the one place an item is set up (the same card as on the Items screen). -->
+    @if (cardOpen()) {
+      <zp-stock-card [itemId]="cardId()" [siblings]="itemIds()" (savedItem)="load()" (closed)="cardOpen.set(false)" (navigate)="cardId.set($event)" />
+    }
 
     <!-- Adjust -->
     <zp-dialog [open]="dialog() === 'adjust'" [title]="'Adjust stock: ' + (target()?.name ?? '')" (closed)="dialog.set(null)">
@@ -193,8 +162,10 @@ export class StockTabComponent {
   protected readonly fe = signal<Readonly<Record<string, readonly string[] | string>>>({});
   protected readonly search = signal('');
   protected readonly lowOnly = signal(false);
-  protected readonly editingId = signal<string | null>(null);
-  protected readonly item = signal<SaveInventoryItemRequest>(blankItem());
+  protected readonly cardOpen = signal(false);
+  protected readonly cardId = signal<string | null>(null);
+  protected readonly itemIds = computed(() => this.items().map((i) => i.id));
+  protected readonly canManageItems = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_ITEMS_MANAGE));
   protected readonly target = signal<InventoryItemDto | null>(null);
   protected readonly adj = signal({ type: 'Adjustment' as StockMovementType, direction: 'up' as 'up' | 'down', quantity: 0, reason: '' });
   protected readonly rc = signal({ itemId: '', quantity: 0, unitCost: 0, reference: '', lot: '', expiry: '', supplierId: '', tax: 0, serials: '' });
@@ -240,27 +211,8 @@ export class StockTabComponent {
 
   // ---- item ----
   protected openItem(i: InventoryItemDto | null): void {
-    this.fe.set({});
-    this.editingId.set(i?.id ?? null);
-    this.item.set(i ? { ...i, averageCost: i.averageCost ?? 0, rowVersion: i.rowVersion } : blankItem());
-    this.dialog.set('item');
-  }
-
-  protected patchItem(p: Partial<SaveInventoryItemRequest>): void { this.item.update((v) => ({ ...v, ...p })); }
-
-  protected async saveItem(): Promise<void> {
-    this.saving.set(true);
-    this.fe.set({});
-    try {
-      await firstValueFrom(this.api.saveItem(this.editingId(), this.item()));
-      this.dialog.set(null);
-      this.toast.success('Item saved.');
-      await this.load();
-    } catch (err) {
-      const e = toApiError(err);
-      this.fe.set(Object.fromEntries(Object.entries(e.fieldErrors).map(([k, v]) => [k, v[0] ?? ''])));
-      if (Object.keys(e.fieldErrors).length === 0) this.toast.error(e.message);
-    } finally { this.saving.set(false); }
+    this.cardId.set(i?.id ?? null);
+    this.cardOpen.set(true);
   }
 
   // ---- adjust (offline-first) ----

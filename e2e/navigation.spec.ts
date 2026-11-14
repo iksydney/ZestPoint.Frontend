@@ -6,7 +6,7 @@ import { newContext, pick, registerViaUi } from './helpers';
 const AREAS: [string, string[], number][] = [
   ['sell', ['Point of Sale', 'Start / End of Day'], 7],
   ['customers', ['Customers', 'Laybys', 'Sales Back Orders'], 2],
-  ['stock', ['Stock Overview', 'Items', 'Stock Groups', 'Catalogue', 'Adjustments', 'Bulk Changes', 'Bin Locations', 'Labels', 'Consignment Out'], 17],
+  ['stock', ['Stock Overview', 'Items', 'Stock Groups', 'Adjustments', 'Bulk Changes', 'Bin Locations', 'Labels', 'Consignment Out'], 17],
   ['purchasing', ['Purchase Orders', 'Goods Receiving', 'Suppliers', 'Supplier Payments'], 12],
   ['finance', ['Chart of Accounts'], 3],
   ['admin', ['Staff', 'Branches', 'Settings', 'Branding', 'Subscription', 'Support'], 0]
@@ -139,6 +139,7 @@ test.describe('Navigation', () => {
   test('search (Ctrl+K) reaches any screen or report, by its old name too, and the keyboard moves through the menu', async ({ page }) => {
     await ownerInApp(page);
     await page.goto('/app/dashboard');
+    await expect(page.getByTestId('nav-search').first()).toBeVisible();                // the application is on screen before a key is pressed
     await expect(page.getByTestId('palette')).toHaveCount(0);
 
     await page.keyboard.press('Control+k');

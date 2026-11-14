@@ -83,6 +83,30 @@ export function recalculate(order: LocalOrder): LocalOrder {
   };
 }
 
+/**
+ * What the item's own discount takes off one unit sold at `unitPrice` (same rule as the server): the percentage, but never taking the
+ * unit below its minimum price. `floor` is for the same unit: a case's floor is its singles' floor times what it holds.
+ */
+export function itemDiscountPerUnit(unitPrice: number, percent: number, floor: number | null | undefined): number {
+  if (!(percent > 0) || !(unitPrice > 0)) return 0;
+  return Math.max(0, Math.min(round2((unitPrice * percent) / 100), round2(unitPrice - Math.min(unitPrice, floor ?? 0))));
+}
+
+/** The item's-own-discount part of a line's discount at a given quantity. */
+export const itemDiscountOf = (line: OrderLineDto, quantity: number): number => round2((line.itemDiscountPerUnit ?? 0) * quantity);
+
+/**
+ * Lines with the same key are the same thing at the same price, and the bill shows them as one row however many times the item was
+ * added or sent. A serial-numbered unit is always a row of its own.
+ */
+export function lineKey(l: OrderLineDto): string {
+  if (l.serialNumber) return l.id;
+  return [
+    l.productId, l.sellingUnitId ?? '', l.unitPrice, l.modifierTotal, l.itemDiscountPerUnit ?? 0, l.seat ?? '', l.notes ?? '',
+    l.modifiers.map((m) => m.id).sort().join(','), (l.package?.contents ?? []).map((c) => `${c.name}:${c.quantity}`).join(',')
+  ].join('|');
+}
+
 /** Splits an amount into equal shares that sum exactly to it (remainder cents go to the first shares). */
 export function splitEvenly(amount: number, parts: number): number[] {
   const cents = Math.round(amount * 100);

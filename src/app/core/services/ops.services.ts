@@ -60,6 +60,10 @@ export class CatalogApi {
     return this.http.get<ApiEnvelope<ProductDto>>(`/api/v1/catalog/products/barcode/${encodeURIComponent(barcode)}`, { params: q({ branchId }) }).pipe(unwrap());
   }
 
+  product(id: string): Observable<ProductDto> {
+    return this.http.get<ApiEnvelope<ProductDto>>(`/api/v1/catalog/products/${id}`).pipe(unwrap());
+  }
+
   saveProduct(id: string | null, body: SaveProductRequest): Observable<ProductDto> {
     return id
       ? this.http.put<ApiEnvelope<ProductDto>>(`/api/v1/catalog/products/${id}`, body).pipe(unwrap())
@@ -97,6 +101,24 @@ export class OrdersApi {
 
   refund(id: string, paymentId: string, body: { amount: number; reason: string; idempotencyKey: string }): Observable<OrderDto> {
     return this.http.post<ApiEnvelope<OrderDto>>(`/api/v1/orders/${id}/payments/${paymentId}/refunds`, body).pipe(unwrap());
+  }
+
+  updateLine(id: string, lineId: string, quantity: number): Observable<OrderDto> {
+    return this.http.put<ApiEnvelope<OrderDto>>(`/api/v1/orders/${id}/lines/${lineId}`, { quantity }).pipe(unwrap());
+  }
+
+  removeLine(id: string, lineId: string): Observable<OrderDto> {
+    return this.http.delete<ApiEnvelope<OrderDto>>(`/api/v1/orders/${id}/lines/${lineId}`).pipe(unwrap());
+  }
+
+  /** The colleagues at a branch a bill can be handed over to. */
+  handOverTargets(branchId: string): Observable<{ id: string; name: string }[]> {
+    return this.http.get<ApiEnvelope<{ id: string; name: string }[]>>('/api/v1/orders/hand-over-targets', { params: q({ branchId }) }).pipe(unwrap());
+  }
+
+  /** Bar man method: a supervisor or administrator (their credentials in the body) allows payment before the bar has confirmed. */
+  unlockPayment(id: string, authorizer: VoidAuthorizer): Observable<OrderDto> {
+    return this.http.post<ApiEnvelope<OrderDto>>(`/api/v1/orders/${id}/payment-unlock`, authorizer).pipe(unwrap());
   }
 
   transfer(id: string, body: { tableLabel: string | null; newOwnerMembershipId: string | null }): Observable<OrderDto> {

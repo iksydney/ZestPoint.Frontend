@@ -94,6 +94,7 @@ test.describe('Bar man method', () => {
   });
 
   test('an order goes from the attendant to the bar man and back, live, and stock leaves at dispatch', async ({ page, browser }, testInfo) => {
+    test.slow();   // three signed-in devices and the whole round trip: more than the usual minute on a busy machine
     const who = await barWithDemoData(page);
     const waiterCode = await addPinStaff(page, 'Wale Waiter', 'waiter', '7391');
     const barmanCode = await addPinStaff(page, 'Bola Barman', 'bartender', '8264');
@@ -122,14 +123,15 @@ test.describe('Bar man method', () => {
     const prompt = barman.page.getByTestId('bar-prompt-Table 12');
     await expect(prompt).toBeVisible();
     await expect(prompt).toContainText('from Wale Waiter');
-    await expect(prompt).toContainText('2 items');
+    await expect(prompt).toContainText('1 item (2)');                                  // the same drink twice is one row of 2
     await expect(barman.page.getByTestId('bar-dock-count')).toHaveText('1');
+    await expect(barman.page.getByTestId('bar-bell')).toHaveAttribute('data-count', '1');   // the bell in the header rings too
 
     // Tapping it expands the order.
     await prompt.getByTestId('bar-prompt-open').click();
     const card = barman.page.getByTestId('bar-panel').getByTestId('bar-order-Table 12');
     await expect(card.getByTestId('bar-from')).toHaveText('Wale Waiter');
-    await expect(card.getByTestId('bar-items')).toContainText('1 x Demo Gin & Tonic');
+    await expect(card.getByTestId('bar-items')).toContainText('2 x Demo Gin & Tonic');
     await card.getByTestId('bar-take').click();
     await expect(card.getByTestId('bar-status')).toHaveText('Preparing');
     await expect(barman.page.getByTestId('bar-dock-count')).toHaveCount(0);            // nothing is waiting to be taken any more
@@ -146,11 +148,17 @@ test.describe('Bar man method', () => {
     await expect(ready).toContainText('Table 12 is ready');
     await expect(ready).toContainText('Collect from Bola Barman');
     await expect(waiter.page.getByTestId('bar-dock-count')).toHaveText('1');
+    await expect(waiter.page.getByTestId('bar-bell')).toHaveAttribute('data-count', '1');
     expect(await ginOnHand(page)).toContain('2,000');                                  // 2 x 50 ml, deducted at dispatch
 
     await ready.getByTestId('bar-prompt-acknowledge').click();
     await expect(ready).toHaveCount(0);
+    await expect(waiter.page.getByTestId('bar-bell')).toHaveAttribute('data-count', '0');
     await expect(waiter.page.getByTestId('bar-state-Demo Gin & Tonic').first()).toHaveText('served');
+    // The bell opens the panel of what this person sent.
+    await waiter.page.getByTestId('bar-bell').click();
+    await expect(waiter.page.getByTestId('bar-panel')).toBeVisible();
+    await waiter.page.getByTestId('bar-panel-close').click();
 
     // The Bar Orders screen keeps the history, and it reads well on a phone in dark mode.
     await barman.page.getByTestId('bar-panel-close').click();
@@ -258,14 +266,15 @@ test.describe('Bar man method', () => {
     await expect(waiter.page.getByTestId('bar-orders-screen')).toHaveCount(0);
     await waiter.context.close();
 
-    // A supermarket is never offered the setting.
+    // Any kind of business is offered the setting (owner, 2026-11-14); a supermarket was not asked at registration, so it is off.
     const market = await newContext(browser);
     await registerViaUi(market.page, { type: 'Supermarket' });
     await market.page.getByTestId('save-continue').click();
     await market.page.getByTestId('go-staff').click();
     await market.page.goto('/app/settings/operations');
     await expect(market.page.getByTestId('settings-save')).toBeVisible();
-    await expect(market.page.getByTestId('bar-man-section')).toHaveCount(0);
+    await expect(market.page.getByTestId('bar-man-section')).toBeVisible();
+    await expect(market.page.getByTestId('bar-man-enabled')).not.toBeChecked();
     await market.context.close();
   });
 });

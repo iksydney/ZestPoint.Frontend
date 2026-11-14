@@ -169,6 +169,13 @@ export class BarStore {
   /** Waiting and being prepared at the branch, oldest first. */
   readonly queue = this._queue.asReadonly();
   readonly waiting = computed(() => this._queue().filter((o) => o.status === 'New'));
+
+  /** Raised by the bell in the header: the floating panel opens (bar-dock listens). */
+  readonly panelRequests = signal(0);
+  openPanel(): void { this.panelRequests.update((n) => n + 1); }
+
+  /** The number on the bell: orders waiting for a bar man to take, plus the person's own orders that are ready or could not be made. */
+  readonly bellCount = computed(() => (this.isBarMan() ? this.waiting().length : 0) + this.attention().length);
   /** What I sent that is still in progress or needs me. */
   readonly mine = this._mine.asReadonly();
   readonly attention = computed(() => this._mine().filter((o) => o.needsAttention));
@@ -189,6 +196,10 @@ export class BarStore {
     this.live.notices.subscribe((n) => { if (n.branchId === this.branches.activeId()) void this.refresh(); });
     this.live.connected.subscribe(() => void this.refresh());
     setInterval(() => this._now.set(Date.now()), 30_000);
+    // The method may be switched on (or off) while this person is already signed in: look again every two minutes and whenever the
+    // window is looked at again, so their device shows the bell and the prompts without signing in again.
+    setInterval(() => void this.recheck(), 120_000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void this.recheck(); });
 
     // Another branch has another bar: forget what was seen and read that branch's orders.
     effect(() => {
@@ -211,6 +222,20 @@ export class BarStore {
     } catch {
       this.startedFor = null; // offline at sign-in: try again when the shell is next shown
     }
+  }
+
+  private lastCheck = 0;
+
+  /** Reads the company's setting again (at most every twenty seconds) and follows it. */
+  async recheck(): Promise<void> {
+    if (!this.auth.isAuthenticated() || this.auth.locked() || Date.now() - this.lastCheck < 20_000) return;
+    this.lastCheck = Date.now();
+    try { this.follow((await firstValueFrom(this.settingsApi.get())).barManMethodEnabled); } catch { /* offline: the next look will do */ }
+  }
+
+  /** Something that has just read the company's settings (the till) passes on what it saw. */
+  follow(enabled: boolean): void {
+    if (enabled !== this._enabled()) this.setEnabled(enabled);
   }
 
   /** The operations settings screen calls this after saving, so the owner's own device follows the switch at once. */

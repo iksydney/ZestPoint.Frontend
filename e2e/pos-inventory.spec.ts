@@ -148,12 +148,6 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
     const code = await addPinCashier(page, 'Cash Ier');
     const supervisorCode = await addPinCashier(page, 'Sade Super', '5827', 'supervisor');
 
-    await openPos(page);
-    await startBill(page, 'Void me');
-    await page.getByTestId('product-Demo Canned Beans').click();
-    await page.getByTestId('send-order').click();
-    await waitForSync(page);
-
     const cashier = await newContext(browser);
     await cashier.page.goto('/login');
     await cashier.page.getByTestId('login-slug').fill(who.slug);
@@ -163,7 +157,12 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
     await cashier.page.getByTestId('login-submit').click();
     await expect(cashier.page).toHaveURL(/\/app\/(dashboard|pos)$/);
     await cashier.page.getByTestId('main-nav').getByRole('link', { name: 'Point of Sale' }).click();
-    await cashier.page.getByTestId('bill-Void me').click();
+    // The cashier's own bill: a bill is worked on by whoever opened it.
+    await expect(cashier.page.getByTestId('product-grid')).toContainText('Demo Canned Beans');
+    await startBill(cashier.page, 'Void me');
+    await cashier.page.getByTestId('product-Demo Canned Beans').click();
+    await cashier.page.getByTestId('send-order').click();
+    await waitForSync(cashier.page);
     await expect(cashier.page.getByTestId('open-approvals')).toHaveCount(0);
 
     // The cashier starts the void, but the button stays off until someone who may authorise it has entered their details.

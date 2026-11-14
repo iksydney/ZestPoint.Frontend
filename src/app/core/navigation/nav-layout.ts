@@ -30,7 +30,7 @@ export const NAV_AREAS: readonly NavArea[] = [
   { key: 'customers', label: 'Customers', icon: 'users', blurb: 'The people you sell to: their points, their laybys and what they are waiting for.', screens: ['customers', 'pos.laybys', 'pos.backorders'] },
   {
     key: 'stock', label: 'Stock', icon: 'box', blurb: 'What you hold and sell: items, groups, counts and where things are.',
-    screens: ['inventory', 'stock.items', 'stock.groups', 'catalog', 'stock.adjust', 'stock.global', 'stock.bins', 'stock.labels', 'stock.consignment']
+    screens: ['inventory', 'stock.items', 'stock.groups', 'stock.adjust', 'stock.global', 'stock.bins', 'stock.labels', 'stock.consignment']
   },
   { key: 'purchasing', label: 'Purchasing', icon: 'truck', blurb: 'Order from suppliers, receive goods and pay for them.', screens: ['purchasing.orders', 'purchasing.receiving', 'purchasing.suppliers', 'purchasing.payments'] },
   { key: 'finance', label: 'Finance', icon: 'wallet', blurb: 'The ledger: accounts and the entries posted from sales, purchases and stock.', screens: ['ledger.accounts'] },
@@ -93,9 +93,8 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
   'pos.report.backorders': 'A list of sales back orders and whether they can be supplied now.',
 
   'inventory': 'Stock levels at this branch, receiving, transfers, counts and weigh checks.',
-  'stock.items': 'Add an item or change one: prices, units, package content, picture and sale rules.',
+  'stock.items': 'Add an item or change one: prices, discount, units, package content, recipe and options, picture and sale rules.',
   'stock.groups': 'The groups items belong to, and the ledger accounts each group posts to.',
-  'catalog': 'What appears on the till: products, their options and recipes.',
   'stock.adjust': 'Correct a quantity or record waste, spillage and breakage, with a reason.',
   'stock.global': 'Change many items at once: prices, groups and levels.',
   'stock.bins': 'Where stock is kept in the branch: bins, their security and what each holds.',

@@ -64,20 +64,22 @@ export const TOURS: readonly TourDefinition[] = [
     ]
   },
   {
-    key: 'pos', nav: 'pos', title: 'The till', version: 1,
+    key: 'pos', nav: 'pos', title: 'The till', version: 3,
+    changes: [{ version: 2, steps: [{ id: 'quantity', target: '[data-testid="current-bill"]', title: 'One row per item', body: 'Adding the same item again now raises the number on its row instead of starting another row. Type the quantity you want in the box between minus and plus. Units already sent stay sent: to take those off, void them.' }] }, { version: 3, steps: [{ id: 'own-bills', target: '[data-testid="bill-list"]', title: 'Whose bill it is', body: 'A bill belongs to whoever opened it. Colleagues can look at it, but only its owner, a supervisor or a manager can change it or take payment. Move / hand over gives a bill to a colleague.' }, { id: 'receipt-send', target: '[data-testid="current-bill"]', title: 'Sending a receipt', body: 'Receipt now prints the receipt by itself and can send it: WhatsApp, e-mail, SMS, the share options of your device, a QR code the customer scans, or a picture to download. Where the bar man method is used, Pay unlocks when the bar marks the order ready.' }] }],
     steps: [
       { id: 'bills', target: '[data-testid="bill-list"]', title: 'Open bills', body: 'Bills that are still open at this branch. Click one to carry on with it.' },
       { id: 'new', target: '[data-testid="new-bill"]', optional: true, title: 'Start a bill', body: 'Every sale starts here: a tab, a table, a walk-up or a takeaway. Give it a name you will recognise.' },
       { id: 'find', target: '[data-testid="product-search"]', title: 'Find what to sell', body: 'Type part of a name, or scan a barcode in the box beside it. Tapping a product adds it to the bill.' },
-      { id: 'bill', target: '[data-testid="current-bill"]', title: 'The bill', body: 'What is on the bill, its total, and what you can do with it: add a customer, discount, split, take payment and print the receipt. Prices come from the stock card; nobody types a price here.' }
+      { id: 'bill', target: '[data-testid="current-bill"]', title: 'The bill', body: 'What is on the bill, its total, and what you can do with it: add a customer, split, take payment and print the receipt. Each item has one row: type its quantity in the box. Prices and any item discount come from the stock card; nobody types a price here.' }
     ]
   },
   {
-    key: 'stock.items', nav: 'stock.items', title: 'Items', version: 1,
+    key: 'stock.items', nav: 'stock.items', title: 'Items', version: 2,
+    changes: [{ version: 2, steps: [{ id: 'discount', target: '[data-testid="items-table"]', title: 'A discount on the item', body: 'The stock card now has Discount %, under the prices. The till takes it off that item by itself on every sale, always or only between the dates you give, and never below the minimum price.' }, { id: 'recipe', target: '[data-testid="items-table"]', title: 'Recipes moved here', body: 'The Catalogue screen is gone. A drink or dish made from ingredients is now an item like any other: open its stock card and use the Recipe and options tab. Everything about an item is on its card.' }] }],
     steps: [
       { id: 'search', target: '[data-testid="items-search"]', title: 'Find an item', body: 'Search by name, part number or barcode, or narrow the list to one stock group.' },
-      { id: 'new', target: '[data-testid="item-new"]', optional: true, title: 'Add an item', body: 'Opens the stock card: name, prices, the special price and its dates, tax, loyalty points and the rules the till follows. Creating an item adds no stock; stock comes in through purchasing and adjustments.' },
-      { id: 'list', target: '[data-testid="items-table"]', title: 'Your items', body: 'Edit opens the same stock card, where you also set selling units (a case of 12), package content, the picture and the ledger accounts.' }
+      { id: 'new', target: '[data-testid="item-new"]', optional: true, title: 'Add an item', body: 'Opens the stock card: name, prices, the special price and its dates, the discount percentage, tax, loyalty points and the rules the till follows. Creating an item adds no stock; stock comes in through purchasing and adjustments.' },
+      { id: 'list', target: '[data-testid="items-table"]', title: 'Your items', body: 'Edit opens the same stock card, where you also set selling units (a case of 12), package content, the recipe and options, the picture and the ledger accounts.' }
     ]
   },
   {

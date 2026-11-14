@@ -149,13 +149,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/support/support.component').then((m) => m.SupportComponent)
       },
       {
-        path: 'catalog',
-        title: 'Catalogue',
-        canActivate: [screenRbacGuard, subscriptionGateGuard],
-        data: { permission: SCREEN_PERMISSIONS.PRODUCTS_MANAGE, feature: FEATURES.CORE_POS, screen: 'catalog' } satisfies RouteAccessData,
-        loadComponent: () => import('./features/catalog/catalog.component').then((m) => m.CatalogComponent)
-      },
-      {
         path: 'settings/operations',
         title: 'Operations settings',
         canActivate: [screenRbacGuard],
@@ -230,5 +223,7 @@ export const routes: Routes = [
     path: 'upgrade',
     loadComponent: () => import('./features/system/system-pages.component').then((m) => m.UpgradeRequiredComponent)
   },
+  // A customer's receipt, opened from its web link without signing in.
+  { path: 'r/:token', title: 'Your receipt', loadComponent: () => import('./features/receipt/public-receipt.page').then((m) => m.PublicReceiptPageComponent) },
   { path: '**', redirectTo: '' }
 ];

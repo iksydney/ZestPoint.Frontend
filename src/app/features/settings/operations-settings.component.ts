@@ -39,12 +39,14 @@ import { ConfirmService, ToastService } from '../../shared/ui/feedback';
           @else { <p class="text-sm">Payment provider: {{ v.paymentProvider }}</p> }
         </section>
 
-        @if (v.barManMethodAvailable || v.barManMethodEnabled) {
+        @if (v) { <!-- offered to every kind of business since 2026-11-14 -->
           <section class="app-card space-y-2" data-testid="bar-man-section"><h2 class="font-semibold">Bar man method</h2>
             <label class="flex min-h-11 items-start gap-2 text-sm"><input type="checkbox" class="mt-1" data-testid="bar-man-enabled" [checked]="v.barManMethodEnabled" (change)="patch({ barManMethodEnabled: !v.barManMethodEnabled })" />
               <span>Attendants send orders to a bar man, who prepares them and tells the attendant when they are ready</span></label>
             <ul class="list-disc space-y-1 pl-6 text-sm text-ink/80">
               <li>When an attendant presses Send, staff with the "bar man" permission at that branch get the order on their device, with the table and who asked.</li>
+              <li>When the bar man marks it ready, the attendant who sent it gets a bell, a sound and a prompt on whatever screen they are on, and taps Collected when they pick it up. They then take payment as usual.</li>
+              <li>The Bartender role prepares orders and does not sell. A bartender who should also sell is given the selling rights, or the Cashier role, on the Staff screen.</li>
               <li>Stock is deducted when the bar man marks the order ready, not when it is sent.</li>
               <li>Bar orders need a connection: an order sent while a device is offline reaches the bar when that device is back online.</li>
               <li>It cannot be switched off while orders are still waiting at the bar.</li>

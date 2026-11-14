@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { recalculate, round2 } from '../offline/order-calc';
+import { itemDiscountOf, itemDiscountPerUnit, lineKey, recalculate, round2 } from '../offline/order-calc';
 import {
   CategoryDto, CompanySettingsDto, LocalOrder, OrderDto, OrderKind, OrderLineDto, PayRequest, PaymentMethod, ProductDto, SellingUnitDto, VoidAuthorizer
 } from '../models/ops.model';
@@ -33,6 +33,9 @@ const fromServer = (o: OrderDto): LocalOrder => ({ ...o, pendingSync: false, num
  * recomputes the totals and its answer replaces the local figures. Card and transfer payments, splits, merges, refunds and
  * receipts need the server and say so.
  */
+/** Quantities are kept to three decimals, like the server. */
+const round3 = (value: number): number => Math.round(value * 1000) / 1000;
+
 @Injectable({ providedIn: 'root' })
 export class PosStore {
   private readonly auth = inject(AuthService);
@@ -175,7 +178,34 @@ export class PosStore {
   // ---- Editing (offline-first) ----------------------------------------------------------------------
 
   /** `unit` sells one of the product's selling units (a case): its price is the item's price times what it holds, as the server will set it. */
-  async addProduct(product: ProductDto, quantity: number, modifierIds: string[] = [], seat: number | null = null, serialNumber: string | null = null, unit: SellingUnitDto | null = null): Promise<void> {
+  addProduct(product: ProductDto, quantity: number, modifierIds: string[] = [], seat: number | null = null, serialNumber: string | null = null, unit: SellingUnitDto | null = null): Promise<void> {
+    return this.oneAtATime(() => this.addProductNow(product, quantity, modifierIds, seat, serialNumber, unit));
+  }
+
+  /**
+   * Adds more of what a line already holds (the bill's quantity box, when part of the row has been sent and cannot be changed). The
+   * extra units go on as a line of their own, at today's price, and only they are sent.
+   */
+  addMore(line: OrderLineDto, quantity: number): Promise<void> {
+    const product = this._products().find((p) => p.id === line.productId);
+    if (!product) return Promise.reject(new ApiError(`${line.productName} is no longer on sale here, so no more can be added.`, 0, 'validation', {}));
+    const unit = line.sellingUnitId ? product.sellingUnits?.find((u) => u.id === line.sellingUnitId) ?? null : null;
+    if (line.sellingUnitId && !unit) return Promise.reject(new ApiError(`${line.productName} is no longer sold that way, so no more can be added.`, 0, 'validation', {}));
+    return this.addProduct(product, quantity, line.modifiers.map((m) => m.id), line.seat, null, unit);
+  }
+
+  /** Edits to the bill run one after another, so two quick taps on a product make 2, not 1. */
+  private editing: Promise<unknown> = Promise.resolve();
+  /** Resolves when every change to the bill that was asked for has been applied, so a figure read afterwards is the true one. */
+  settled(): Promise<void> { return this.editing.then(() => undefined); }
+
+  private oneAtATime<T>(work: () => Promise<T>): Promise<T> {
+    const run = this.editing.then(work, work);
+    this.editing = run.catch(() => undefined);
+    return run;
+  }
+
+  private async addProductNow(product: ProductDto, quantity: number, modifierIds: string[], seat: number | null, serialNumber: string | null, unit: SellingUnitDto | null): Promise<void> {
     const o = this.requireEditable();
     const mods = product.modifiers.filter((m) => modifierIds.includes(m.id) && m.isActive);
     const line: OrderLineDto = {
@@ -185,23 +215,44 @@ export class PosStore {
       discountAmount: 0, lineTotal: 0, status: 'Active', confirmed: false, voidReason: null, voidPending: false,
       taxExempt: product.taxExempt ?? false, onSpecial: product.onSpecial ?? false, blockDiscount: product.blockDiscount ?? false, package: product.package ?? null
     };
+    // The item's own discount, as the server will set it: a percentage off the price charged, never below the minimum price.
+    const perUnit = product.package ? 0 : itemDiscountPerUnit(line.unitPrice, product.discountPercent ?? 0, product.minimumPrice == null ? null : product.minimumPrice * (unit?.size ?? 1));
+    line.itemDiscountPerUnit = perUnit;
+    line.itemDiscountPercent = perUnit > 0 ? product.discountPercent ?? 0 : 0;
+    line.discountAmount = round2(perUnit * quantity);
+
+    // The same thing again joins the line it is already on, unless that line has been sent, carries a serial number, or the item is
+    // sold one per line.
+    const mate = serialNumber || product.editQtyOnSales === false ? undefined
+      : o.lines.find((l) => l.status === 'Active' && !l.confirmed && !l.serialNumber && lineKey(l) === lineKey(line));
+    if (mate) { await this.setQuantityNow(mate.id, round3(mate.quantity + quantity)); return; }
     await this.commit(
       recalculate({ ...o, lines: [...o.lines, line] }), 'order.line.add',
       { orderId: o.id, id: line.id, productId: product.id, quantity, seat, notes: null, modifierIds, serialNumber, sellingUnitId: unit?.id ?? null }, `Add ${line.productName}${serialNumber ? ' (' + serialNumber + ')' : ''} x${quantity}`
     );
   }
 
-  async setQuantity(lineId: string, quantity: number): Promise<void> {
+  setQuantity(lineId: string, quantity: number): Promise<void> {
+    return this.oneAtATime(() => this.setQuantityNow(lineId, quantity));
+  }
+
+  private async setQuantityNow(lineId: string, quantity: number): Promise<void> {
     const o = this.requireEditable();
     const line = o.lines.find((l) => l.id === lineId);
     if (!line || line.confirmed) return;
+    // The item's own discount follows the quantity; a discount given at the till on this line stays as it was (same rule as the server).
+    const discountAmount = round2(itemDiscountOf(line, quantity) + Math.max(0, line.discountAmount - itemDiscountOf(line, line.quantity)));
     await this.commit(
-      recalculate({ ...o, lines: o.lines.map((l) => (l.id === lineId ? { ...l, quantity } : l)) }), 'order.line.update',
+      recalculate({ ...o, lines: o.lines.map((l) => (l.id === lineId ? { ...l, quantity, discountAmount } : l)) }), 'order.line.update',
       { orderId: o.id, lineId, quantity, seat: line.seat, notes: line.notes }, `Change ${line.productName} to x${quantity}`
     );
   }
 
-  async removeLine(lineId: string): Promise<void> {
+  removeLine(lineId: string): Promise<void> {
+    return this.oneAtATime(() => this.removeLineNow(lineId));
+  }
+
+  private async removeLineNow(lineId: string): Promise<void> {
     const o = this.requireEditable();
     const line = o.lines.find((l) => l.id === lineId);
     if (!line || line.confirmed) return;

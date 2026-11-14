@@ -91,6 +91,8 @@ export interface ProductDto {
   editQtyOnSales?: boolean;
   blockDiscount?: boolean;
   minimumPrice?: number | null;
+  /** The item's own discount in force now (0 or absent = none): the till takes this percentage off `price` by itself, never below the minimum price. */
+  discountPercent?: number;
   /** Other ways this product is sold (a case of 12), each priced at the item's price times what it holds. */
   sellingUnits?: SellingUnitDto[];
   /** Set when the product is a package: price is the total of its contents and stock comes from the contents. */
@@ -206,7 +208,11 @@ export interface OrderLineDto {
   notes: string | null;
   modifiers: AppliedModifierDto[];
   modifierTotal: number;
+  /** Everything taken off the line: the item's own discount (itemDiscountPerUnit times the quantity) plus any discount given at the till. */
   discountAmount: number;
+  /** The item's own discount (stock card), fixed when the line was added: the percentage, and what it takes off one unit. */
+  itemDiscountPercent?: number;
+  itemDiscountPerUnit?: number;
   lineTotal: number;
   status: LineStatus;
   /** The company tax is not charged on this line. */
@@ -350,6 +356,8 @@ export interface OrderDto {
   lines: OrderLineDto[];
   payments: PaymentDto[];
   hasPendingVoids: boolean;
+  /** Bar man method: a supervisor or administrator allowed payment on this bill before the bar confirmed it. */
+  paymentUnlocked?: boolean;
   rowVersion: string;
 }
 
@@ -427,6 +435,8 @@ export interface ReceiptDto {
   change: number;
   printCount: number;
   isDemoPayment: boolean;
+  /** The secret of the receipt's web link: the page is /r/{shareToken}. Absent on a receipt read before links existed. */
+  shareToken?: string | null;
 }
 
 export interface PayRequest {
@@ -501,6 +511,10 @@ export interface InventoryItemDto {
   /** UTC on the wire; the card shows and takes them in the company's time zone. */
   specialFromUtc?: string | null;
   specialToUtc?: string | null;
+  /** Taken off the price at the till by itself. The dates are optional: without them it always applies. */
+  discountPercent?: number | null;
+  discountFromUtc?: string | null;
+  discountToUtc?: string | null;
   minimumPrice?: number | null;
   suggestedRetailPrice?: number | null;
   specialCost?: number | null;
@@ -520,6 +534,8 @@ export interface InventoryItemDto {
   userPrompt?: string | null;
   notes?: string | null;
   onSpecial?: boolean;
+  /** The item's own discount is in force right now. */
+  discountLive?: boolean;
   hasPicture?: boolean;
   /** The item has package content: it holds no stock and sells for the total of its contents. */
   isPackage?: boolean;
@@ -578,6 +594,10 @@ export interface SaveInventoryItemRequest {
   /** UTC on the wire; the card shows and takes them in the company's time zone. */
   specialFromUtc?: string | null;
   specialToUtc?: string | null;
+  /** Taken off the price at the till by itself. The dates are optional: without them it always applies. */
+  discountPercent?: number | null;
+  discountFromUtc?: string | null;
+  discountToUtc?: string | null;
   minimumPrice?: number | null;
   suggestedRetailPrice?: number | null;
   specialCost?: number | null;

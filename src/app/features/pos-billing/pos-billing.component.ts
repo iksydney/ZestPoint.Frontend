@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { CustomerDto, CustomersApi, LaybysApi } from '../../core/services/customer.services';
-import { BarLineState, OrderKind, PaymentMethod, ProductDto, ReceiptDto, SellingUnitDto, VoidAuthorizer, VoidRequestDto } from '../../core/models/ops.model';
-import { splitEvenly } from '../../core/offline/order-calc';
+import { BarLineState, OrderKind, OrderLineDto, PaymentMethod, ProductDto, ReceiptDto, SellingUnitDto, VoidAuthorizer, VoidRequestDto } from '../../core/models/ops.model';
+import { lineKey, splitEvenly } from '../../core/offline/order-calc';
 import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { BarStore } from '../../core/services/bar.services';
@@ -16,9 +16,34 @@ import { SyncAgentService } from '../../core/services/sync-agent.service';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { BranchPickerComponent, SyncStatusComponent } from '../../shared/ui/ops-chrome.components';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
+import { printReceipt } from '../../core/receipt/receipt-render';
+import { ReceiptShareComponent, ReceiptViewComponent } from '../../shared/ui/receipt.components';
 import { VoidAuthoriserComponent } from './void-authoriser.component';
 
-type Dialog = 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 'pay' | 'void' | 'discount' | 'split' | 'merge' | 'transfer' | 'receipt' | 'approvals' | 'tip' | null;
+/** One row of the bill: every active line that is the same thing at the same price. Sent lines cannot change; the unsent one carries the rest. */
+interface BillRow {
+  readonly key: string;
+  readonly name: string;
+  readonly first: OrderLineDto;
+  readonly sent: readonly OrderLineDto[];
+  readonly unsent: readonly OrderLineDto[];
+  readonly quantity: number;
+  readonly sentQty: number;
+  readonly unsentQty: number;
+  /** Sent units that are not at the bar (no bar state to show): they carry the plain "sent" mark. */
+  readonly plainSentQty: number;
+  readonly total: number;
+  readonly discount: number;
+  readonly voidPending: boolean;
+  /** No quantity box: a serial-numbered unit, or an item sold one per line. */
+  readonly locked: boolean;
+  /** The bar handed this line back (it could not make it): the attendant may change its quantity or take it off, with nobody's PIN. */
+  readonly back: OrderLineDto | null;
+}
+
+const q3 = (value: number): number => Math.round(value * 1000) / 1000;
+
+type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 'pay' | 'void' | 'discount' | 'split' | 'merge' | 'transfer' | 'receipt' | 'approvals' | 'tip' | null;
 
 /**
  * Three-panel point of sale: open bills | catalogue | the bill being built. Works offline for everything except card/transfer
@@ -28,7 +53,7 @@ type Dialog = 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 'pay' | 'vo
 @Component({
   selector: 'zp-pos-billing',
   standalone: true,
-  imports: [CurrencyPipe, DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent, BranchPickerComponent, SyncStatusComponent, VoidAuthoriserComponent],
+  imports: [CurrencyPipe, DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent, BranchPickerComponent, SyncStatusComponent, VoidAuthoriserComponent, ReceiptViewComponent, ReceiptShareComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -111,6 +136,7 @@ type Dialog = 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 'pay' | 'vo
                 @if (lb.status === 'Active') { <p class="text-xs text-ink/70">Its items are fixed. Take payments here or on the Laybys screen.</p> }
               }
               @if (o.consignmentSaleId) { <p class="mt-1 text-xs text-ink/70" data-testid="bill-consignment">Consignment goods sold by an agent, at the agreed prices. Take payment; nothing else can be changed.</p> }
+              @if (!mine()) { <p class="sys-alert sys-alert-info mt-1 text-sm" role="status" data-testid="bill-not-mine">Opened by {{ o.ownerName ?? 'someone else' }}. You can look at it; only they, a supervisor or a manager can change it or take payment. They can hand it over to you with Move / hand over.</p> }
               @if (laybyError()) { <p class="app-error" role="alert" data-testid="layby-error">{{ laybyError() }}</p> }
               <p class="mt-1 text-sm" data-testid="bill-customer">
                 @if (o.customer; as c) { <span class="font-medium">{{ c.name }}</span> <span class="text-ink/70">{{ c.pointsBalance }} points@if (o.pointsEarned) { , {{ o.pointsEarned }} from this bill } @else if (o.pointsOnBill) { , {{ o.pointsOnBill }} more when paid }</span> }
@@ -121,50 +147,66 @@ type Dialog = 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 'pay' | 'vo
             <zp-status-badge [tone]="o.status === 'Paid' ? 'success' : o.status === 'Open' || o.status === 'PartiallyPaid' ? 'primary' : 'danger'"><span data-testid="bill-status">{{ o.status }}</span></zp-status-badge>
           </div>
 
+          <!-- One row per item: the same thing at the same price is shown once, however many times it was added or sent. -->
           <ul class="mb-3 max-h-[22rem] flex-1 space-y-1 overflow-auto" data-testid="bill-lines">
-            @for (l of o.lines; track l.id) {
-              @if (l.status === 'Active') {
-                <li class="rounded-lg border border-ink/10 p-2" [attr.data-testid]="'line-' + l.productName">
-                  <div class="flex items-start justify-between gap-2">
-                    <div class="min-w-0">
-                      <p class="font-medium">{{ l.productName }}</p>
-                      @if (l.serialNumber) { <p class="font-mono text-xs text-ink/70">S/N {{ l.serialNumber }}</p> }
-                      @for (m of l.modifiers; track m.id) { <p class="text-xs text-ink/70">+ {{ m.name }}</p> }
-                      @if (l.package; as pk) {
-                        <p class="text-xs text-ink/70" [attr.data-testid]="'contents-' + l.productName">@for (c of pk.contents; track $index) { {{ $index ? ', ' : '' }}{{ c.quantity * l.quantity }} x {{ c.name }} }</p>
-                        @if (pk.mixed && pk.splitExempt + pk.splitExemptNoDiscount > 0) { <span class="app-badge bg-ink/10 text-ink/80" [attr.data-testid]="'part-exempt-' + l.productName">part tax free</span> }
-                        @if (pk.mixed && pk.splitNoDiscount + pk.splitExemptNoDiscount > 0) { <span class="app-badge bg-ink/10 text-ink/80">part no discount</span> }
-                      }
+            @for (r of rows(); track r.key) {
+              <li class="rounded-lg border border-ink/10 p-2" [attr.data-testid]="'line-' + r.name">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="font-medium">{{ r.name }}</p>
+                    @if (r.first.serialNumber) { <p class="font-mono text-xs text-ink/70">S/N {{ r.first.serialNumber }}</p> }
+                    @for (m of r.first.modifiers; track m.id) { <p class="text-xs text-ink/70">+ {{ m.name }}</p> }
+                    @if (r.first.package; as pk) {
+                      <p class="text-xs text-ink/70" [attr.data-testid]="'contents-' + r.name">@for (c of pk.contents; track $index) { {{ $index ? ', ' : '' }}{{ c.quantity * r.quantity }} x {{ c.name }} }</p>
+                      @if (pk.mixed && pk.splitExempt + pk.splitExemptNoDiscount > 0) { <span class="app-badge bg-ink/10 text-ink/80" [attr.data-testid]="'part-exempt-' + r.name">part tax free</span> }
+                      @if (pk.mixed && pk.splitNoDiscount + pk.splitExemptNoDiscount > 0) { <span class="app-badge bg-ink/10 text-ink/80">part no discount</span> }
+                    }
+                    @for (l of r.sent; track l.id) {
                       @if (l.barState) {
-                        <span class="app-badge" [class]="barTone(l.barState)" [attr.data-testid]="'bar-state-' + l.productName">{{ barLabel(l.barState) }}</span>
-                        @if (l.barState === 'CantMake') { <p class="text-xs font-semibold text-danger" role="status">{{ l.barNote }}. Void this item or offer something else.</p> }
-                      } @else if (l.confirmed) { <span class="app-badge app-badge-success">sent</span> }
-                      @if (l.onSpecial) { <span class="app-badge app-badge-primary" [attr.data-testid]="'special-' + l.productName">special price</span> }
-                      @if (l.taxExempt) { <span class="app-badge bg-ink/10 text-ink/80" [attr.data-testid]="'exempt-' + l.productName">no tax</span> }
-                      @if (l.blockDiscount) { <span class="app-badge bg-ink/10 text-ink/80">no discount</span> }
-                      @if (l.voidPending) { <span class="app-badge app-badge-warning">void awaiting approval</span> }
-                    </div>
-                    <span class="font-semibold">{{ l.lineTotal | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</span>
-                  </div>
-                  @if (canEdit() && !readOnly()) {
-                    <div class="mt-1 flex items-center gap-1">
-                      @if (!l.confirmed) {
-                        <!-- An item set to "one per line" on its stock card has no quantity buttons: add it again for another one. -->
-                        @if (qtyLocked(l.productId)) { <span class="w-8 text-center" data-testid="line-qty">x{{ l.quantity }}</span> }
-                        @else {
-                          <button type="button" class="btn-outline h-8 w-8 p-0" aria-label="Fewer" (click)="qty(l.id, l.quantity - 1)">-</button>
-                          <span class="w-8 text-center" data-testid="line-qty">{{ l.quantity }}</span>
-                          <button type="button" class="btn-outline h-8 w-8 p-0" aria-label="More" (click)="qty(l.id, l.quantity + 1)">+</button>
-                        }
-                        <button type="button" class="btn-ghost ml-auto px-2 py-1 text-sm" (click)="qty(l.id, 0)">Remove</button>
-                      } @else {
-                        <span class="w-8 text-center">x{{ l.quantity }}</span>
-                        @if (canVoid() && !l.voidPending) { <button type="button" class="btn-ghost ml-auto px-2 py-1 text-sm" [attr.data-testid]="'void-' + l.productName" (click)="openVoid(l.id)">Void</button> }
+                        <span class="app-badge" [class]="barTone(l.barState)" [attr.data-testid]="'bar-state-' + r.name">{{ r.sent.length > 1 || r.unsentQty > 0 ? (l.quantity | number: '1.0-3') + ' ' : '' }}{{ barLabel(l.barState) }}</span>
+                        @if (l.barState === 'CantMake') { <p class="text-xs font-semibold text-danger" role="status" [attr.data-testid]="'handed-back-' + r.name">The bar handed this back: {{ l.barNote }}. Change the quantity or take it off, then Send again.</p> }
                       }
-                    </div>
-                  }
-                </li>
-              }
+                    }
+                    @if (r.plainSentQty > 0) { <span class="app-badge app-badge-success" [attr.data-testid]="'sent-' + r.name">{{ r.plainSentQty < r.quantity ? (r.plainSentQty | number: '1.0-3') + ' sent' : 'sent' }}</span> }
+                    @if (r.sentQty > 0 && r.unsentQty > 0) { <span class="app-badge app-badge-warning" [attr.data-testid]="'unsent-' + r.name">{{ r.unsentQty | number: '1.0-3' }} not sent yet</span> }
+                    @if (r.first.onSpecial) { <span class="app-badge app-badge-primary" [attr.data-testid]="'special-' + r.name">special price</span> }
+                    @if (r.first.itemDiscountPercent) { <span class="app-badge app-badge-primary" [attr.data-testid]="'item-discount-' + r.name">{{ r.first.itemDiscountPercent | number: '1.0-2' }}% off</span> }
+                    @if (r.first.taxExempt) { <span class="app-badge bg-ink/10 text-ink/80" [attr.data-testid]="'exempt-' + r.name">no tax</span> }
+                    @if (r.first.blockDiscount) { <span class="app-badge bg-ink/10 text-ink/80">no discount</span> }
+                    @if (r.voidPending) { <span class="app-badge app-badge-warning">void awaiting approval</span> }
+                  </div>
+                  <span class="text-right font-semibold">{{ r.total | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}
+                    @if (r.discount > 0) { <span class="block text-xs font-normal text-ink/70" [attr.data-testid]="'line-discount-' + r.name">-{{ r.discount | currency: store.currency() : 'symbol-narrow' : '1.2-2' }} discount</span> }
+                  </span>
+                </div>
+                @if (canEdit() && !readOnly()) {
+                  <div class="mt-1 flex flex-wrap items-center gap-1">
+                    <!-- An item set to "one per line" on its stock card, and a serial-numbered unit, have no quantity box: add it again for another one. -->
+                    @if (r.back; as b) {
+                      <input type="number" inputmode="decimal" min="0" step="any" class="app-input h-9 w-20 px-1 py-0 text-center" [attr.aria-label]="'Quantity of ' + r.name" data-testid="line-qty" [disabled]="!online() || r.locked"
+                             [value]="r.quantity" (focus)="$any($event.target).select()" (keydown.enter)="$any($event.target).blur()" (change)="changeBack(b, $any($event.target).value, $any($event.target))" />
+                      <button type="button" class="btn-ghost ml-auto px-2 py-1 text-sm" [attr.data-testid]="'remove-' + r.name" [disabled]="!online()" (click)="removeBack(b)">Take off</button>
+                    }
+                    @else if (r.locked) { <span class="w-10 text-center" data-testid="line-qty">x{{ r.quantity | number: '1.0-3' }}</span> }
+                    @else {
+                      <button type="button" class="btn-outline h-9 w-9 p-0" aria-label="Fewer" [disabled]="r.quantity - 1 < r.sentQty" (click)="setRow(r, r.quantity - 1, null)">-</button>
+                      <input type="number" inputmode="decimal" min="0" step="any" class="app-input h-9 w-20 px-1 py-0 text-center" [attr.aria-label]="'Quantity of ' + r.name" data-testid="line-qty"
+                             [value]="r.quantity" (focus)="$any($event.target).select()" (keydown.enter)="$any($event.target).blur()" (change)="setRow(r, $any($event.target).value, $any($event.target))" />
+                      <button type="button" class="btn-outline h-9 w-9 p-0" aria-label="More" (click)="setRow(r, r.quantity + 1, null)">+</button>
+                    }
+                    @if (!r.back) {
+                    <span class="ml-auto flex flex-wrap items-center justify-end gap-1">
+                      @if (r.unsent.length) { <button type="button" class="btn-ghost px-2 py-1 text-sm" [attr.data-testid]="'remove-' + r.name" (click)="removeUnsent(r)">{{ r.sentQty > 0 ? 'Remove unsent' : 'Remove' }}</button> }
+                      @if (canVoid()) {
+                        @for (l of r.sent; track l.id) {
+                          @if (!l.voidPending) { <button type="button" class="btn-ghost px-2 py-1 text-sm" [attr.data-testid]="'void-' + r.name" (click)="openVoid(l.id)">{{ r.sent.length > 1 ? 'Void ' + (l.quantity | number: '1.0-3') : 'Void' }}</button> }
+                        }
+                      }
+                    </span>
+                    }
+                  </div>
+                }
+              </li>
             } @empty { <li class="py-6 text-center text-sm text-ink/70">No items yet.</li> }
           </ul>
 
@@ -187,8 +229,14 @@ type Dialog = 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 'pay' | 'vo
               <button type="button" class="btn-outline" (click)="dialog.set('tip')">Tip</button>
               @if (canSplit()) { <button type="button" class="btn-outline" data-testid="split" (click)="dialog.set('split')">Split</button> }
               @if (canSplit()) { <button type="button" class="btn-outline" (click)="openMerge()">Merge</button> }
-              @if (canSplit()) { <button type="button" class="btn-outline" (click)="dialog.set('transfer')">Move / hand over</button> }
-              @if (canPay() && o.balance > 0) { <button type="button" class="btn-primary col-span-2 touch-target" data-testid="pay" (click)="openPay()">Pay {{ o.balance | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</button> }
+              @if (canSplit()) { <button type="button" class="btn-outline" data-testid="transfer-open" (click)="openTransfer()">Move / hand over</button> }
+            }
+            @if (canPay() && !readOnly() && isOpen() && o.balance > 0) {
+              <button type="button" class="btn-primary col-span-2 touch-target disabled:opacity-40" data-testid="pay" [disabled]="!!barLock()" (click)="openPay()">Pay {{ o.balance | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</button>
+              @if (barLock(); as why) {
+                <p class="col-span-2 text-sm text-ink/80" role="status" data-testid="pay-lock">{{ why }}
+                  @if (canUnlock()) { <button type="button" class="btn-ghost px-1 py-0 text-sm underline" data-testid="pay-unlock" (click)="openUnlock()">Take payment anyway (supervisor)</button> }</p>
+              }
             }
             @if (canVoid() && !readOnly() && isOpen() && o.amountPaid === 0 && activeLines().length > 0) { <button type="button" class="btn-ghost col-span-2 text-sm" data-testid="void-bill" (click)="openVoid(null)">Void whole bill</button> }
             @if (o.status === 'Paid' || o.amountPaid > 0) { <button type="button" class="btn-outline col-span-2" data-testid="receipt" (click)="openReceipt()">Receipt</button> }
@@ -386,6 +434,12 @@ type Dialog = 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 'pay' | 'vo
     <zp-dialog [open]="dialog() === 'transfer'" title="Move table or hand the bill over" (closed)="dialog.set(null)">
       <form class="space-y-3" (submit)="$event.preventDefault(); submitTransfer()">
         <div><label class="app-label" for="tr-table">Table</label><input id="tr-table" class="app-input" data-testid="transfer-table" [ngModel]="transferTable()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="transferTable.set($event)" /></div>
+        <div><label class="app-label" for="tr-owner">Hand the bill over to</label>
+          <select id="tr-owner" class="app-input" data-testid="transfer-owner" [ngModel]="transferOwner()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="transferOwner.set($event)">
+            <option value="">Nobody: it stays with {{ store.current()?.ownerName ?? 'its owner' }}</option>
+            @for (p of handOverTargets(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+          </select>
+          <p class="mt-1 text-xs text-ink/70">The bill then belongs to that person: only they, a supervisor or a manager can change it or take payment on it.</p></div>
         @if (splitError()) { <p class="sys-alert sys-alert-danger" role="alert">{{ splitError() }}</p> }
         <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="transfer-save">Move</button></div>
       </form>
@@ -406,35 +460,26 @@ type Dialog = 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 'pay' | 'vo
       @if (splitError()) { <p class="sys-alert sys-alert-danger mt-2" role="alert">{{ splitError() }}</p> }
     </zp-dialog>
 
-    <!-- Receipt -->
-    <zp-dialog [open]="dialog() === 'receipt'" title="Receipt" (closed)="dialog.set(null)">
+    <!-- Receipt: shown, then printed by itself or sent to the customer -->
+    <zp-dialog [open]="dialog() === 'receipt'" title="Receipt" [wide]="true" (closed)="dialog.set(null)">
       @if (receipt(); as r) {
-        <article class="mx-auto max-w-xs rounded-md bg-white p-4 font-mono text-xs leading-5 text-slate-900" data-testid="receipt-view" id="receipt-print">
-          <p class="text-center text-sm font-bold">{{ r.companyName }}</p>
-          @if (r.tagline) { <p class="text-center">{{ r.tagline }}</p> }
-          @if (r.header) { <p class="whitespace-pre-line text-center">{{ r.header }}</p> }
-          <p class="text-center">{{ r.branchName }}</p>
-          <p class="text-center">Receipt #{{ r.number }}, bill #{{ r.orderNumber }}</p>
-          <hr class="my-2 border-dashed border-slate-400" />
-          @for (l of r.lines; track $index) {
-            <p class="flex justify-between gap-2"><span>{{ l.quantity }} x {{ l.name }}</span><span>{{ l.lineTotal | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p>
-            @for (c of l.contents ?? []; track $index) { <p class="pl-4 text-xs" data-testid="receipt-content">{{ c.quantity }} x {{ c.name }}</p> }
-          }
-          <hr class="my-2 border-dashed border-slate-400" />
-          <p class="flex justify-between"><span>Subtotal</span><span>{{ r.subtotal | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p>
-          @if (r.discounts > 0) { <p class="flex justify-between"><span>Discounts</span><span>-{{ r.discounts | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p> }
-          <p class="flex justify-between"><span>{{ r.taxName }} {{ r.taxRatePercent }}%{{ r.taxInclusive ? ' (incl.)' : '' }}</span><span>{{ r.tax | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p>
-          @if (r.tip > 0) { <p class="flex justify-between"><span>Tip</span><span>{{ r.tip | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p> }
-          <p class="flex justify-between font-bold"><span>TOTAL</span><span data-testid="receipt-total">{{ r.total | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p>
-          @for (p of r.payments; track p.id) { <p class="flex justify-between"><span>{{ p.method }}{{ p.isDemo ? ' (DEMO)' : '' }}</span><span>{{ p.amount | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p> }
-          @if (r.change > 0) { <p class="flex justify-between"><span>Change</span><span>{{ r.change | currency: r.currencyCode : 'symbol-narrow' : '1.2-2' }}</span></p> }
-          @if (r.loyaltyCustomer) { <p class="mt-1" data-testid="receipt-loyalty">{{ r.loyaltyCustomer }}: {{ r.pointsEarned ?? 0 }} points from this bill, {{ r.pointsBalance ?? 0 }} in all</p> }
-          @if (r.isDemoPayment) { <p class="mt-1 text-center font-bold">DEMONSTRATION PAYMENT: NO REAL MONEY MOVED</p> }
-          @if (r.footer) { <p class="mt-2 whitespace-pre-line text-center">{{ r.footer }}</p> }
-          @if (r.printCount > 0) { <p class="mt-1 text-center">Reprint {{ r.printCount }}</p> }
-        </article>
-        <div class="mt-3 flex justify-end gap-2"><button type="button" class="btn-outline" data-testid="reprint" (click)="reprint()">Print</button></div>
+        <div class="grid gap-4 md:grid-cols-[20rem_minmax(0,1fr)]">
+          <zp-receipt-view [receipt]="r" />
+          <zp-receipt-share [receipt]="r" [phone]="store.current()?.customer?.phone ?? null" (print)="reprint()" />
+        </div>
+        @if (receiptError()) { <p class="sys-alert sys-alert-danger mt-2" role="alert">{{ receiptError() }}</p> }
       } @else { <p class="text-ink/70">{{ receiptError() ?? 'Loading...' }}</p> }
+    </zp-dialog>
+
+    <!-- Bar man method: a supervisor or administrator allows payment before the bar has confirmed -->
+    <zp-dialog [open]="dialog() === 'unlock'" title="Take payment before the bar confirms" (closed)="dialog.set(null)">
+      <form class="space-y-3" (submit)="$event.preventDefault(); submitUnlock()" data-testid="unlock-dialog">
+        <p class="text-sm text-ink/80">Payment normally waits until the bar has marked the order ready. A supervisor or an administrator can allow it now for this bill, for example when the bar's device is down. It is recorded with who allowed it.</p>
+        @if (!online()) { <p class="sys-alert sys-alert-warning" role="status">This needs a connection: the authoriser's details are checked by the server.</p> }
+        @if (dialog() === 'unlock') { <zp-void-authoriser [clearSecret]="authAttempts()" (changed)="authorizer.set($event)" /> }
+        @if (voidError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="unlock-error">{{ voidError() }}</p> }
+        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary touch-target" data-testid="unlock-confirm" [disabled]="voiding() || !online() || !authorizer()">{{ voiding() ? 'Checking...' : 'Allow payment' }}</button></div>
+      </form>
     </zp-dialog>
   `
 })
@@ -462,7 +507,7 @@ export class PosBillingComponent implements OnInit {
 
   // ---- Layby: the bill, with its customer, becomes a layby; its items are then fixed and it is paid in parts ----
   private readonly laybysApi = inject(LaybysApi);
-  protected readonly canLayby = computed(() => this.auth.hasPermission(this.perms.POS_LAYBY_MANAGE));
+  protected readonly canLayby = computed(() => this.auth.hasPermission(this.perms.POS_LAYBY_MANAGE) && this.mine());
   protected readonly laybyBusy = signal(false);
   protected readonly laybyError = signal<string | null>(null);
 
@@ -480,7 +525,7 @@ export class PosBillingComponent implements OnInit {
 
   // ---- The customer record on the bill ----
   private readonly customersApi = inject(CustomersApi);
-  protected readonly canCustomers = computed(() => this.auth.hasPermission(this.perms.CUSTOMERS_USE));
+  protected readonly canCustomers = computed(() => this.auth.hasPermission(this.perms.CUSTOMERS_USE) && this.mine());
   protected readonly custSearch = signal('');
   protected readonly custResults = signal<readonly CustomerDto[]>([]);
   protected readonly custLooking = signal(false);
@@ -567,15 +612,65 @@ export class PosBillingComponent implements OnInit {
   protected readonly readOnly = computed(() => this.auth.accessModeFor(FEATURES.CORE_POS) === 'readonly');
   protected readonly isOpen = computed(() => ['Open', 'PartiallyPaid'].includes(this.store.current()?.status ?? ''));
   protected readonly canCreate = computed(() => this.auth.hasPermission(this.perms.POS_ORDER_CREATE));
-  protected readonly canEdit = computed(() => this.auth.hasPermission(this.perms.POS_ORDER_EDIT));
-  protected readonly canPay = computed(() => this.auth.hasPermission(this.perms.POS_PAYMENT_PROCESS));
+  /** The bill on screen is this person's to work on: they opened it (or it was handed to them), or they are a supervisor or manager. */
+  protected readonly mine = computed(() => {
+    const o = this.store.current();
+    return !o || !o.ownerMembershipId || o.ownerMembershipId === this.auth.membership()?.id || this.auth.hasPermission(this.perms.POS_VOID_APPROVE);
+  });
+  protected readonly canEdit = computed(() => this.auth.hasPermission(this.perms.POS_ORDER_EDIT) && this.mine());
+  /** Laybys and consignment bills are paid by anyone with the payment right; every other bill by its owner, a supervisor or a manager. */
+  protected readonly canPay = computed(() => this.auth.hasPermission(this.perms.POS_PAYMENT_PROCESS) && (this.mine() || !!this.store.current()?.layby || !!this.store.current()?.consignmentSaleId));
   protected readonly canDiscount = computed(() => this.auth.hasPermission(this.perms.POS_DISCOUNT_APPLY));
-  protected readonly canSplit = computed(() => this.auth.hasPermission(this.perms.POS_TAB_SPLIT));
-  protected readonly canVoid = computed(() => this.auth.hasAnyPermission([this.perms.POS_VOID_REQUEST, this.perms.POS_VOID_APPROVE]));
+  protected readonly canSplit = computed(() => this.auth.hasPermission(this.perms.POS_TAB_SPLIT) && this.mine());
+  protected readonly canVoid = computed(() => this.auth.hasAnyPermission([this.perms.POS_VOID_REQUEST, this.perms.POS_VOID_APPROVE]) && this.mine());
+
+  /**
+   * Bar man method: why payment cannot be taken yet, or null when it can. Payment waits until the bar has marked everything ready,
+   * unless a supervisor allowed it for this bill. UX only: the server refuses the payment for the same reasons.
+   */
+  protected readonly barLock = computed<string | null>(() => {
+    const o = this.store.current();
+    if (!o || !this.bar.enabled() || o.layby || o.consignmentSaleId || o.paymentUnlocked) return null;
+    const lines = this.activeLines();
+    if (lines.some((l) => !l.confirmed)) return 'Send this bill to the bar first. Payment is taken once the bar has marked the order ready.';
+    const refused = lines.filter((l) => l.barState === 'CantMake').map((l) => l.productName);
+    if (refused.length) return `The bar could not make ${[...new Set(refused)].join(', ')}. Change its quantity or take it off before taking payment.`;
+    if (lines.some((l) => l.barState === 'Waiting' || l.barState === 'Preparing')) return 'Waiting for the bar: payment is taken once it marks this order ready.';
+    return null;
+  });
+  protected readonly canUnlock = computed(() => this.online() && this.activeLines().length > 0);
+  protected readonly transferOwner = signal('');
+  protected readonly handOverTargets = signal<readonly { id: string; name: string }[]>([]);
   protected readonly canApproveVoid = computed(() => this.auth.hasPermission(this.perms.POS_VOID_APPROVE));
 
   protected readonly hasUnsent = computed(() => !!this.store.current()?.lines.some((l) => l.status === 'Active' && !l.confirmed));
   protected readonly activeLines = computed(() => this.store.current()?.lines.filter((l) => l.status === 'Active') ?? []);
+
+  /** The bill as the person sees it: one row per item, in the order each was first added. */
+  protected readonly rows = computed<readonly BillRow[]>(() => {
+    const groups = new Map<string, OrderLineDto[]>();
+    for (const l of this.activeLines()) {
+      const key = l.barState === 'CantMake' ? `back:${l.id}` : lineKey(l);   // what the bar handed back is a row of its own
+      const list = groups.get(key);
+      if (list) list.push(l); else groups.set(key, [l]);
+    }
+    const products = this.store.products();
+    return [...groups.entries()].map(([key, lines]) => {
+      const first = lines[0]!;
+      const sent = lines.filter((l) => l.confirmed);
+      const unsent = lines.filter((l) => !l.confirmed);
+      const sum = (list: readonly OrderLineDto[], pick: (l: OrderLineDto) => number) => list.reduce((s, l) => s + pick(l), 0);
+      return {
+        key, name: first.productName, first, sent, unsent,
+        quantity: q3(sum(lines, (l) => l.quantity)), sentQty: q3(sum(sent, (l) => l.quantity)), unsentQty: q3(sum(unsent, (l) => l.quantity)),
+        plainSentQty: q3(sum(sent.filter((l) => !l.barState), (l) => l.quantity)),
+        total: Math.round(sum(lines, (l) => l.lineTotal) * 100) / 100, discount: Math.round(sum(lines, (l) => l.discountAmount) * 100) / 100,
+        voidPending: lines.some((l) => l.voidPending),
+        locked: !!first.serialNumber || products.find((p) => p.id === first.productId)?.editQtyOnSales === false,
+        back: first.barState === 'CantMake' ? first : null
+      };
+    });
+  });
   protected readonly mergeCandidates = computed(() => this.store.bills().filter((b) => b.id !== this.store.current()?.id && !b.numberPending));
   protected readonly change = computed(() => Math.max(0, Math.round((this.tendered() - this.payAmount()) * 100) / 100));
   protected readonly shareText = computed(() => this.shares().map((s) => s.toFixed(2)).join(' + '));
@@ -608,6 +703,12 @@ export class PosBillingComponent implements OnInit {
       if (id) untracked(() => void this.reloadBranch(id));
     });
 
+    // A till that was already signed in when the bar man method was switched on learns it here, so its bell and prompts appear.
+    effect(() => {
+      const s = this.store.settings();
+      if (s) untracked(() => this.bar.follow(s.barManMethodEnabled));
+    }, { allowSignalWrites: true });
+
     // Bar man method: when something changes at the bar, re-read the open bill so each line shows where it is (waiting, preparing, ready).
     // A bill with changes not yet synced keeps its local figures (PosStore.open), so nothing the person typed is lost.
     effect(() => {
@@ -617,11 +718,6 @@ export class PosBillingComponent implements OnInit {
         if (open && this.bar.enabled() && this.online()) void this.store.open(open.id).catch(() => undefined);
       });
     }, { allowSignalWrites: true });
-  }
-
-  /** The item's stock card says its quantity is not changed at the till. UX only: the server refuses it too. */
-  protected qtyLocked(productId: string): boolean {
-    return this.store.products().find((p) => p.id === productId)?.editQtyOnSales === false;
   }
 
   protected barLabel(state: BarLineState): string {
@@ -720,9 +816,49 @@ export class PosBillingComponent implements OnInit {
     void this.run(() => this.store.confirm());
   }
 
-  protected qty(lineId: string, q: number): void {
-    if (q < 1) void this.run(() => this.store.removeLine(lineId));
-    else void this.run(() => this.store.setQuantity(lineId, q));
+  /**
+   * Sets how many of a row are on the bill, from the box or the minus / plus buttons. What has been sent stays sent: more goes on as
+   * units still to send, and the number cannot go below what was sent (that is a void, which a supervisor authorises).
+   */
+  protected setRow(r: BillRow, value: unknown, box: HTMLInputElement | null): void {
+    const typed = typeof value === 'string' ? value.trim() : value;
+    const wanted = typed === '' || typed === null ? NaN : q3(Number(typed));
+    const putBack = () => { if (box) box.value = String(r.quantity); };
+    if (!Number.isFinite(wanted) || wanted < 0) { putBack(); return; }
+    if (wanted < r.sentQty) {
+      putBack();
+      this.error.set(`${r.sentQty} of ${r.name} ${r.sentQty === 1 ? 'has' : 'have'} already been sent, so the quantity cannot go below that. To take sent items off, void them.`);
+      return;
+    }
+    const unsentWanted = q3(wanted - r.sentQty);
+    if (unsentWanted === r.unsentQty) { putBack(); return; }
+    void this.run(async () => {
+      if (unsentWanted === 0) { for (const l of r.unsent) await this.store.removeLine(l.id); return; }
+      const [keep, ...extra] = r.unsent;
+      if (!keep) { await this.store.addMore(r.first, unsentWanted); return; }
+      for (const l of extra) await this.store.removeLine(l.id);
+      await this.store.setQuantity(keep.id, unsentWanted);
+    }).then(() => { if (this.error()) putBack(); });
+  }
+
+  /** A line the bar handed back gets a new quantity: the server closes the old line with the bar's reason and enters it again, to be sent. */
+  protected changeBack(line: OrderLineDto, value: unknown, box: HTMLInputElement): void {
+    const wanted = q3(Number(typeof value === 'string' ? value.trim() : value));
+    if (!Number.isFinite(wanted) || wanted < 0 || value === '') { box.value = String(line.quantity); return; }
+    if (wanted === line.quantity) return;
+    void this.run(async () => {
+      await this.store.serverAction((id) => firstValueFrom(wanted === 0 ? this.ordersApi.removeLine(id, line.id) : this.ordersApi.updateLine(id, line.id, wanted)), 'Changing what the bar handed back');
+    }).then(() => { if (this.error()) box.value = String(line.quantity); });
+  }
+
+  protected removeBack(line: OrderLineDto): void {
+    void this.run(async () => { await this.store.serverAction((id) => firstValueFrom(this.ordersApi.removeLine(id, line.id)), 'Changing what the bar handed back'); });
+  }
+
+  /** Takes off what has not been sent yet. For an item sold one per line that is one unit at a time, the last added first. */
+  protected removeUnsent(r: BillRow): void {
+    const lines = r.locked ? r.unsent.slice(-1) : r.unsent;
+    void this.run(async () => { for (const l of lines) await this.store.removeLine(l.id); });
   }
 
   /** A barcode already in the cached catalogue is added at once, so scanning works offline. */
@@ -746,7 +882,8 @@ export class PosBillingComponent implements OnInit {
   }
 
   // ---- payment ----
-  protected openPay(): void {
+  protected async openPay(): Promise<void> {
+    await this.store.settled();   // an item tapped a moment ago is on the bill before the amount due is read
     const o = this.store.current();
     if (!o) return;
     this.payMethod.set('Cash');
@@ -865,12 +1002,47 @@ export class PosBillingComponent implements OnInit {
     } catch (err) { this.splitError.set(toApiError(err).message); }
   }
 
+  protected openTransfer(): void {
+    this.splitError.set(null);
+    this.transferOwner.set('');
+    this.transferTable.set(this.store.current()?.tableLabel ?? '');
+    this.dialog.set('transfer');
+    const branch = this.branches.activeId();
+    if (branch) void firstValueFrom(this.ordersApi.handOverTargets(branch)).then((l) => this.handOverTargets.set(l)).catch(() => this.handOverTargets.set([]));
+  }
+
   protected async submitTransfer(): Promise<void> {
     this.splitError.set(null);
+    const to = this.transferOwner() || null;
     try {
-      await this.store.serverAction((id) => firstValueFrom(this.ordersApi.transfer(id, { tableLabel: this.transferTable().trim() || null, newOwnerMembershipId: null })), 'Moving a bill');
+      await this.store.serverAction((id) => firstValueFrom(this.ordersApi.transfer(id, { tableLabel: this.transferTable().trim() || null, newOwnerMembershipId: to })), 'Moving a bill');
       this.dialog.set(null);
+      if (to) this.toast.success(`Handed over to ${this.handOverTargets().find((p) => p.id === to)?.name ?? 'your colleague'}.`);
+      await this.store.refreshBills();
     } catch (err) { this.splitError.set(toApiError(err).message); }
+  }
+
+  // ---- bar man method: payment before the bar has confirmed ----
+  protected openUnlock(): void {
+    this.voidError.set(null);
+    this.authorizer.set(null);
+    this.dialog.set('unlock');
+  }
+
+  protected async submitUnlock(): Promise<void> {
+    const authorizer = this.authorizer();
+    if (!authorizer || this.voiding()) return;
+    this.voiding.set(true);
+    this.voidError.set(null);
+    try {
+      await this.store.serverAction((id) => firstValueFrom(this.ordersApi.unlockPayment(id, authorizer)), 'Allowing payment');
+      this.dialog.set(null);
+      this.authorizer.set(null);
+      this.toast.success('Payment allowed on this bill.');
+    } catch (err) {
+      this.voidError.set(toApiError(err).message);
+      this.authAttempts.update((n) => n + 1);
+    } finally { this.voiding.set(false); }
   }
 
   // ---- approvals ----
@@ -920,8 +1092,9 @@ export class PosBillingComponent implements OnInit {
     const o = this.store.current();
     if (!o) return;
     try {
-      this.receipt.set(await firstValueFrom(this.ordersApi.reprint(o.id)));
-      window.print();
+      const printed = await firstValueFrom(this.ordersApi.reprint(o.id));
+      this.receipt.set(printed);
+      printReceipt(printed);   // the receipt by itself, not the screen around it
     } catch (err) { this.receiptError.set(toApiError(err).message); }
   }
 }

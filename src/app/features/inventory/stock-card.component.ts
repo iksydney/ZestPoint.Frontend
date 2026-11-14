@@ -17,9 +17,10 @@ import { InventoryApi } from '../../core/services/ops.services';
 import { BinApi } from '../../core/services/purchasing.services';
 import { utcToZoned, zonedToUtc } from '../../core/time-zone';
 import { ToastService } from '../../shared/ui/feedback';
+import { ItemRecipeComponent } from './item-recipe.component';
 
 const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
-type Tab = 'details' | 'aliases' | 'units' | 'package' | 'picture' | 'history' | 'sales' | 'purchases';
+type Tab = 'details' | 'aliases' | 'units' | 'package' | 'recipe' | 'picture' | 'history' | 'sales' | 'purchases';
 type PriceKey = 'sellingPrice' | 'tradePrice' | 'wholesalePrice' | 'resellerPrice' | 'bundlePrice' | 'specialPrice';
 
 const PRICE_LEVELS: readonly { key: PriceKey; label: string; testId: string }[] = [
@@ -31,7 +32,7 @@ const blank = (): SaveInventoryItemRequest => ({
   name: '', sku: null, kind: 'FinishedGood', baseUnit: 'Each', containerSize: null, tareGrams: null, densityGPerMl: null, minimumLevel: 0, reorderLevel: 0, targetDaysOfStock: 14,
   averageCost: 0, supplierId: null, tracksBatches: false, tracksSerials: false, groupId: null, barcode: null, description: null, purchaseUnitName: null, purchaseUnitSize: null,
   reorderQuantity: 0, targetStock: null, listedOnWebStore: false, sellingPrice: null, tradePrice: null, wholesalePrice: null, resellerPrice: null, bundlePrice: null,
-  specialPrice: null, specialFromUtc: null, specialToUtc: null, minimumPrice: null, suggestedRetailPrice: null, lastCost: null, specialCost: null, specialCostFrom: null, specialCostTo: null,
+  specialPrice: null, specialFromUtc: null, specialToUtc: null, discountPercent: null, discountFromUtc: null, discountToUtc: null, minimumPrice: null, suggestedRetailPrice: null, lastCost: null, specialCost: null, specialCostFrom: null, specialCostTo: null,
   blockQtyFractions: false, useScale: false, printOnInvoice: true, editQtyOnSales: true, blockDiscount: false, taxExempt: false, pointsValue: 0, salesAccountId: null, purchaseAccountId: null,
   userPrompt: null, notes: null, isActive: true, rowVersion: null
 });
@@ -49,7 +50,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
 @Component({
   selector: 'zp-stock-card',
   standalone: true,
-  imports: [DecimalPipe, FormsModule, RouterLink, TenantTimePipe],
+  imports: [DecimalPipe, FormsModule, RouterLink, TenantTimePipe, ItemRecipeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="fixed inset-0 z-50 grid place-items-start overflow-auto bg-black/60 p-2 sm:p-4 print:static print:bg-transparent print:p-0" (mousedown)="onBackdrop($event)">
@@ -134,9 +135,16 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
                   <div><label class="app-label" for="sc-sp-from">From</label><input id="sc-sp-from" type="datetime-local" class="app-input" data-testid="item-special-from" [ngModel]="specialFrom()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ specialFromUtc: toUtc($event) })" /></div>
                   <div><label class="app-label" for="sc-sp-to">Until</label><input id="sc-sp-to" type="datetime-local" class="app-input" data-testid="item-special-to" [ngModel]="specialTo()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ specialToUtc: toUtc($event) })" /></div>
                 </div>
+                <div class="grid gap-2 sm:grid-cols-[auto_7rem_1fr_1fr] sm:items-end" data-testid="item-discount">
+                  <p class="text-sm font-semibold">Discount <span class="block text-xs font-normal text-ink/70">taken off at the till</span></p>
+                  <div><label class="app-label" for="sc-disc">Percent</label><input id="sc-disc" type="number" min="0" max="100" step="0.01" class="app-input text-right" data-testid="item-discount-percent" [ngModel]="f().discountPercent" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ discountPercent: n($event) })" /></div>
+                  <div><label class="app-label" for="sc-disc-from">From (optional)</label><input id="sc-disc-from" type="datetime-local" class="app-input" data-testid="item-discount-from" [ngModel]="discountFrom()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ discountFromUtc: toUtc($event) })" /></div>
+                  <div><label class="app-label" for="sc-disc-to">Until (optional)</label><input id="sc-disc-to" type="datetime-local" class="app-input" data-testid="item-discount-to" [ngModel]="discountTo()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ discountToUtc: toUtc($event) })" /></div>
+                </div>
+                @if (item()?.discountLive) { <p class="sys-alert sys-alert-info" role="status" data-testid="discount-live">The discount is running now: the till takes {{ item()?.discountPercent }}% off this item on every sale.</p> }
                 @if (item()?.onSpecial) { <p class="sys-alert sys-alert-info" role="status" data-testid="special-live">The special is running now: the till is selling this item at the special price.</p> }
                 @for (k of priceErrors; track k) { @if (fe(k)) { <p class="app-error" role="alert" [attr.data-testid]="'error-' + k">{{ fe(k) }}</p> } }
-                <p class="text-xs text-ink/70">The till charges Retail, or On special during its period. Trade, Wholesale, Reseller and Bundle are kept for those price lists. Minimum is the lowest one unit may go for after any discount.</p>
+                <p class="text-xs text-ink/70">The till charges Retail, or On special during its period. The Discount % then comes off that price by itself on every sale (always, or only between its dates), and shows on the bill and the receipt as a discount. Trade, Wholesale, Reseller and Bundle are kept for those price lists. Minimum is the lowest one unit may go for after any discount.</p>
               } @else { <p class="text-sm text-ink/70">Selling prices are set by people with the product-management permission.</p> }
 
               <div class="grid gap-4 lg:grid-cols-2">
@@ -316,6 +324,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
               <p class="text-sm text-ink/80">Every movement of this item (receipts, sales, adjustments, transfers), with dates and who did it.</p>
               <a class="btn-outline" routerLink="/app/inventory/reports/items-history" [queryParams]="{ itemId: saved() }" data-testid="link-history" (click)="closed.emit()">Open Items History for this item</a>
             }
+            @case ('recipe') { <zp-item-recipe [productId]="item()?.productId ?? null" /> }
             @case ('sales') {
               <p class="text-sm text-ink/80">Sales of this item from the stock ledger. Last sold: {{ (item()?.lastSoldAtUtc | tenantTime) || 'never' }}.</p>
               <a class="btn-outline" routerLink="/app/inventory/reports/transactions" [queryParams]="{ itemId: saved(), type: 'Sale' }" data-testid="link-sales" (click)="closed.emit()">Open the sales movements for this item</a>
@@ -377,11 +386,11 @@ export class StockCardComponent implements OnDestroy {
   readonly navigate = output<string>();
 
   protected readonly tabs: readonly { key: Tab; label: string; needsItem: boolean }[] = [
-    { key: 'details', label: 'Details', needsItem: false }, { key: 'aliases', label: 'Equivalent part numbers', needsItem: true }, { key: 'units', label: 'Unit of measure', needsItem: true }, { key: 'package', label: 'Package content', needsItem: true }, { key: 'picture', label: 'Picture', needsItem: true },
+    { key: 'details', label: 'Details', needsItem: false }, { key: 'aliases', label: 'Equivalent part numbers', needsItem: true }, { key: 'units', label: 'Unit of measure', needsItem: true }, { key: 'package', label: 'Package content', needsItem: true }, { key: 'recipe', label: 'Recipe and options', needsItem: true }, { key: 'picture', label: 'Picture', needsItem: true },
     { key: 'history', label: 'History', needsItem: true }, { key: 'sales', label: 'Sales', needsItem: true }, { key: 'purchases', label: 'Purchases', needsItem: true }
   ];
   protected readonly levels = PRICE_LEVELS;
-  protected readonly priceErrors = ['sellingPrice', 'specialPrice', 'minimumPrice'] as const;
+  protected readonly priceErrors = ['sellingPrice', 'specialPrice', 'discountPercent', 'minimumPrice'] as const;
 
   protected readonly tab = signal<Tab>('details');
   protected readonly loading = signal(false);
@@ -433,6 +442,8 @@ export class StockCardComponent implements OnDestroy {
   protected readonly lastCost = computed(() => this.f().lastCost ?? 0);
   protected readonly specialFrom = computed(() => utcToZoned(this.f().specialFromUtc, this.zone()));
   protected readonly specialTo = computed(() => utcToZoned(this.f().specialToUtc, this.zone()));
+  protected readonly discountFrom = computed(() => utcToZoned(this.f().discountFromUtc, this.zone()));
+  protected readonly discountTo = computed(() => utcToZoned(this.f().discountToUtc, this.zone()));
   protected readonly previousId = computed(() => { const i = this.siblings().indexOf(this.saved() ?? ''); return i > 0 ? this.siblings()[i - 1]! : null; });
   protected readonly nextId = computed(() => { const i = this.siblings().indexOf(this.saved() ?? ''); return i >= 0 && i < this.siblings().length - 1 ? this.siblings()[i + 1]! : null; });
 
@@ -517,7 +528,7 @@ export class StockCardComponent implements OnDestroy {
       reorderLevel: i.reorderLevel, targetDaysOfStock: i.targetDaysOfStock, averageCost: i.averageCost ?? 0, supplierId: i.supplierId, tracksBatches: i.tracksBatches, tracksSerials: i.tracksSerials,
       groupId: i.groupId, barcode: i.barcode, description: i.description, purchaseUnitName: i.purchaseUnitName, purchaseUnitSize: i.purchaseUnitSize, reorderQuantity: i.reorderQuantity,
       targetStock: i.targetStock, listedOnWebStore: i.listedOnWebStore, sellingPrice: i.sellingPrice, tradePrice: i.tradePrice ?? null, wholesalePrice: i.wholesalePrice ?? null,
-      resellerPrice: i.resellerPrice ?? null, bundlePrice: i.bundlePrice ?? null, specialPrice: i.specialPrice ?? null, specialFromUtc: i.specialFromUtc ?? null, specialToUtc: i.specialToUtc ?? null,
+      resellerPrice: i.resellerPrice ?? null, bundlePrice: i.bundlePrice ?? null, specialPrice: i.specialPrice ?? null, specialFromUtc: i.specialFromUtc ?? null, specialToUtc: i.specialToUtc ?? null, discountPercent: i.discountPercent ?? null, discountFromUtc: i.discountFromUtc ?? null, discountToUtc: i.discountToUtc ?? null,
       minimumPrice: i.minimumPrice ?? null, suggestedRetailPrice: i.suggestedRetailPrice ?? null, lastCost: i.lastPurchaseCost ?? null, specialCost: i.specialCost ?? null,
       specialCostFrom: i.specialCostFrom ?? null, specialCostTo: i.specialCostTo ?? null, blockQtyFractions: !!i.blockQtyFractions, useScale: !!i.useScale, printOnInvoice: i.printOnInvoice !== false,
       editQtyOnSales: i.editQtyOnSales !== false, blockDiscount: !!i.blockDiscount, taxExempt: !!i.taxExempt, pointsValue: i.pointsValue ?? 0, salesAccountId: i.salesAccountId ?? null,
@@ -553,7 +564,7 @@ export class StockCardComponent implements OnDestroy {
     const body: SaveInventoryItemRequest = { ...this.f(), name: this.f().name.trim() };
     // A new item's average cost starts at the last cost typed; afterwards receipts keep the average, so it is sent back unchanged.
     if (isNew) body.averageCost = body.lastCost ?? 0;
-    if (!this.canPrice()) for (const k of ['sellingPrice', 'tradePrice', 'wholesalePrice', 'resellerPrice', 'bundlePrice', 'specialPrice', 'specialFromUtc', 'specialToUtc', 'minimumPrice', 'suggestedRetailPrice'] as const) body[k] = null as never;
+    if (!this.canPrice()) for (const k of ['sellingPrice', 'tradePrice', 'wholesalePrice', 'resellerPrice', 'bundlePrice', 'specialPrice', 'specialFromUtc', 'specialToUtc', 'discountPercent', 'discountFromUtc', 'discountToUtc', 'minimumPrice', 'suggestedRetailPrice'] as const) body[k] = null as never;
     try {
       const result = await firstValueFrom(this.inventory.saveItem(this.saved(), body));
       const branch = this.branches.activeId();
