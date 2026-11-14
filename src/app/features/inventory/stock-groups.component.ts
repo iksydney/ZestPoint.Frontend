@@ -5,12 +5,13 @@ import { SaveStockGroupRequest, StockGroupDto } from '../../core/models/nav-ops.
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { toApiError, ApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
+import { LedgerAccountOptionDto, LedgerApi } from '../../core/services/ledger.services';
 import { StockGroupApi } from '../../core/services/nav-ops.services';
 import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 
-const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description: null, parentId: null, sortOrder: 0, isActive: true });
+const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description: null, parentId: null, sortOrder: 0, isActive: true, salesAccountId: null, purchaseAccountId: null });
 
 /**
  * Stock groups are the one grouping used by the POS menu, stock items and the sales-by-group reports. A group that is referenced by
@@ -69,6 +70,17 @@ const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description:
           <select id="g-parent" class="app-input" data-testid="group-parent" [ngModel]="form().parentId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ parentId: $event || null })">
             <option [ngValue]="null">None (top level)</option>@for (p of parents(); track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }</select>
           @if (fe('parentId')) { <p class="app-error" role="alert">{{ fe('parentId') }}</p> }</div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div><label class="app-label" for="g-sales-ac">Sales account</label>
+            <select id="g-sales-ac" class="app-input" data-testid="group-sales-ac" [ngModel]="form().salesAccountId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ salesAccountId: $event || null })">
+            <option [ngValue]="null">The company's Sales account</option>@for (a of salesAccounts(); track a.id) { <option [ngValue]="a.id">{{ a.code }} {{ a.name }}</option> }</select>
+            @if (fe('salesAccountId')) { <p class="app-error" role="alert">{{ fe('salesAccountId') }}</p> }</div>
+          <div><label class="app-label" for="g-purchase-ac">Stock (purchase) account</label>
+            <select id="g-purchase-ac" class="app-input" data-testid="group-purchase-ac" [ngModel]="form().purchaseAccountId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ purchaseAccountId: $event || null })">
+            <option [ngValue]="null">The company's Stock account</option>@for (a of stockAccounts(); track a.id) { <option [ngValue]="a.id">{{ a.code }} {{ a.name }}</option> }</select>
+            @if (fe('purchaseAccountId')) { <p class="app-error" role="alert">{{ fe('purchaseAccountId') }}</p> }</div>
+        </div>
+        <p class="text-xs text-ink/70">In the ledger, the sales and the stock of every item in this group go to these accounts, unless the item's own stock card names another.</p>
         <div><label class="app-label" for="g-desc">Description</label><input id="g-desc" class="app-input" maxlength="300" [ngModel]="form().description" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ description: $event || null })" /></div>
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" [checked]="form().isActive" (change)="patch({ isActive: !form().isActive })" /> Active</label>
         @if (dialogError()) { <p class="sys-alert sys-alert-danger" role="alert">{{ dialogError() }}</p> }
@@ -88,6 +100,11 @@ const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description:
 })
 export class StockGroupsComponent implements OnInit {
   private readonly api = inject(StockGroupApi);
+  private readonly ledgerApi = inject(LedgerApi);
+  private readonly accountOptions = signal<readonly LedgerAccountOptionDto[]>([]);
+  /** Sales go to an income account; stock is held on an asset account (or, for a company that prefers it, an expense). */
+  protected readonly salesAccounts = computed(() => this.accountOptions().filter((a) => a.type === 'Income'));
+  protected readonly stockAccounts = computed(() => this.accountOptions().filter((a) => a.type === 'Asset' || a.type === 'Expense'));
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
@@ -110,7 +127,10 @@ export class StockGroupsComponent implements OnInit {
   protected readonly parents = computed(() => this.groups().filter((g) => g.id !== this.editingId() && g.isActive));
   protected readonly targets = computed(() => this.groups().filter((g) => g.id !== this.reassigning()?.id && g.isActive));
 
-  ngOnInit(): void { void this.load(); }
+  ngOnInit(): void {
+    void this.load();
+    void firstValueFrom(this.ledgerApi.options()).then((a) => this.accountOptions.set(a)).catch(() => undefined);
+  }
 
   protected fe = (name: string): string | null => this.fieldErrors()[name]?.[0] ?? null;
   protected patch(p: Partial<SaveStockGroupRequest>): void { this.form.update((f) => ({ ...f, ...p })); }
@@ -125,7 +145,7 @@ export class StockGroupsComponent implements OnInit {
 
   protected openEdit(g: StockGroupDto | null): void {
     this.editingId.set(g?.id ?? null);
-    this.form.set(g ? { name: g.name, code: g.code, description: g.description, parentId: g.parentId, sortOrder: g.sortOrder, isActive: g.isActive } : blank());
+    this.form.set(g ? { name: g.name, code: g.code, description: g.description, parentId: g.parentId, sortOrder: g.sortOrder, isActive: g.isActive, salesAccountId: g.salesAccountId ?? null, purchaseAccountId: g.purchaseAccountId ?? null } : blank());
     this.fieldErrors.set({});
     this.dialogError.set(null);
     this.dialog.set('edit');

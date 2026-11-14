@@ -158,5 +158,11 @@ export const REPORTS = {
   equivalentPartNumbers: {
     path: 'purchasing/reports/equivalent-part-numbers', period: 'none', supplier: true, item: true, search: 'Part number, item or SKU',
     view: { label: 'Code type', default: '', options: opts(['', 'All codes'], ['Equivalent', 'Equivalent part numbers'], ['SupplierPartNumber', 'Supplier part numbers']) }
-  }
+  },
+
+  // ---- Ledger ------------------------------------------------------------------------------------
+  /** Each of these first brings the ledger up to date on the server, so it includes everything that has happened. */
+  trialBalance: { path: 'ledger/reports/trial-balance', period: 'range', branch: true },
+  profitAndLoss: { path: 'ledger/reports/profit-and-loss', period: 'range', branch: true },
+  ledgerJournal: { path: 'ledger/reports/journal', period: 'range', branch: true, search: 'Account code, account name or description' }
 } as const satisfies Record<string, ReportDefinition>;

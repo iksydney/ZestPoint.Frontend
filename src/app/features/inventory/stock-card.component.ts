@@ -9,6 +9,7 @@ import { BinDto } from '../../core/models/purchasing.model';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { TenantTimePipe } from '../../core/pipes/tenant-time.pipe';
 import { ApiError, toApiError } from '../../core/services/api.util';
+import { LedgerAccountOptionDto, LedgerApi } from '../../core/services/ledger.services';
 import { AuthService } from '../../core/services/auth.service';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { StockExtrasApi, StockGroupApi } from '../../core/services/nav-ops.services';
@@ -31,7 +32,7 @@ const blank = (): SaveInventoryItemRequest => ({
   averageCost: 0, supplierId: null, tracksBatches: false, tracksSerials: false, groupId: null, barcode: null, description: null, purchaseUnitName: null, purchaseUnitSize: null,
   reorderQuantity: 0, targetStock: null, listedOnWebStore: false, sellingPrice: null, tradePrice: null, wholesalePrice: null, resellerPrice: null, bundlePrice: null,
   specialPrice: null, specialFromUtc: null, specialToUtc: null, minimumPrice: null, suggestedRetailPrice: null, lastCost: null, specialCost: null, specialCostFrom: null, specialCostTo: null,
-  blockQtyFractions: false, useScale: false, printOnInvoice: true, editQtyOnSales: true, blockDiscount: false, taxExempt: false, pointsValue: 0, salesAccount: null, purchaseAccount: null,
+  blockQtyFractions: false, useScale: false, printOnInvoice: true, editQtyOnSales: true, blockDiscount: false, taxExempt: false, pointsValue: 0, salesAccountId: null, purchaseAccountId: null,
   userPrompt: null, notes: null, isActive: true, rowVersion: null
 });
 
@@ -144,8 +145,12 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
                   <div class="grid gap-2 sm:grid-cols-2">
                     <div><label class="app-label" for="sc-points">Points value</label><input id="sc-points" type="number" min="0" step="0.01" class="app-input" data-testid="item-points" [ngModel]="f().pointsValue" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ pointsValue: n($event) ?? 0 })" /><p class="app-hint">Loyalty points per unit. Earning starts when customers and loyalty are set up.</p></div>
                     <div><label class="app-label" for="sc-tax">Tax</label><select id="sc-tax" class="app-input" data-testid="item-tax" [ngModel]="f().taxExempt ? 'exempt' : 'taxable'" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ taxExempt: $event === 'exempt' })"><option value="taxable">Taxable (company rate)</option><option value="exempt">Tax exempt</option></select></div>
-                    <div><label class="app-label" for="sc-sales-ac">Sales A/C</label><input id="sc-sales-ac" class="app-input" maxlength="60" data-testid="item-sales-ac" [ngModel]="f().salesAccount" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ salesAccount: $event || null })" /></div>
-                    <div><label class="app-label" for="sc-purchase-ac">Purchase A/C</label><input id="sc-purchase-ac" class="app-input" maxlength="60" data-testid="item-purchase-ac" [ngModel]="f().purchaseAccount" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ purchaseAccount: $event || null })" /></div>
+                    <div><label class="app-label" for="sc-sales-ac">Sales A/C</label><select id="sc-sales-ac" class="app-input" data-testid="item-sales-ac" [ngModel]="f().salesAccountId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ salesAccountId: $event || null })">
+            <option [ngValue]="null">As the stock group says</option>@for (a of salesAccounts(); track a.id) { <option [ngValue]="a.id">{{ a.code }} {{ a.name }}</option> }</select>
+                      @if (fe('salesAccountId')) { <p class="app-error" role="alert">{{ fe('salesAccountId') }}</p> }</div>
+                    <div><label class="app-label" for="sc-purchase-ac">Purchase A/C</label><select id="sc-purchase-ac" class="app-input" data-testid="item-purchase-ac" [ngModel]="f().purchaseAccountId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ purchaseAccountId: $event || null })">
+            <option [ngValue]="null">As the stock group says</option>@for (a of stockAccounts(); track a.id) { <option [ngValue]="a.id">{{ a.code }} {{ a.name }}</option> }</select>
+                      @if (fe('purchaseAccountId')) { <p class="app-error" role="alert">{{ fe('purchaseAccountId') }}</p> }</div>
                   </div>
                   <p class="app-hint -mt-1">Account codes are kept as typed until the accounts list is set up.</p>
 
@@ -346,6 +351,11 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
 })
 export class StockCardComponent implements OnDestroy {
   private readonly inventory = inject(InventoryApi);
+  private readonly ledgerApi = inject(LedgerApi);
+  private readonly accountOptions = signal<readonly LedgerAccountOptionDto[]>([]);
+  /** Sales go to an income account; stock is held on an asset account (or, for a company that prefers it, an expense). */
+  protected readonly salesAccounts = computed(() => this.accountOptions().filter((a) => a.type === 'Income'));
+  protected readonly stockAccounts = computed(() => this.accountOptions().filter((a) => a.type === 'Asset' || a.type === 'Expense'));
   private readonly groupApi = inject(StockGroupApi);
   private readonly extras = inject(StockExtrasApi);
   private readonly binApi = inject(BinApi);
@@ -462,6 +472,7 @@ export class StockCardComponent implements OnDestroy {
   // ---- Load ------------------------------------------------------------------------------------
 
   private async open(id: string | null): Promise<void> {
+    if (!this.accountOptions().length) void firstValueFrom(this.ledgerApi.options()).then((o) => this.accountOptions.set(o)).catch(() => undefined);
     this.tab.set('details');
     this.fieldErrors.set({});
     this.formError.set(null);
@@ -509,8 +520,8 @@ export class StockCardComponent implements OnDestroy {
       resellerPrice: i.resellerPrice ?? null, bundlePrice: i.bundlePrice ?? null, specialPrice: i.specialPrice ?? null, specialFromUtc: i.specialFromUtc ?? null, specialToUtc: i.specialToUtc ?? null,
       minimumPrice: i.minimumPrice ?? null, suggestedRetailPrice: i.suggestedRetailPrice ?? null, lastCost: i.lastPurchaseCost ?? null, specialCost: i.specialCost ?? null,
       specialCostFrom: i.specialCostFrom ?? null, specialCostTo: i.specialCostTo ?? null, blockQtyFractions: !!i.blockQtyFractions, useScale: !!i.useScale, printOnInvoice: i.printOnInvoice !== false,
-      editQtyOnSales: i.editQtyOnSales !== false, blockDiscount: !!i.blockDiscount, taxExempt: !!i.taxExempt, pointsValue: i.pointsValue ?? 0, salesAccount: i.salesAccount ?? null,
-      purchaseAccount: i.purchaseAccount ?? null, userPrompt: i.userPrompt ?? null, notes: i.notes ?? null, isActive: i.isActive, rowVersion: i.rowVersion
+      editQtyOnSales: i.editQtyOnSales !== false, blockDiscount: !!i.blockDiscount, taxExempt: !!i.taxExempt, pointsValue: i.pointsValue ?? 0, salesAccountId: i.salesAccountId ?? null,
+      purchaseAccountId: i.purchaseAccountId ?? null, userPrompt: i.userPrompt ?? null, notes: i.notes ?? null, isActive: i.isActive, rowVersion: i.rowVersion
     });
     if (i.hasPicture) void this.loadPicture(i.id); else this.revokePicture();
   }

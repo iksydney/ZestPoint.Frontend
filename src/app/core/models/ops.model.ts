@@ -495,8 +495,9 @@ export interface InventoryItemDto {
   blockDiscount?: boolean;
   taxExempt?: boolean;
   pointsValue?: number;
-  salesAccount?: string | null;
-  purchaseAccount?: string | null;
+  /** The item's own ledger accounts; null = as its stock group says, else the company's Sales / Stock account. */
+  salesAccountId?: string | null;
+  purchaseAccountId?: string | null;
   userPrompt?: string | null;
   notes?: string | null;
   onSpecial?: boolean;
@@ -565,8 +566,9 @@ export interface SaveInventoryItemRequest {
   blockDiscount?: boolean;
   taxExempt?: boolean;
   pointsValue?: number;
-  salesAccount?: string | null;
-  purchaseAccount?: string | null;
+  /** The item's own ledger accounts; null = as its stock group says, else the company's Sales / Stock account. */
+  salesAccountId?: string | null;
+  purchaseAccountId?: string | null;
   userPrompt?: string | null;
   notes?: string | null;
   /** Cost of the most recent purchase; applied only with the cost right. */

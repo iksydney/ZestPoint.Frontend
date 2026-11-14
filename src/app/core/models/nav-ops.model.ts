@@ -142,9 +142,12 @@ export interface StockGroupDto {
   readonly productCount: number;
   readonly itemCount: number;
   readonly inUse: boolean;
+  /** The ledger accounts for the group's sales and stock; null = the company's Sales / Stock account. */
+  readonly salesAccountId?: string | null;
+  readonly purchaseAccountId?: string | null;
 }
 
-export interface SaveStockGroupRequest { name: string; code: string | null; description: string | null; parentId: string | null; sortOrder: number; isActive: boolean }
+export interface SaveStockGroupRequest { name: string; code: string | null; description: string | null; parentId: string | null; sortOrder: number; isActive: boolean; salesAccountId?: string | null; purchaseAccountId?: string | null }
 
 // ---- Adjustments -------------------------------------------------------------------------------
 

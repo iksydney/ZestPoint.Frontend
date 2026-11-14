@@ -8,7 +8,7 @@ const P = SCREEN_PERMISSIONS;
 export type NavIcon = 'home' | 'cart' | 'clock' | 'chart' | 'file' | 'box' | 'layers' | 'edit' | 'globe' | 'adjust' | 'clipboard' | 'tag' | 'printer' | 'calendar'
   | 'search' | 'truck' | 'wallet' | 'users' | 'settings' | 'card' | 'branch' | 'palette' | 'recipe' | 'list' | 'inbox' | 'grid';
 
-export type NavGroupKey = 'pos' | 'stock' | 'purchasing';
+export type NavGroupKey = 'pos' | 'stock' | 'purchasing' | 'ledger';
 
 /** A submenu: a titled, expandable group of screens. */
 export interface NavGroup {
@@ -45,7 +45,8 @@ export interface NavDefinition {
 export const NAV_GROUPS: readonly NavGroup[] = [
   { key: 'pos', label: 'POS', icon: 'cart', kind: 'submenu' },
   { key: 'stock', label: 'Stock', icon: 'box', kind: 'submenu' },
-  { key: 'purchasing', label: 'Purchasing', icon: 'truck', kind: 'submenu' }
+  { key: 'purchasing', label: 'Purchasing', icon: 'truck', kind: 'submenu' },
+  { key: 'ledger', label: 'Ledger', icon: 'wallet', kind: 'submenu' }
 ];
 
 const reportPage = () => import('../../features/reports/report-page.component').then((m) => m.ReportPageComponent);
@@ -133,6 +134,13 @@ export const APP_NAV: readonly NavDefinition[] = [
   report('purchasing.report.tax', 'Purchases Tax Report', 'purchasing/reports/purchases-tax', 'purchasing', REPORTS.purchasesTax, P.PURCHASING_REPORTS_VIEW, FEATURES.INVENTORY, 'x', 'file'),
   report('purchasing.report.payments', 'Purchase Payments Report', 'purchasing/reports/purchase-payments', 'purchasing', REPORTS.purchasePayments, P.PURCHASING_PAYMENTS_VIEW, FEATURES.INVENTORY, 'y', 'wallet'),
   report('purchasing.report.equivalent', 'Equivalent Part Numbers Report', 'purchasing/reports/equivalent-part-numbers', 'purchasing', REPORTS.equivalentPartNumbers, P.PURCHASING_REPORTS_VIEW, FEATURES.INVENTORY, 'q', 'tag'),
+
+  // ---- Ledger ------------------------------------------------------------------------------------
+  { key: 'ledger.accounts', label: 'Chart of Accounts', route: '/app/ledger/accounts', icon: 'wallet', permission: P.LEDGER_VIEW, feature: FEATURES.FINANCIAL_REPORTING, group: 'ledger', kind: 'screen', shortcut: '1',
+    load: () => import('../../features/ledger/ledger-accounts.component').then((m) => m.LedgerAccountsComponent), description: 'The accounts of the ledger and what each holds today.' },
+  report('ledger.report.trial', 'Trial Balance', 'ledger/reports/trial-balance', 'ledger', REPORTS.trialBalance, P.LEDGER_VIEW, FEATURES.FINANCIAL_REPORTING, '2', 'list', 'Every account at the start and end of a period.'),
+  report('ledger.report.pnl', 'Profit and Loss', 'ledger/reports/profit-and-loss', 'ledger', REPORTS.profitAndLoss, P.LEDGER_VIEW, FEATURES.FINANCIAL_REPORTING, '3', 'chart', 'Income less cost of goods sold and losses.'),
+  report('ledger.report.journal', 'Ledger Journal', 'ledger/reports/journal', 'ledger', REPORTS.ledgerJournal, P.LEDGER_VIEW, FEATURES.FINANCIAL_REPORTING, '4', 'file', 'Every entry, newest first.'),
 
   // ---- The rest of the application ---------------------------------------------------------------
   { key: 'inventory', label: 'Inventory', route: '/app/inventory', icon: 'box', permission: P.INVENTORY_VIEW, feature: FEATURES.INVENTORY, kind: 'screen', needsBranch: true,

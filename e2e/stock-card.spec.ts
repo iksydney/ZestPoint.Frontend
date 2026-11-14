@@ -59,8 +59,8 @@ test.describe('Stock card', () => {
     await page.getByTestId('item-block-discount').check();
     await page.getByTestId('item-tax').selectOption('exempt');
     await page.getByTestId('item-points').fill('5');
-    await page.getByTestId('item-sales-ac').fill('4000');
-    await page.getByTestId('item-purchase-ac').fill('5000');
+    await page.getByTestId('item-sales-ac').selectOption({ label: '4000 Sales' });      // accounts come from the ledger's list now
+    await page.getByTestId('item-purchase-ac').selectOption({ label: '1200 Stock' });
     await page.getByTestId('item-srp').fill('1200');
     await page.getByTestId('item-prompt').fill('Offer the cable too');
     await page.getByTestId('item-notes').fill('Shelf B2');
@@ -82,7 +82,7 @@ test.describe('Stock card', () => {
     await expect(page.getByTestId('item-edit-qty')).toBeChecked();
     await expect(page.getByTestId('item-tax')).toHaveValue('exempt');
     await expect(page.getByTestId('item-points')).toHaveValue('5');
-    await expect(page.getByTestId('item-sales-ac')).toHaveValue('4000');
+    await expect(page.getByTestId('item-sales-ac').locator('option:checked')).toHaveText('4000 Sales');
     await expect(page.getByTestId('item-prompt')).toHaveValue('Offer the cable too');
     await expect(page.getByTestId('item-notes')).toHaveValue('Shelf B2');
     await expect(page.getByTestId('special-live')).toBeVisible();
