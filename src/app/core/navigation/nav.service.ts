@@ -5,6 +5,9 @@ import { BarStore } from '../services/bar.services';
 import { APP_NAV, NavDefinition, permissionsOf } from './app-nav';
 import { NAV_AREAS, NAV_HOME, NavArea, NavAreaKey, areaOf, isReport } from './nav-layout';
 
+/** Screens that only mean something to a company that sends orders to preparation stations. */
+const STATION_SCREENS: ReadonlySet<string> = new Set(['pos.bar', 'pos.kitchen', 'pos.report.prep']);
+
 /** One area of the menu as this person sees it: the working screens they may use, and the reports behind its Reports page. */
 export interface NavSection {
   readonly area: NavArea;
@@ -28,7 +31,7 @@ export class NavService {
   /** Permission AND module AND the screen itself (an operator may withhold just one); a locked workspace keeps only subscription and support. */
   readonly items = computed<readonly NavDefinition[]>(() =>
     APP_NAV.filter((n) => this.auth.hasAnyPermission(permissionsOf(n)) && (!this.auth.locked() || n.key === 'subscription' || n.key === 'support')
-      && this.access.canShow(n) && (n.key !== 'pos.bar' || this.bar.enabled())));
+      && this.access.canShow(n) && (!STATION_SCREENS.has(n.key) || this.bar.enabled())));
 
   readonly home = computed<NavDefinition | null>(() => this.items().find((n) => n.key === NAV_HOME) ?? null);
 

@@ -82,6 +82,11 @@ export const REPORTS = {
     method: { label: 'Paid by', options: opts(['', 'Any method'], ['Cash', 'Cash'], ['Card', 'Card'], ['Transfer', 'Transfer']) },
     status: { label: 'Status', options: opts(['', 'All'], ['paid', 'Paid in full'], ['part', 'Part paid'], ['refunded', 'With a refund']) }
   },
+  /** How long tickets wait, take and the guest waits: by station, by item, by hour sent. */
+  preparationTimes: {
+    path: 'pos/reports/preparation-times', period: 'range', branch: true,
+    view: { label: 'Group by', default: 'station', options: opts(['station', 'Station'], ['item', 'Item'], ['hour', 'Hour of the day sent']) }
+  },
   /** Every payment, with the filters an audit needs. */
   paymentsHistory: {
     path: 'pos/reports/payments-history', period: 'range', branch: true, staff: 'Staff member', amount: true, search: 'Bill number, customer, table or reference',

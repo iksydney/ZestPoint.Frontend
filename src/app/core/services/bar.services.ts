@@ -4,7 +4,7 @@ import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } fro
 import { Observable, Subject, firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiEnvelope } from '../models/api.model';
-import { BarOrderDto, BarOrderNotice } from '../models/ops.model';
+import { BarOrderDto, BarOrderNotice, KitchenBoardDto } from '../models/ops.model';
 import { SCREEN_PERMISSIONS } from '../models/rbac.model';
 import { AccessService } from './access.service';
 import { toApiError, unwrap } from './api.util';
@@ -24,6 +24,19 @@ export class BarOrdersApi {
   list(branchId: string, history = false): Observable<BarOrderDto[]> {
     return this.http.get<ApiEnvelope<BarOrderDto[]>>('/api/v1/bar-orders', { params: new HttpParams().set('branchId', branchId).set('history', String(history)) }).pipe(unwrap());
   }
+
+  /** The kitchen display's feed: the tickets still to make and the ones made in the last 30 minutes (for calling back). */
+  board(branchId: string, stationId: string | null): Observable<KitchenBoardDto> {
+    let params = new HttpParams().set('branchId', branchId);
+    if (stationId) params = params.set('stationId', stationId);
+    return this.http.get<ApiEnvelope<KitchenBoardDto>>('/api/v1/kitchen/board', { params }).pipe(unwrap());
+  }
+
+  /** Ticks an item of a ticket you are making as made, or unticks it. */
+  prepared(id: string, itemId: string, prepared: boolean): Observable<BarOrderDto> { return this.post(`/api/v1/kitchen/tickets/${id}/items/${itemId}/prepared`, { prepared }); }
+
+  /** Calls back a ticket marked ready by mistake (a kitchen's, within 30 minutes, before it is collected). */
+  recall(id: string): Observable<BarOrderDto> { return this.post(`/api/v1/kitchen/tickets/${id}/recall`); }
 
   take(id: string): Observable<BarOrderDto> { return this.post(`/api/v1/bar-orders/${id}/take`); }
   release(id: string): Observable<BarOrderDto> { return this.post(`/api/v1/bar-orders/${id}/release`); }

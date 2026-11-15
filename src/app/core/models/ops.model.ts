@@ -270,6 +270,8 @@ export interface BarOrderItemDto {
   status: BarItemStatus;
   cantMakeReason: string | null;
   acknowledged: boolean;
+  /** The station ticked this item off as made. */
+  prepared?: boolean;
 }
 
 /** What one press of Send handed to the bar, with the bill it belongs to as it is now. */
@@ -334,8 +336,17 @@ export interface StationDto {
   isDefault: boolean;
   isActive: boolean;
   sortOrder: number;
+  /** Minutes a ticket may wait before the kitchen display shows it amber, then red. */
+  amberMinutes: number;
+  redMinutes: number;
   groupCount: number;
   itemCount: number;
+}
+
+/** What a kitchen screen shows: the tickets still to make, and the ones just made that can still be called back. */
+export interface KitchenBoardDto {
+  queue: BarOrderDto[];
+  recent: BarOrderDto[];
 }
 
 /** A table at a branch, and how many bills are running at it now. */

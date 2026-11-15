@@ -175,7 +175,7 @@ test.describe('Giving an organisation modules, screens and buttons, and the whol
     await op.getByTestId('action-confirm').click();
     await expect(op.getByTestId('application-grant-banner')).toBeVisible();
     await expect(op.getByTestId('mod-inventory_management')).toContainText('Full');
-    await expect(op.getByTestId('coming-soon')).toHaveCount(3);                         // KDS, Hotel PMS and Enterprise API have nothing built behind them: skipped
+    await expect(op.getByTestId('coming-soon')).toHaveCount(2);                         // Hotel PMS and Enterprise API have nothing built behind them: skipped (the kitchen display is built)
     await page.goto('/app/inventory');
     await expect(page).toHaveURL(/\/app\/inventory$/);
     await expect(page.getByTestId('tab-stock')).toBeVisible();

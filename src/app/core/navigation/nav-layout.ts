@@ -31,7 +31,7 @@ export interface NavArea {
 export const NAV_HOME = 'dashboard';
 
 export const NAV_AREAS: readonly NavArea[] = [
-  { key: 'sell', label: 'Sell', icon: 'cart', blurb: 'Take orders and payments, and open and close the day.', screens: ['pos', 'pos.day', 'pos.sales', 'pos.bar', 'pos.tips'] },
+  { key: 'sell', label: 'Sell', icon: 'cart', blurb: 'Take orders and payments, and open and close the day.', screens: ['pos', 'pos.day', 'pos.sales', 'pos.bar', 'pos.kitchen', 'pos.tips'] },
   { key: 'customers', label: 'Customers', icon: 'users', blurb: 'The people you sell to: their points, their laybys and what they are waiting for.', screens: ['customers', 'pos.laybys', 'pos.backorders'] },
   {
     key: 'stock', label: 'Stock', icon: 'box', blurb: 'What you hold and sell: items, groups, counts and where things are.',
@@ -88,6 +88,8 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
   'pos.day': 'Start your shift with a float, record cash in and out, and count the drawer when you finish.',
   'pos.sales': 'Your own sales: the bills you served or took payment on, with their receipts to show or send.',
   'pos.bar': 'Orders sent by attendants for the bar to make and hand over.',
+  'pos.kitchen': 'A station\'s tickets on a wall screen: tick items off, bump them when ready, call one back if it was a mistake.',
+  'pos.report.prep': 'How long tickets wait for someone to start them, how long they take to make, and how long the guest waits.',
   'pos.report.income': 'Sales, discounts, tax, tips and payments for a period, in one summary.',
   'pos.report.daily': 'Sales day by day.',
   'pos.report.staff': 'What each member of staff sold.',

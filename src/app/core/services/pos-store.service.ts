@@ -261,7 +261,12 @@ export class PosStore {
     );
   }
 
-  async confirm(): Promise<void> {
+  /** Send waits its turn behind line edits still being applied (a quantity typed a moment ago), so it sends what is on screen. */
+  confirm(): Promise<void> {
+    return this.oneAtATime(() => this.confirmNow());
+  }
+
+  private async confirmNow(): Promise<void> {
     const o = this.requireEditable();
     if (!o.lines.some((l) => l.status === 'Active' && !l.confirmed)) return;
     await this.commit(

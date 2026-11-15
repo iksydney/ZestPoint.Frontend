@@ -68,6 +68,8 @@ export const APP_NAV: readonly NavDefinition[] = [
   // The bar man method. The menu offers it only to a company that uses the method (the shell filters on that); the route and the API are guarded as usual.
   { key: 'pos.bar', label: 'Bar Orders', route: '/app/pos/bar-orders', icon: 'inbox', permission: P.POS_BAR_ORDER_FULFIL, feature: FEATURES.CORE_POS, group: 'pos', kind: 'screen', needsBranch: true,
     load: () => import('../../features/pos-billing/bar-orders.component').then((m) => m.BarOrdersComponent), description: 'Orders sent by attendants: take, make and dispatch them.' },
+  { key: 'pos.kitchen', label: 'Kitchen Display', route: '/app/pos/kitchen', icon: 'clipboard', permission: P.POS_BAR_ORDER_FULFIL, feature: FEATURES.KDS, group: 'pos', kind: 'screen', needsBranch: true,
+    load: () => import('../../features/pos-billing/kitchen-display.component').then((m) => m.KitchenDisplayComponent), description: 'A station\'s tickets on a wall screen: tick items off, bump when ready, call one back.' },
   report('pos.report.income', 'Summary Income Report', 'pos/reports/summary-income', 'pos', REPORTS.summaryIncome, P.REPORTS_INCOME_VIEW, FEATURES.CORE_POS, '1', 'chart'),
   report('pos.report.daily', 'Daily Sales Report', 'pos/reports/daily-sales', 'pos', REPORTS.dailySales, P.REPORTS_DAILY_SALES_VIEW, FEATURES.CORE_POS, '2', 'calendar'),
   report('pos.report.staff', 'Staff Sales Report', 'pos/reports/staff-sales', 'pos', REPORTS.staffSales, P.REPORTS_STAFF_SALES_VIEW, FEATURES.CORE_POS, '3', 'users'),
@@ -76,6 +78,7 @@ export const APP_NAV: readonly NavDefinition[] = [
   report('pos.report.currency', 'Multi-Currency Report', 'pos/reports/multi-currency', 'pos', REPORTS.multiCurrency, P.REPORTS_MULTI_CURRENCY_VIEW, FEATURES.FINANCIAL_REPORTING, '6', 'globe'),
   { key: 'pos.tips', label: 'Tips', route: '/app/pos/tips', icon: 'wallet', permission: P.POS_TIPS_MANAGE, feature: FEATURES.CORE_POS, group: 'pos', kind: 'screen', needsBranch: true,
     load: () => import('../../features/pos-billing/tips.component').then((m) => m.TipsComponent), description: 'Tips collected per staff member, and every payout or donation out of them.' },
+  report('pos.report.prep', 'Preparation Times Report', 'pos/reports/preparation-times', 'pos', REPORTS.preparationTimes, P.REPORTS_DAILY_SALES_VIEW, FEATURES.KDS, '0', 'clock', 'How long tickets wait, take to make, and the guest waits, by station, item or hour.'),
   report('pos.report.tips', 'Tips Report', 'pos/reports/tips', 'pos', REPORTS.tips, P.POS_TIPS_MANAGE, FEATURES.CORE_POS, '8', 'wallet', 'Tips per staff member and per bill, and what was paid out or donated.'),
   report('pos.report.payments', 'Payments History', 'pos/reports/payments-history', 'pos', REPORTS.paymentsHistory, P.REPORTS_INCOME_VIEW, FEATURES.CORE_POS, '9', 'clipboard', 'Every payment taken, with filters for checking the drawer, the terminal and the bank.'),
   report('pos.report.voids', 'Void History Report', 'pos/reports/void-history', 'pos', REPORTS.voidHistory, P.POS_VOID_APPROVE, FEATURES.CORE_POS, '7', 'clipboard', 'Every void: what, why, who asked and who authorised it.'),

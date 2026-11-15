@@ -15,8 +15,8 @@ async function toursOn(page: Page) {
   await page.addInitScript(() => { try { localStorage.setItem('zp.tours.auto', 'on'); } catch { /* ignore */ } });
 }
 
-async function ownerInApp(page: Page) {
-  const who = await registerViaUi(page);
+async function ownerInApp(page: Page, barManMethod = false) {
+  const who = await registerViaUi(page, barManMethod ? { type: 'Nightclub', barManMethod } : {});
   await page.getByTestId('save-continue').click();
   await page.getByTestId('go-staff').click();
   await expect(page).toHaveURL(/\/app\/staff$/);
@@ -130,7 +130,7 @@ test.describe('Guided tours', () => {
 
   test('every tour is in step with its screen: each step points at something that is there', async ({ page }) => {
     test.setTimeout(240_000);
-    await ownerInApp(page);                                                                // tours do not start by themselves here: each is asked for
+    await ownerInApp(page, true);                                                          // tours do not start by themselves here: each is asked for; this company uses stations, so the kitchen display is in its menu
     for (const tour of TOURS) {
       if (tour.nav) {
         const entry = page.locator(`[data-testid="main-nav"] [data-nav="${tour.nav}"]`);
