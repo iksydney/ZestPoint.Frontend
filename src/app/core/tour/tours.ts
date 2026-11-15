@@ -47,8 +47,8 @@ export const APP_TOUR = 'app';
 
 export const TOURS: readonly TourDefinition[] = [
   {
-    key: APP_TOUR, title: 'Welcome to ZestPoint', version: 3,
-    changes: [{ version: 2, steps: [{ id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Set-up has moved', body: 'Branches, Settings and Branding have left the menu. Things you set up once and change now and then are behind one Set-up entry: branches, tables, settings and your brand, each with a line on what it is for. Search finds them too.' }] }, { version: 3, steps: [{ id: 'head', target: '[data-tour="nav-area-head"]', menu: true, optional: true, title: 'Head Office', body: 'All your branches together: two reports (every branch side by side, and a comparison over time) behind its Reports entry, and Prices and Menus, which has moved here from Stock.' }] }],
+    key: APP_TOUR, title: 'Welcome to ZestPoint', version: 4,
+    changes: [{ version: 2, steps: [{ id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Set-up has moved', body: 'Branches, Settings and Branding have left the menu. Things you set up once and change now and then are behind one Set-up entry: branches, tables, settings and your brand, each with a line on what it is for. Search finds them too.' }] }, { version: 3, steps: [{ id: 'head', target: '[data-tour="nav-area-head"]', menu: true, optional: true, title: 'Head Office', body: 'All your branches together: two reports (every branch side by side, and a comparison over time) behind its Reports entry, and Prices and Menus, which has moved here from Stock.' }] }, { version: 4, steps: [{ id: 'notices', target: '[data-testid="notices-bell"]', title: 'Notices', body: 'The new speech-bubble button at the top is where ZestPoint tells you things: alerts, summaries and messages from the system. The number is how many you have not read.' }] }],
     steps: [
       { id: 'welcome', title: 'Welcome', body: 'This takes about a minute. It shows where things are; you can leave at any time and take it again from Help.' },
       { id: 'menu', target: '[data-tour="nav"]', menu: true, title: 'The menu', body: 'Everything you can do is here, grouped by the job you are doing. You only see what your role allows. Click an area\'s name to fold it away.' },
@@ -62,6 +62,7 @@ export const TOURS: readonly TourDefinition[] = [
       { id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Set-up', body: 'Things you set up once and change now and then are behind one Set-up entry: branches, tables, settings and your brand, each with a line on what it is for. Search finds them too.' },
       { id: 'reports', target: '[data-nav^="reports."]', menu: true, optional: true, title: 'Reports', body: 'Each area keeps its reports behind one Reports entry: a page listing them, each with a line on what it shows.' },
       { id: 'search', target: '[data-tour="nav-search"]', menu: true, title: 'Search', body: 'The quickest way anywhere: press Ctrl+K (or click here) and type part of a screen\'s or report\'s name.' },
+      { id: 'notices', target: '[data-testid="notices-bell"]', title: 'Notices', body: 'The speech-bubble button is where ZestPoint tells you things: alerts, summaries and messages from the system. The number is how many you have not read; open it to read them, or mark them all read.' },
       { id: 'help', target: '[data-tour="help"]', title: 'Help', body: 'Take this tour again, or the tour of the screen you are on, whenever you like. When something changes in ZestPoint you will be shown what moved.' },
       { id: 'account', target: '[data-tour="account"]', title: 'You', body: 'Who is signed in on this device. Sign out here when you leave, especially on a shared till.' }
     ]
@@ -131,6 +132,15 @@ export const TOURS: readonly TourDefinition[] = [
       { id: 'chart', target: '[data-testid="cmp-chart"]', optional: true, title: 'The chart', body: 'Move over it (or use the arrow keys) to read the figures of each day, week or month. A gap in a line means there was nothing to divide by, such as no bills that day.' },
       { id: 'table', target: '[data-testid="cmp-table-details"]', optional: true, title: 'As a table', body: 'The same figures as a table, if you find them easier to read or to check.' },
       { id: 'ranking', target: '[data-testid="cmp-ranking"]', title: 'Who comes first', body: 'The branches in order, first being best. For void rate and discount rate lower is better; for cash difference, the closest to zero.' }
+    ]
+  },
+  {
+    key: 'messages', nav: 'messages', title: 'Messages', version: 1,
+    steps: [
+      { id: 'what', title: 'What the system sends', body: 'Every message ZestPoint sends to your people is kept here: in the app, by e-mail, by SMS or by WhatsApp, with how it went. A message that could not be sent stays with the reason.' },
+      { id: 'usage', target: '[data-testid="msg-usage"]', title: 'Paid messages', body: 'SMS and WhatsApp are paid messages: your plan includes a number each month. When they are used up, further ones go by e-mail and you are told once.' },
+      { id: 'channels', target: '[data-testid="msg-channels"]', title: 'Ways of sending', body: 'Each way says whether it is ready on this server. Send a test to yourself to see that it works, or why it does not.' },
+      { id: 'table', target: '[data-testid="msg-table"]', title: 'What was sent', body: 'Filter by way of sending or by how it went. Try again puts a failed message back in the queue.' }
     ]
   },
   {

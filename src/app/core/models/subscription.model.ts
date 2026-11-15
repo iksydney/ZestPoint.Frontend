@@ -39,6 +39,8 @@ export interface PlanDto {
   maxBranches: number | null;
   maxStaff: number | null;
   maxMonthlyOrders: number | null;
+  /** Paid messages (SMS and WhatsApp) a month. Null or 0: none included, so they go by e-mail. Unlike the limits above, null is not unlimited. */
+  monthlyMessageAllowance: number | null;
   trialDays: number;
   warningDays: number;
   graceDays: number;
@@ -62,6 +64,8 @@ export interface SavePlanRequest {
   maxBranches: number | null;
   maxStaff: number | null;
   maxMonthlyOrders: number | null;
+  /** Paid messages (SMS and WhatsApp) a month. Null or 0: none included, so they go by e-mail. Unlike the limits above, null is not unlimited. */
+  monthlyMessageAllowance: number | null;
   trialDays: number;
   warningDays: number;
   graceDays: number;
@@ -171,6 +175,13 @@ export interface NotificationDto {
   body: string;
   dateCreated: string;
   readAtUtc: string | null;
+  link: string | null;
+}
+
+/** The bell: how many the person has not read and the latest few. */
+export interface NotificationSummaryDto {
+  unread: number;
+  latest: NotificationDto[];
 }
 
 // ---- Platform administration ----------------------------------------------------------------------

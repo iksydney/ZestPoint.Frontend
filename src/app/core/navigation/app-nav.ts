@@ -172,6 +172,8 @@ export const APP_NAV: readonly NavDefinition[] = [
   { key: 'branding', label: 'Branding', route: '/app/settings/branding', icon: 'palette', permission: P.SETTINGS_BRANDING_VIEW, kind: 'screen' },
   { key: 'operations', label: 'Operations', route: '/app/settings/operations', icon: 'settings', permission: P.SETTINGS_COMPANY_MANAGE, kind: 'screen' },
   { key: 'branches', label: 'Branches', route: '/app/settings/branches', icon: 'branch', permission: P.BRANCHES_MANAGE, kind: 'screen' },
+  { key: 'messages', label: 'Messages', route: '/app/messages', icon: 'inbox', permission: P.MESSAGING_MANAGE, feature: FEATURES.MESSAGING, kind: 'screen',
+    load: () => import('../../features/messaging/messages.component').then((m) => m.MessagesComponent), description: 'What the system has sent to your people, whether it arrived, and what is left of the paid messages.' },
   { key: 'pos.stations', label: 'Preparation Stations', route: '/app/settings/stations', icon: 'grid', permission: P.POS_STATIONS_MANAGE, feature: FEATURES.CORE_POS, kind: 'screen',
     load: () => import('../../features/settings/stations.component').then((m) => m.StationsComponent), description: 'The bar, the kitchen and other places orders are prepared, and how each behaves.' },
   { key: 'pos.tables', label: 'Tables', route: '/app/settings/tables', icon: 'grid', permission: P.POS_TABLES_MANAGE, feature: FEATURES.CORE_POS, kind: 'screen', needsBranch: true,

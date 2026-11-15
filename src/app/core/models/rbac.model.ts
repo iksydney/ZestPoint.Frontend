@@ -86,6 +86,7 @@ export const SCREEN_PERMISSIONS = {
   REPORTS_SALES_ANALYSIS_VIEW: 'reports.sales_analysis.view',
   REPORTS_MULTI_CURRENCY_VIEW: 'reports.multi_currency.view',
   REPORTS_HEAD_OFFICE_VIEW: 'reports.head_office.view',
+  MESSAGING_MANAGE: 'messaging.manage',
   REPORTS_EXPORT: 'reports.export',
 
   STAFF_VIEW: 'staff.view',
@@ -121,7 +122,8 @@ export const FEATURES = {
   FINANCIAL_REPORTING: 'financial_reporting',
   ADVANCED_ANALYTICS: 'advanced_analytics',
   ENTERPRISE_API: 'enterprise_api',
-  HEAD_OFFICE: 'head_office'
+  HEAD_OFFICE: 'head_office',
+  MESSAGING: 'messaging'
 } as const;
 
 export type FeatureCode = (typeof FEATURES)[keyof typeof FEATURES];

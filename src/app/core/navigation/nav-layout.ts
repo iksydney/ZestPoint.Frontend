@@ -40,7 +40,7 @@ export const NAV_AREAS: readonly NavArea[] = [
   { key: 'purchasing', label: 'Purchasing', icon: 'truck', blurb: 'Order from suppliers, receive goods and pay for them.', screens: ['purchasing.orders', 'purchasing.receiving', 'purchasing.suppliers', 'purchasing.payments'] },
   { key: 'finance', label: 'Finance', icon: 'wallet', blurb: 'The ledger: accounts and the entries posted from sales, purchases and stock.', screens: ['ledger.accounts'] },
   { key: 'head', label: 'Head Office', icon: 'branch', blurb: 'All your branches together: how each is doing side by side, and the prices and menus they share.', screens: [], setup: ['stock.prices'] },
-  { key: 'admin', label: 'Admin', icon: 'settings', blurb: 'People, branches, settings, your brand and your subscription.', screens: ['staff', 'subscription', 'support'], setup: ['branches', 'pos.tables', 'pos.stations', 'operations', 'branding'] }
+  { key: 'admin', label: 'Admin', icon: 'settings', blurb: 'People, branches, settings, your brand and your subscription.', screens: ['staff', 'subscription', 'support'], setup: ['branches', 'pos.tables', 'pos.stations', 'operations', 'messages', 'branding'] }
 ];
 
 /** Reports that belong to another area than their key prefix suggests. */
@@ -164,6 +164,7 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
   'pos.tables': 'The tables at each branch. The till offers them and shows which have a bill running.',
   'pos.stations': 'The bar, the kitchen and other places orders are prepared: which items go where, and whether payment and stock wait for them.',
   'operations': 'Tax, payments, shifts, layby rules and other settings for how you trade.',
+  'messages': 'What the system has sent to your people in the app, by e-mail, SMS or WhatsApp, whether it arrived, and what is left of the paid messages.',
   'branding': 'Your name, logo and colours, on screen and on receipts.',
   'subscription': 'Your plan, what it includes and your invoices.',
   'support': 'Ask ZestPoint for help and follow your requests.'

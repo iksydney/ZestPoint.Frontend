@@ -6,7 +6,7 @@ import {
 } from '../models/access.model';
 import { ApiEnvelope } from '../models/api.model';
 import {
-  BillingEventDto, EntitlementStateDto, FeatureModuleDto, ItemDefault, LedgerEntryDto, ModeName, NotificationDto, PagedResult, PlanDto, PlatformOverviewDto,
+  BillingEventDto, EntitlementStateDto, FeatureModuleDto, ItemDefault, LedgerEntryDto, ModeName, NotificationDto, NotificationSummaryDto, PagedResult, PlanDto, PlatformOverviewDto,
   PlatformSessionDto, PlatformTenantDetailDto, PlatformTenantListItemDto, SavePlanRequest, SubscriptionDto, SubscriptionStatus
 } from '../models/subscription.model';
 import { toApiError, unwrap } from './api.util';
@@ -68,6 +68,10 @@ export class SubscriptionApi {
 
   notifications(unreadOnly = false): Observable<NotificationDto[]> {
     return this.http.get<ApiEnvelope<NotificationDto[]>>('/api/v1/notifications', { params: q({ unreadOnly }) }).pipe(unwrap());
+  }
+
+  noticeSummary(): Observable<NotificationSummaryDto> {
+    return this.http.get<ApiEnvelope<NotificationSummaryDto>>('/api/v1/notifications/summary').pipe(unwrap());
   }
 
   markRead(id: string): Observable<boolean> {

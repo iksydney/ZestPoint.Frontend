@@ -120,6 +120,7 @@ const LEDGER_LABEL: Record<string, string> = {
             <p class="mt-2 text-2xl font-bold">{{ p.priceMinor / 100 | currency: p.currencyCode }}<span class="text-sm font-normal text-ink/70"> / {{ p.interval === 'Yearly' ? 'year' : 'month' }}</span></p>
             <ul class="mt-2 space-y-0.5 text-sm">
               <li>{{ p.maxBranches ?? 'Unlimited' }} branch(es)</li><li>{{ p.maxStaff ?? 'Unlimited' }} staff</li><li>{{ p.maxMonthlyOrders === null ? 'Unlimited' : (p.maxMonthlyOrders | number) }} orders a month</li>
+              @if (p.monthlyMessageAllowance) { <li>{{ p.monthlyMessageAllowance | number }} SMS and WhatsApp messages a month</li> }
             </ul>
             <ul class="mt-2 flex-1 space-y-0.5 text-sm">
               @for (f of p.features; track f.featureKey) { <li>&#10003; {{ moduleName(f.featureKey) }}</li> }

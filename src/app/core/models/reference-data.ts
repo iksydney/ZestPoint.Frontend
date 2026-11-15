@@ -87,7 +87,8 @@ export const MODULE_LABELS: Readonly<Record<FeatureCode, string>> = {
   [FEATURES.FINANCIAL_REPORTING]: 'Financial reporting',
   [FEATURES.ADVANCED_ANALYTICS]: 'Advanced analytics',
   [FEATURES.ENTERPRISE_API]: 'Enterprise API & integrations',
-  [FEATURES.HEAD_OFFICE]: 'Head office'
+  [FEATURES.HEAD_OFFICE]: 'Head office',
+  [FEATURES.MESSAGING]: 'Messaging'
 };
 
 export const CHECKOUT_STYLE_LABELS: Readonly<Record<string, string>> = {

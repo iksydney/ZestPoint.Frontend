@@ -36,13 +36,14 @@ async function walk(page: Page, tour: TourDefinition): Promise<string[]> {
     const step = tour.steps.find((s) => s.id === id)!;
     await expect(page.getByTestId('tour-title'), `${tour.key}/${id}`).toHaveText(step.title);
     await expect(page.getByTestId('tour-body'), `${tour.key}/${id}`).toHaveText(step.body);
-    // The card is inside the window, whatever it is pointing at.
-    const box = (await page.getByRole('dialog', { name: step.title }).boundingBox())!;
+    // The card is inside the window, whatever it is pointing at. It slides to its place when the step changes, so it is looked at once it has settled.
     const view = page.viewportSize()!;
-    expect(box.x, `${tour.key}/${id} left`).toBeGreaterThanOrEqual(0);
-    expect(box.y, `${tour.key}/${id} top`).toBeGreaterThanOrEqual(0);
-    expect(box.x + box.width, `${tour.key}/${id} right`).toBeLessThanOrEqual(view.width + 1);
-    expect(box.y + box.height, `${tour.key}/${id} bottom`).toBeLessThanOrEqual(view.height + 1);
+    const card = page.getByRole('dialog', { name: step.title });
+    const edges = async () => { const b = (await card.boundingBox())!; return { left: b.x, top: b.y, right: b.x + b.width, bottom: b.y + b.height }; };
+    await expect.poll(async () => (await edges()).left, { message: `${tour.key}/${id} left` }).toBeGreaterThanOrEqual(0);
+    await expect.poll(async () => (await edges()).top, { message: `${tour.key}/${id} top` }).toBeGreaterThanOrEqual(0);
+    await expect.poll(async () => (await edges()).right, { message: `${tour.key}/${id} right` }).toBeLessThanOrEqual(view.width + 1);
+    await expect.poll(async () => (await edges()).bottom, { message: `${tour.key}/${id} bottom` }).toBeLessThanOrEqual(view.height + 1);
     expect(await host.getAttribute('data-tour-missing'), `${tour.key}: a step points at something that is not on screen`).toBe('');
 
     const last = (await page.getByTestId('tour-next').innerText()).trim() === 'Done';

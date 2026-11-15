@@ -14,7 +14,7 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 const MODULES = Object.values(FEATURES) as string[];
 
 const blank = (): SavePlanRequest => ({
-  code: '', name: '', description: '', priceMinor: 0, currencyCode: 'USD', interval: 'Monthly', maxBranches: null, maxStaff: null, maxMonthlyOrders: null,
+  code: '', name: '', description: '', priceMinor: 0, currencyCode: 'USD', interval: 'Monthly', maxBranches: null, maxStaff: null, maxMonthlyOrders: null, monthlyMessageAllowance: null,
   trialDays: 14, warningDays: 3, graceDays: 7, restrictionPolicy: 'LockedExceptBilling', isActive: true, isPublic: true, sortOrder: 10, features: [], rules: [], rowVersion: null
 });
 
@@ -27,11 +27,11 @@ const blank = (): SavePlanRequest => ({
   template: `
     <div class="mb-4 flex items-center justify-between"><h1 class="text-2xl font-bold">Plans</h1>@if (platform.can(perms.BILLING_MANAGE)) { <button type="button" class="btn-primary" data-testid="new-plan" (click)="openPlan(null)">New plan</button> }</div>
     @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert">{{ error() }}</p> }
-    <div class="app-card overflow-x-auto p-0"><table class="app-table" data-testid="plans-table"><thead><tr><th>Plan</th><th class="text-right">Price</th><th>Limits (branches / staff / orders)</th><th>Timing</th><th>Modules</th><th></th></tr></thead>
+    <div class="app-card overflow-x-auto p-0"><table class="app-table" data-testid="plans-table"><thead><tr><th>Plan</th><th class="text-right">Price</th><th>Limits (branches / staff / orders / paid messages)</th><th>Timing</th><th>Modules</th><th></th></tr></thead>
       <tbody>@for (p of plans(); track p.id) {
         <tr [attr.data-testid]="'plan-row-' + p.code"><td class="font-medium">{{ p.name }}<span class="block text-xs font-normal text-ink/60">{{ p.code }}</span> @if (!p.isActive) { <zp-status-badge tone="danger">Inactive</zp-status-badge> }@if (!p.isPublic) { <zp-status-badge tone="warning">Hidden</zp-status-badge> }</td>
           <td class="text-right">{{ p.priceMinor / 100 | currency: p.currencyCode }}<span class="block text-xs text-ink/60">per {{ p.interval === 'Yearly' ? 'year' : 'month' }}</span></td>
-          <td class="text-sm">{{ p.maxBranches ?? '&infin;' }} / {{ p.maxStaff ?? '&infin;' }} / {{ p.maxMonthlyOrders ?? '&infin;' }}</td>
+          <td class="text-sm">{{ p.maxBranches ?? '&infin;' }} / {{ p.maxStaff ?? '&infin;' }} / {{ p.maxMonthlyOrders ?? '&infin;' }} / {{ p.monthlyMessageAllowance || 'none' }}</td>
           <td class="text-sm">trial {{ p.trialDays }}d, remind {{ p.warningDays }}d, grace {{ p.graceDays }}d<span class="block text-xs text-ink/60">{{ p.restrictionPolicy === 'PerModule' ? 'per-module restriction' : 'locked except billing' }}</span></td>
           <td class="text-sm">{{ p.features.length }} of {{ allModules.length }}</td>
           <td class="text-right">@if (platform.can(perms.BILLING_MANAGE)) { <button type="button" class="btn-outline px-2 py-1 text-sm" [attr.data-testid]="'edit-plan-' + p.code" (click)="openPlan(p)">Edit</button> }</td></tr> }</tbody></table></div>
@@ -48,6 +48,7 @@ const blank = (): SavePlanRequest => ({
           <div><label class="app-label" for="p-mb">Max branches (blank = unlimited)</label><input id="p-mb" type="number" min="1" class="app-input" [ngModel]="f().maxBranches" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ maxBranches: $event ? +$event : null })" /></div>
           <div><label class="app-label" for="p-ms">Max staff</label><input id="p-ms" type="number" min="1" class="app-input" [ngModel]="f().maxStaff" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ maxStaff: $event ? +$event : null })" /></div>
           <div><label class="app-label" for="p-mo">Max orders a month</label><input id="p-mo" type="number" min="1" class="app-input" [ngModel]="f().maxMonthlyOrders" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ maxMonthlyOrders: $event ? +$event : null })" /></div>
+          <div><label class="app-label" for="p-mm">Paid messages a month (SMS and WhatsApp; blank or 0 = none included, they go by e-mail)</label><input id="p-mm" type="number" min="0" class="app-input" data-testid="plan-messages" [ngModel]="f().monthlyMessageAllowance" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ monthlyMessageAllowance: $event ? +$event : null })" /></div>
           <div><label class="app-label" for="p-td">Trial days</label><input id="p-td" type="number" min="0" class="app-input" [ngModel]="f().trialDays" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ trialDays: +$event })" /></div>
           <div><label class="app-label" for="p-wd">Reminder days before due</label><input id="p-wd" type="number" min="0" class="app-input" data-testid="plan-warning" [ngModel]="f().warningDays" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ warningDays: +$event })" /></div>
           <div><label class="app-label" for="p-gd">Grace days after due</label><input id="p-gd" type="number" min="0" class="app-input" data-testid="plan-grace" [ngModel]="f().graceDays" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ graceDays: +$event })" /></div>

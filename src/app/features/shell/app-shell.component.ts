@@ -20,6 +20,7 @@ import { AccountBannerComponent } from '../../shared/ui/account-banner.component
 import { CommandPaletteComponent } from '../../shared/ui/command-palette.component';
 import { ConfirmHostComponent, ToastHostComponent, ToastService } from '../../shared/ui/feedback';
 import { NavSidebarComponent } from '../../shared/ui/nav-sidebar.component';
+import { NoticesBellComponent } from '../../shared/ui/notices-bell.component';
 import { TourHostComponent } from '../../shared/ui/tour-host.component';
 
 /**
@@ -31,7 +32,7 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
 @Component({
   selector: 'zp-app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, BarDockComponent, CommandPaletteComponent, TourHostComponent, LockScreenComponent, ItemSavedPromptComponent, ShiftPromptComponent],
+  imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, BarDockComponent, CommandPaletteComponent, TourHostComponent, LockScreenComponent, ItemSavedPromptComponent, ShiftPromptComponent, NoticesBellComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="grid min-h-screen grid-cols-[minmax(0,1fr)] bg-canvas text-ink md:grid-cols-[17rem_minmax(0,1fr)] print:block" [attr.inert]="lock.locked() || shiftPrompt.mustStart() ? '' : null">
@@ -61,6 +62,8 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
             <button type="button" class="btn-ghost px-2 md:hidden" aria-label="Search screens and reports" data-testid="header-search" (click)="openSearch()">
               <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M21 21l-4.3-4.3M11 18a7 7 0 100-14 7 7 0 000 14" /></svg>
             </button>
+
+            <zp-notices-bell />
 
             <!-- Bar man method: the bell. It rings (with the number) when an order this person sent is ready, or one is waiting at the bar. -->
             @if (bar.active()) {
