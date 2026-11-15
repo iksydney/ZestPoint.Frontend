@@ -30,7 +30,7 @@ export class BarOrdersApi {
   ready(id: string): Observable<BarOrderDto> { return this.post(`/api/v1/bar-orders/${id}/ready`); }
 
   /** No item ids means every item still waiting on the order. */
-  cantMake(id: string, itemIds: string[], reason: string): Observable<BarOrderDto> { return this.post(`/api/v1/bar-orders/${id}/cant-make`, { itemIds, reason }); }
+  cantMake(id: string, itemIds: string[], reason: string, parts: { itemId: string; quantity: number }[] = []): Observable<BarOrderDto> { return this.post(`/api/v1/bar-orders/${id}/cant-make`, { itemIds, parts, reason }); }
 
   /** What I sent to the bar that is still in progress or needs me. */
   mine(branchId: string): Observable<BarOrderDto[]> {
@@ -272,7 +272,7 @@ export class BarStore {
   take(id: string): Promise<string | null> { return this.act(this.api.take(id), id); }
   release(id: string): Promise<string | null> { return this.act(this.api.release(id)); }
   ready(id: string): Promise<string | null> { return this.act(this.api.ready(id)); }
-  cantMake(id: string, itemIds: string[], reason: string): Promise<string | null> { return this.act(this.api.cantMake(id, itemIds, reason)); }
+  cantMake(id: string, itemIds: string[], reason: string, parts: { itemId: string; quantity: number }[] = []): Promise<string | null> { return this.act(this.api.cantMake(id, itemIds, reason, parts)); }
   acknowledge(id: string): Promise<string | null> { return this.act(this.api.acknowledge(id)); }
 
   private async act(call: Observable<BarOrderDto>, dismiss?: string): Promise<string | null> {

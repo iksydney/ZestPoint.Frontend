@@ -95,6 +95,11 @@ export class PurchasingWorkstationApi {
     return this.http.post<ApiEnvelope<WorkstationOrderDto>>(`${this.base}/orders/${id}/close-short`, { reason }).pipe(unwrap());
   }
 
+  /** Makes (once) the order's private web link and returns the order with it. */
+  shareLink(id: string): Observable<WorkstationOrderDto> {
+    return this.http.post<ApiEnvelope<WorkstationOrderDto>>(`${this.base}/orders/${id}/share-link`, {}).pipe(unwrap());
+  }
+
   email(id: string): Observable<EmailOrderResultDto> {
     return this.http.post<ApiEnvelope<EmailOrderResultDto>>(`${this.base}/orders/${id}/email`, {}).pipe(unwrap());
   }

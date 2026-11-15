@@ -18,6 +18,7 @@ import { InventoryApi, OperationSettingsApi } from '../../core/services/ops.serv
 import { BinApi, PurchasingWorkstationApi, ReceivingApi } from '../../core/services/purchasing.services';
 import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { ZpIconComponent } from '../../shared/ui/zp-icon.component';
+import { ShareLinksComponent } from '../../shared/ui/share-links.component';
 import { PoPrintSheetComponent } from './po-print-sheet.component';
 import { SupplierFormComponent, SupplierLookupComponent } from './supplier-dialogs.component';
 import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
@@ -66,7 +67,7 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
 @Component({
   selector: 'zp-po-workstation',
   standalone: true,
-  imports: [EntitledActionDirective, DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, SupplierLookupComponent, SupplierFormComponent, PoPrintSheetComponent, StockCardComponent],
+  imports: [EntitledActionDirective, DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, SupplierLookupComponent, SupplierFormComponent, PoPrintSheetComponent, StockCardComponent, ShareLinksComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="no-print flex flex-col gap-4 font-jakarta" data-testid="po-workstation">
@@ -196,7 +197,7 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
         </div>
         @if (scanNote()) { <p class="text-xs text-warning" role="status" data-testid="po-scan-note">{{ scanNote() }}</p> }
         <!-- Add SKU: the stock card for a brand-new item; once saved it goes straight onto this document. -->
-        @if (newItemOpen()) { <zp-stock-card [itemId]="null" [prefill]="newItemPrefill()" (savedItem)="onNewItem($event)" (closed)="newItemOpen.set(false)" /> }
+        @if (newItemOpen()) { <zp-stock-card [itemId]="null" afterSave="close" [prefill]="newItemPrefill()" (savedItem)="onNewItem($event)" (closed)="newItemOpen.set(false)" /> }
 
         <div class="overflow-x-auto rounded-lg bg-ink/5">
           <table class="w-full min-w-[60rem] text-left" data-testid="po-lines">
@@ -284,6 +285,7 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
         <div class="flex flex-wrap items-center gap-2">
           <button type="button" class="btn-outline h-11" data-testid="po-print" [disabled]="!doc()" (click)="print()"><zp-icon name="printer" [size]="18" /> Print <span class="po-kbd">F3</span></button>
           <button type="button" class="btn-outline h-11" data-testid="po-email" zpAction="inventory.purchase.manage" [disabled]="!doc()?.actions?.canEmail" [title]="doc()?.actions?.canEmail ? '' : 'Available once the order is approved and the supplier has an e-mail address'" (click)="email()"><zp-icon name="mail" [size]="18" /> E-mail order</button>
+          <button type="button" class="btn-outline h-11" data-testid="po-share" [disabled]="!doc() || sharing()" (click)="openShare()"><zp-icon name="mail" [size]="18" /> Share</button>
           <button type="button" class="btn-outline h-11" data-testid="po-tags" [disabled]="lines().length === 0" (click)="shelfTags()"><zp-icon name="tag" [size]="18" /> Print shelf tags</button>
           @if (editable()) { <button type="button" class="inline-flex h-11 items-center gap-2 rounded-lg border border-danger/40 bg-danger/10 px-3 text-sm font-semibold text-danger disabled:opacity-40" data-testid="po-void" [disabled]="selectedCount() === 0" (click)="voidSelected()"><zp-icon name="trash" [size]="18" /> Void selection</button> }
         </div>
@@ -305,6 +307,13 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
       </section>
     </div>
 
+    <!-- Sending the order to its supplier: a private web link that shows this one order without signing in -->
+    <zp-dialog [open]="!!shareLink()" title="Share this order" [wide]="true" (closed)="shareLink.set(null)">
+      @if (shareLink(); as link) {
+        <p class="mb-3 text-sm text-ink/80">Anyone you send this link to can see this order, as it would be printed, without signing in. They can see nothing else. The link stays the same for this order.</p>
+        <zp-share-links [link]="link" [message]="shareMessage()" [subject]="shareSubject()" [email]="doc()?.supplier?.email ?? null" [phone]="doc()?.supplier?.phone ?? null" qrHint="The supplier points their phone camera at this code to open the order." />
+      }
+    </zp-dialog>
     <zp-po-print-sheet [doc]="doc()" />
 
     <!-- Dialogs -->
@@ -874,6 +883,24 @@ export class PurchaseOrderWorkstationComponent implements OnInit {
   // ---- Output and leaving ---------------------------------------------------------------------------------------------------------
 
   protected print(): void { if (this.doc()) window.print(); }
+
+  // ---- sharing the order with its supplier ----
+  protected readonly shareLink = signal<string | null>(null);
+  protected readonly sharing = signal(false);
+  protected readonly shareSubject = computed(() => `${this.doc()?.documentNumber ?? 'Order'} from ${this.auth.tenant()?.name ?? 'us'}`);
+  protected readonly shareMessage = computed(() => `${this.shareSubject()}${this.doc()?.expectedDeliveryDate ? `, expected ${this.doc()!.expectedDeliveryDate!.slice(0, 10)}` : ''}. View or print it here:`);
+
+  /** Asks the server for the order's link (made the first time) and opens the box with the ways to send it. */
+  protected async openShare(): Promise<void> {
+    const d = this.doc();
+    if (!d || this.sharing()) return;
+    this.sharing.set(true);
+    try {
+      const withLink = d.shareToken ? d : await firstValueFrom(this.api.shareLink(d.id));
+      if (withLink.shareToken) this.shareLink.set(`${window.location.origin}/po/${withLink.shareToken}`);
+    } catch (err) { this.toast.error(toApiError(err).message); }
+    finally { this.sharing.set(false); }
+  }
 
   protected async copyNumber(): Promise<void> {
     try { await navigator.clipboard.writeText(this.doc()!.documentNumber); this.toast.info('Document number copied.'); } catch { this.toast.error('Your browser did not allow copying.'); }

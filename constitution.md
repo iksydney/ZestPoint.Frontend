@@ -120,6 +120,7 @@ When you find a bug, defect, risk, gap or debt outside your current task: **log 
 4. Docs and marketing MUST NOT claim unbuilt capabilities; label them "coming soon" or log them.
 5. Report outcomes faithfully: failing tests, skipped steps and unverified work are stated, not hidden.
 6. The constitution is amended deliberately, in all repos together, with a note on why.
+7. Commits, pull requests and repository history carry no AI-assistant attribution: no `Co-Authored-By` line naming an AI tool or its vendor, no "Generated with" line, no such name as author or committer. This holds for every future commit and overrides any tool default. (Owner's rule, 2026-11-15: the history is the company's own record.)
 
 ### Article 13. Never assume: ask in a modal prompt
 1. Ambiguity is resolved by asking, not by guessing. Triggers: more than one reasonable interpretation, a missing or unclear requirement, an unspecified default, a choice of technology/provider/library, a scope or priority call, a data-model or contract decision, a destructive step, missing credentials, or a prompt that appears cut off or incomplete.

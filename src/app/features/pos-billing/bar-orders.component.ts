@@ -54,7 +54,7 @@ const STATUS_LABEL: Record<BarOrderStatus, string> = {
             @for (o of bar.queue(); track o.id) {
               <zp-bar-order-card [order]="o" side="bar" [me]="bar.myId()" [now]="bar.now()" [busy]="busy()"
                                  (take)="run(bar.take($event))" (release)="run(bar.release($event))" (ready)="run(bar.ready($event), 'Dispatched. The attendant has been told.')"
-                                 (cantMake)="run(bar.cantMake($event.id, $event.itemIds, $event.reason), 'The attendant has been told.')" />
+                                 (cantMake)="run(bar.cantMake($event.id, $event.itemIds, $event.reason, $event.parts), 'The attendant has been told.')" />
             } @empty { <p class="app-card col-span-full py-8 text-center text-ink/70" data-testid="bar-queue-empty">No orders are waiting. New ones appear here by themselves.</p> }
           </div>
         </section>

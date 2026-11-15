@@ -76,7 +76,7 @@ import { BarOrderCardComponent } from './bar-order-card.component';
                 @for (o of ordered(); track o.id) {
                   <zp-bar-order-card [order]="o" side="bar" [me]="bar.myId()" [now]="bar.now()" [busy]="busy()"
                                      (take)="run(bar.take($event))" (release)="run(bar.release($event))" (ready)="run(bar.ready($event), 'Dispatched. The attendant has been told.')"
-                                     (cantMake)="run(bar.cantMake($event.id, $event.itemIds, $event.reason), 'The attendant has been told.')" />
+                                     (cantMake)="run(bar.cantMake($event.id, $event.itemIds, $event.reason, $event.parts), 'The attendant has been told.')" />
                 } @empty { <p class="py-6 text-center text-sm text-ink/70" data-testid="bar-empty">No orders are waiting at the bar.</p> }
               } @else {
                 @for (o of bar.mine(); track o.id) {
@@ -146,7 +146,8 @@ export class BarDockComponent {
 
   protected summary(o: BarOrderDto): string {
     const units = o.items.reduce((sum, i) => sum + i.quantity, 0);
-    return `${o.items.length} item${o.items.length === 1 ? '' : 's'} (${units}) · ${elapsed(o.sentAtUtc, this.bar.now())}`;
+    const kinds = new Set(o.items.map((i) => i.productName)).size;   // the same thing added twice is one item of two
+    return `${kinds} item${kinds === 1 ? '' : 's'} (${units}) · ${elapsed(o.sentAtUtc, this.bar.now())}`;
   }
 
   /** The items the bar could not make and the attendant has not confirmed, with the reasons. */

@@ -13,7 +13,7 @@ const UNIT: Record<string, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each'
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (doc(); as d) {
-      <section class="hidden bg-white p-6 font-jakarta text-sm text-black print:block" data-testid="po-print-sheet">
+      <section class="bg-white p-6 font-jakarta text-sm text-black print:block" [class.hidden]="!screen()" data-testid="po-print-sheet">
         <header class="flex items-start justify-between border-b border-black pb-3">
           <div><h1 class="font-syne text-2xl font-bold">{{ typeLabel() }}</h1><p class="font-data text-lg">{{ d.documentNumber }}</p></div>
           <div class="text-right"><p class="font-semibold">{{ company() }}</p><p>{{ d.branchName }}</p><p>Status: {{ status() }}</p><p>Created {{ d.dateCreated | date: 'd MMM yyyy' }} by {{ d.createdByName ?? 'unknown' }}</p></div>
@@ -47,7 +47,11 @@ const UNIT: Record<string, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each'
 export class PoPrintSheetComponent {
   private readonly auth = inject(AuthService);
   readonly doc = input.required<WorkstationOrderDto | null>();
-  protected readonly company = computed(() => this.auth.tenant()?.name ?? '');
+  /** Shown on screen as well as in print (the supplier's page); otherwise it appears only when printing. */
+  readonly screen = input(false);
+  /** The business's name when nobody is signed in (the supplier's page). */
+  readonly companyName = input<string | null>(null);
+  protected readonly company = computed(() => this.companyName() ?? this.auth.tenant()?.name ?? '');
   protected readonly typeLabel = computed(() => DOCUMENT_TYPES.find((t) => t.value === this.doc()?.documentType)?.short ?? 'Purchase order');
   protected readonly status = computed(() => (this.doc() ? STATUS_TEXT[this.doc()!.status] : ''));
   protected unit = (u: string): string => UNIT[u] ?? u;

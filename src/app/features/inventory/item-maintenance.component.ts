@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, effect, untracked } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
@@ -14,6 +14,8 @@ import { InventoryApi } from '../../core/services/ops.services';
 import { BranchPickerComponent } from '../../shared/ui/ops-chrome.components';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
+import { ItemFollowUpService } from '../../core/services/item-follow-up.service';
+import { ItemImportComponent } from './item-import.component';
 import { StockCardComponent } from './stock-card.component';
 
 const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
@@ -25,12 +27,13 @@ const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'ea
 @Component({
   selector: 'zp-item-maintenance',
   standalone: true,
-  imports: [EntitledActionDirective, DecimalPipe, FormsModule, RouterLink, StatusBadgeComponent, BranchPickerComponent, StockCardComponent],
+  imports: [EntitledActionDirective, DecimalPipe, FormsModule, RouterLink, StatusBadgeComponent, BranchPickerComponent, StockCardComponent, ItemImportComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Add / Modify Stock</h1>
-      <div class="flex items-center gap-4"><zp-branch-picker />@if (!readOnly()) { <button type="button" class="btn-primary" data-testid="item-new" zpAction="inventory.items.manage" (click)="openEdit(null)">New stock item</button> }</div>
+      <div class="flex items-center gap-4"><zp-branch-picker />@if (!readOnly()) { <button type="button" class="btn-outline" data-testid="item-import" zpAction="inventory.items.manage" (click)="importOpen.set(true)">Add many from a file</button> }
+        @if (!readOnly()) { <button type="button" class="btn-primary" data-testid="item-new" zpAction="inventory.items.manage" (click)="openEdit(null)">New stock item</button> }</div>
     </div>
     @if (readOnly()) { <p class="sys-alert sys-alert-warning mb-3" role="status">Read-only: your subscription limits this screen.</p> }
     @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert" data-testid="items-error">{{ error() }}</p> }
@@ -66,8 +69,9 @@ const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'ea
     </div>
     <p class="mt-2 text-sm text-ink/70">{{ total() }} item(s). Quantities change only through receipts, adjustments and stock takes.</p>
 
+    @if (importOpen()) { <zp-item-import (closed)="importOpen.set(false)" (imported)="load()" /> }
     @if (cardOpen()) {
-      <zp-stock-card [itemId]="cardId()" [siblings]="ids()" (savedItem)="onSaved()" (closed)="cardOpen.set(false)" (navigate)="cardId.set($event)" />
+      <zp-stock-card [itemId]="cardId()" [siblings]="ids()" [startTab]="cardTab()" (savedItem)="onSaved()" (closed)="cardOpen.set(false)" (navigate)="cardId.set($event)" />
     }
   `
 })
@@ -88,7 +92,19 @@ export class ItemMaintenanceComponent implements OnInit {
   protected readonly statusFilter = signal<'active' | 'inactive' | 'all'>('active');
   /** The stock card: open or not, and which item it shows (null = a new one). */
   protected readonly cardOpen = signal(false);
+  protected readonly importOpen = signal(false);
   protected readonly cardId = signal<string | null>(null);
+  /** The tab the card opens on: the set-up tabs when "finish setting this one up" was chosen after adding an item. */
+  protected readonly cardTab = signal<string | null>(null);
+  private readonly follow = inject(ItemFollowUpService);
+  private handledRequest = this.follow.request()?.n ?? 0;
+  /** The "saved, add another?" box asks this screen to open the card again: blank, or on the item just added. */
+  private readonly followRequests = effect(() => {
+    const r = this.follow.request();
+    if (!r || r.n <= this.handledRequest) return;
+    this.handledRequest = r.n;
+    untracked(() => { this.cardTab.set(r.action === 'finish' ? 'units' : null); this.cardId.set(r.id); this.cardOpen.set(true); });
+  }, { allowSignalWrites: true });
   /** The ids on screen, in order, so the card's Previous / Next walk the same list. */
   protected readonly ids = computed(() => this.items().map((i) => i.id));
 
@@ -121,12 +137,13 @@ export class ItemMaintenanceComponent implements OnInit {
   }
 
   protected openEdit(id: string | null): void {
+    this.cardTab.set(null);
     this.cardId.set(id);
     this.cardOpen.set(true);
   }
 
+  /** The list is read again; the card closes itself when it should (it stays open when a tab asked for the save). */
   protected onSaved(): void {
-    this.cardOpen.set(false);
     void this.load();
   }
 }

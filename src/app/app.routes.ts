@@ -225,5 +225,7 @@ export const routes: Routes = [
   },
   // A customer's receipt, opened from its web link without signing in.
   { path: 'r/:token', title: 'Your receipt', loadComponent: () => import('./features/receipt/public-receipt.page').then((m) => m.PublicReceiptPageComponent) },
+  // A purchase order, opened by its supplier from the link they were sent, without signing in.
+  { path: 'po/:token', title: 'Purchase order', loadComponent: () => import('./features/purchasing/public-purchase-order.page').then((m) => m.PublicPurchaseOrderPageComponent) },
   { path: '**', redirectTo: '' }
 ];

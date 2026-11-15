@@ -28,8 +28,16 @@ test.describe('Stock card', () => {
     await page.getByTestId('item-new').click();
     const card = page.getByTestId('stock-card');
     await expect(page.getByTestId('stock-card-title')).toHaveText('Stock card: new item');
-    await expect(page.getByTestId('item-save')).toBeDisabled();                         // a name is needed first
-    await expect(page.getByTestId('sc-tab-picture')).toBeDisabled();                     // the picture needs a saved item
+    // Save is never greyed out: pressed with nothing typed, it says what is missing and puts the cursor there.
+    await expect(page.getByTestId('item-save')).toBeEnabled();
+    await page.getByTestId('item-save').click();
+    await expect(page.getByTestId('item-problems')).toContainText('Item details (name)');
+    await expect(page.getByTestId('item-name')).toBeFocused();
+    await expect(card).toBeVisible();
+    // A tab that needs a saved item says the same instead of opening.
+    await page.getByTestId('sc-tab-picture').click();
+    await expect(page.getByTestId('item-problems')).toContainText('Item details (name)');
+    await expect(page.getByTestId('no-picture')).toHaveCount(0);
 
     await page.getByTestId('item-sku').fill('PC-100');
     await page.getByTestId('item-name').fill('Phone charger');
@@ -53,6 +61,7 @@ test.describe('Stock card', () => {
     await page.getByTestId('item-special-to').fill(localDateTime(1));
     await page.getByTestId('item-save').click();
     await expect(page.getByTestId('error-minimumPrice')).toContainText('above the special price');
+    await expect(page.getByTestId('item-problems')).toContainText('Minimum price');       // and it is listed by the Save button, in words
     await page.getByTestId('item-minimum-price').fill('700');
 
     await page.getByTestId('item-block-fractions').check();
@@ -67,6 +76,10 @@ test.describe('Stock card', () => {
     await page.getByTestId('item-save').click();
     await expect(card).toHaveCount(0);
     await expect(page.getByTestId('item-Phone charger')).toContainText('PC-100');
+    // The card has closed and a small box offers the next step; Done puts it away.
+    await expect(page.getByTestId('item-saved-name')).toHaveText('Phone charger');
+    await page.getByTestId('item-saved-done').click();
+    await expect(page.getByTestId('item-saved-prompt')).toHaveCount(0);
 
     // Reopened: everything typed is there, the figures are live, and the special is running.
     await page.getByTestId('item-edit-Phone charger').click();
@@ -79,7 +92,7 @@ test.describe('Stock card', () => {
     await expect(page.getByTestId('markup-specialPrice')).toHaveValue('50');
     await expect(page.getByTestId('item-block-fractions')).toBeChecked();
     await expect(page.getByTestId('item-block-discount')).toBeChecked();
-    await expect(page.getByTestId('item-edit-qty')).toBeChecked();
+    await expect(page.getByTestId('item-edit-qty')).toHaveCount(0);                      // every item has a quantity box at the till now
     await expect(page.getByTestId('item-tax')).toHaveValue('exempt');
     await expect(page.getByTestId('item-points')).toHaveValue('5');
     await expect(page.getByTestId('item-sales-ac').locator('option:checked')).toHaveText('4000 Sales');
@@ -99,6 +112,16 @@ test.describe('Stock card', () => {
     await expect(page.getByTestId('item-picture')).toBeVisible();
     await page.getByTestId('picture-file').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('not a picture') });
     await expect(page.getByTestId('picture-error')).toContainText('PNG, JPEG or WebP');
+
+    // Activity replaces History, Sales and Purchases: what has moved, and links to the full reports.
+    await expect(page.getByTestId('sc-tab-history')).toHaveCount(0);
+    await expect(page.getByTestId('sc-tab-sales')).toHaveCount(0);
+    await expect(page.getByTestId('sc-tab-purchases')).toHaveCount(0);
+    await page.getByTestId('sc-tab-activity').click();
+    await expect(page.getByTestId('activity-list')).toContainText('Nothing has moved yet');
+    await expect(page.getByTestId('link-history')).toBeVisible();
+    await expect(page.getByTestId('link-sales')).toBeVisible();
+    await expect(page.getByTestId('link-purchases')).toBeVisible();
 
     // Other part numbers still work from their tab.
     await page.getByTestId('sc-tab-aliases').click();
@@ -187,11 +210,10 @@ test.describe('Stock card', () => {
     await page.getByTestId('item-block-discount').check();
     await page.getByTestId('item-save').click();
     await expect(page.getByTestId('item-Bread')).toBeVisible();
-    // Gift card: one per line.
+    // Gift card: an ordinary item.
     await page.getByTestId('item-new').click();
     await page.getByTestId('item-name').fill('Gift card');
     await page.getByTestId('item-price').fill('500');
-    await page.getByTestId('item-edit-qty').uncheck();
     await page.getByTestId('item-save').click();
     await expect(page.getByTestId('item-Gift card')).toBeVisible();
 
@@ -206,7 +228,8 @@ test.describe('Stock card', () => {
     await expect(page.getByTestId('exempt-Bread')).toBeVisible();
     // 800 (no tax) + 500 + 10% of 500 = 1,350.00
     await expect(page.getByTestId('bill-total')).toContainText('1,350.00');
-    await expect(page.getByTestId('line-Gift card').getByRole('button', { name: 'More' })).toHaveCount(0);   // quantity is fixed
+    await expect(page.getByTestId('line-Gift card').getByTestId('line-qty')).toHaveValue('1');               // every item has its quantity box
+    await expect(page.getByTestId('line-Gift card').getByRole('button', { name: 'More' })).toBeVisible();
     await expect(page.getByTestId('line-Bread').getByRole('button', { name: 'More' })).toBeVisible();
     await expect(page.getByTestId('sync-pending')).toHaveCount(0, { timeout: 30_000 });
     await expect(page.getByTestId('bill-total')).toContainText('1,350.00');             // the server agrees with the till's own sum
@@ -216,16 +239,14 @@ test.describe('Stock card', () => {
     await ownerInApp(page);
     await page.goto('/app/inventory/items');
     await page.getByTestId('item-new').click();
-    await expect(page.getByTestId('sc-tab-units')).toBeDisabled();                       // units need a saved item
     await page.getByTestId('item-name').fill('Lager');
     await page.getByTestId('item-barcode').fill('6001000000017');
     await page.getByTestId('item-price').fill('1000');
     await page.getByTestId('item-tax').selectOption('exempt');
-    await page.getByTestId('item-save').click();
-    await expect(page.getByTestId('item-Lager')).toBeVisible();
-
-    await page.getByTestId('item-edit-Lager').click();
+    // Units need a saved item: the tab saves the new item by itself and opens, with the card still on screen.
     await page.getByTestId('sc-tab-units').click();
+    await expect(page.getByTestId('stock-card-title')).toHaveText('Stock card: Lager');
+    await expect(page.getByTestId('item-saved-prompt')).toHaveCount(0);
     await expect(page.getByTestId('unit-list')).toContainText('Sold singly only.');
     await expect(page.getByTestId('unit-add')).toBeDisabled();
     await page.getByTestId('unit-name').fill('Case');

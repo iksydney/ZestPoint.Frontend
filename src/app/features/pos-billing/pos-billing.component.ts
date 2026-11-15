@@ -35,8 +35,10 @@ interface BillRow {
   readonly total: number;
   readonly discount: number;
   readonly voidPending: boolean;
-  /** No quantity box: a serial-numbered unit, or an item sold one per line. */
+  /** No quantity box: a serial-numbered unit. */
   readonly locked: boolean;
+  /** Where the sent units are at the bar, one entry per state with its total. */
+  readonly states: readonly { readonly state: BarLineState; readonly quantity: number }[];
   /** The bar handed this line back (it could not make it): the attendant may change its quantity or take it off, with nobody's PIN. */
   readonly back: OrderLineDto | null;
 }
@@ -166,9 +168,12 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
                       @if (pk.mixed && pk.splitExempt + pk.splitExemptNoDiscount > 0) { <span class="app-badge bg-ink/10 text-ink/80" [attr.data-testid]="'part-exempt-' + r.name">part tax free</span> }
                       @if (pk.mixed && pk.splitNoDiscount + pk.splitExemptNoDiscount > 0) { <span class="app-badge bg-ink/10 text-ink/80">part no discount</span> }
                     }
+                    <!-- One mark per state with its total ("5 waiting at the bar"), however many times the item was sent. -->
+                    @for (s of r.states; track s.state) {
+                      <span class="app-badge" [class]="barTone(s.state)" [attr.data-testid]="'bar-state-' + r.name" [attr.data-quantity]="s.quantity">{{ s.quantity !== 1 || s.quantity !== r.quantity || r.states.length > 1 ? (s.quantity | number: '1.0-3') + ' ' : '' }}{{ barLabel(s.state) }}</span>
+                    }
                     @for (l of r.sent; track l.id) {
                       @if (l.barState) {
-                        <span class="app-badge" [class]="barTone(l.barState)" [attr.data-testid]="'bar-state-' + r.name">{{ r.sent.length > 1 || r.unsentQty > 0 ? (l.quantity | number: '1.0-3') + ' ' : '' }}{{ barLabel(l.barState) }}</span>
                         @if (l.barState === 'CantMake') { <p class="text-xs font-semibold text-danger" role="status" [attr.data-testid]="'handed-back-' + r.name">The bar handed this back: {{ l.barNote }}. Change the quantity or take it off, then Send again.</p> }
                       }
                     }
@@ -186,7 +191,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
                 </div>
                 @if (canEdit() && !readOnly()) {
                   <div class="mt-1 flex flex-wrap items-center gap-1">
-                    <!-- An item set to "one per line" on its stock card, and a serial-numbered unit, have no quantity box: add it again for another one. -->
+                    <!-- Only a serial-numbered unit has no quantity box: each unit has its own serial, so it is added again for another one. -->
                     @if (r.back; as b) {
                       <input type="number" inputmode="decimal" min="0" step="any" class="app-input h-9 w-20 px-1 py-0 text-center" [attr.aria-label]="'Quantity of ' + r.name" data-testid="line-qty" [disabled]="!online() || r.locked"
                              [value]="r.quantity" (focus)="$any($event.target).select()" (keydown.enter)="$any($event.target).blur()" (change)="changeBack(b, $any($event.target).value, $any($event.target))" />
@@ -202,11 +207,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
                     @if (!r.back) {
                     <span class="ml-auto flex flex-wrap items-center justify-end gap-1">
                       @if (r.unsent.length) { <button type="button" class="btn-ghost px-2 py-1 text-sm" [attr.data-testid]="'remove-' + r.name" (click)="removeUnsent(r)">{{ r.sentQty > 0 ? 'Remove unsent' : 'Remove' }}</button> }
-                      @if (canVoid()) {
-                        @for (l of r.sent; track l.id) {
-                          @if (!l.voidPending) { <button type="button" class="btn-ghost px-2 py-1 text-sm" [attr.data-testid]="'void-' + r.name" (click)="openVoid(l.id)">{{ r.sent.length > 1 ? 'Void ' + (l.quantity | number: '1.0-3') : 'Void' }}</button> }
-                        }
-                      }
+                      @if (canVoid() && r.sentQty > 0 && !r.voidPending) { <button type="button" class="btn-ghost px-2 py-1 text-sm" [attr.data-testid]="'void-' + r.name" (click)="openVoidRow(r)">Void</button> }
                     </span>
                     }
                   </div>
@@ -430,11 +431,24 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
       <form class="space-y-3" (submit)="$event.preventDefault(); submitVoid()" data-testid="void-dialog">
         <p class="text-sm text-ink/80">{{ voidLineId() ? 'The item is removed from the bill' : 'Every item is removed and the bill is closed as voided' }} as soon as a supervisor or an administrator authorises it. Stock is returned unless it was thrown away. The void is recorded with who asked and who authorised it.</p>
         @if (!online()) { <p class="sys-alert sys-alert-warning" role="status" data-testid="void-offline">A void needs a connection: the authoriser's details are checked by the server. Try again when this device is back online.</p> }
+        @if (voidRow(); as vr) {
+          @if (vr.sentQty > 1 && !vr.first.serialNumber) {
+            <div><label class="app-label" for="void-qty">How many {{ vr.name }} to void?</label>
+              <div class="flex items-center gap-2">
+                <button type="button" class="btn-outline h-10 w-10 p-0" aria-label="Fewer" [disabled]="voidQty() <= 1" (click)="voidQty.set(voidQty() - 1 < 1 ? voidQty() : voidQty() - 1)">-</button>
+                <input id="void-qty" type="number" inputmode="decimal" min="0" [max]="vr.sentQty" step="any" class="app-input h-10 w-24 text-center" data-testid="void-quantity" [ngModel]="voidQty()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="voidQty.set(+$event)" />
+                <button type="button" class="btn-outline h-10 w-10 p-0" aria-label="More" [disabled]="voidQty() >= vr.sentQty" (click)="voidQty.set(voidQty() + 1 > vr.sentQty ? vr.sentQty : voidQty() + 1)">+</button>
+                <span class="text-sm text-ink/80">of {{ vr.sentQty }} sent</span>
+              </div>
+              @if (voidQty() <= 0 || voidQty() > vr.sentQty) { <p class="app-error" role="alert">Between 1 and {{ vr.sentQty }}.</p> }
+            </div>
+          }
+        }
         <div><label class="app-label" for="void-reason">Reason</label><input id="void-reason" class="app-input" data-testid="void-reason" [ngModel]="voidReason()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="voidReason.set($event)" /></div>
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" data-testid="void-wasted" [checked]="voidWasted()" (change)="voidWasted.set(!voidWasted())" /> It was made and thrown away (keep the stock used)</label>
         @if (dialog() === 'void') { <zp-void-authoriser [clearSecret]="authAttempts()" (changed)="authorizer.set($event)" /> }
         @if (voidError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="void-error">{{ voidError() }}</p> }
-        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary touch-target" data-testid="void-confirm" [disabled]="voiding() || !online() || voidReason().trim().length < 3 || !authorizer()">{{ voiding() ? 'Checking...' : voidLineId() ? 'Void item' : 'Void bill' }}</button></div>
+        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary touch-target" data-testid="void-confirm" [disabled]="voiding() || !online() || voidReason().trim().length < 3 || !authorizer() || (voidRow() !== null && (voidQty() <= 0 || voidQty() > voidRow()!.sentQty))">{{ voiding() ? 'Checking...' : voidLineId() ? 'Void item' : 'Void bill' }}</button></div>
       </form>
     </zp-dialog>
 
@@ -643,6 +657,9 @@ export class PosBillingComponent implements OnInit {
   protected readonly shares = signal<readonly number[]>([]);
 
   protected readonly voidLineId = signal<string | null>(null);
+  /** The row being voided (so many of its sent units), or null for a single line or the whole bill. */
+  protected readonly voidRow = signal<BillRow | null>(null);
+  protected readonly voidQty = signal(1);
   protected readonly voidReason = signal('');
   protected readonly voidWasted = signal(false);
   protected readonly voidError = signal<string | null>(null);
@@ -707,7 +724,6 @@ export class PosBillingComponent implements OnInit {
       const list = groups.get(key);
       if (list) list.push(l); else groups.set(key, [l]);
     }
-    const products = this.store.products();
     return [...groups.entries()].map(([key, lines]) => {
       const first = lines[0]!;
       const sent = lines.filter((l) => l.confirmed);
@@ -719,7 +735,8 @@ export class PosBillingComponent implements OnInit {
         plainSentQty: q3(sum(sent.filter((l) => !l.barState), (l) => l.quantity)),
         total: Math.round(sum(lines, (l) => l.lineTotal) * 100) / 100, discount: Math.round(sum(lines, (l) => l.discountAmount) * 100) / 100,
         voidPending: lines.some((l) => l.voidPending),
-        locked: !!first.serialNumber || products.find((p) => p.id === first.productId)?.editQtyOnSales === false,
+        locked: !!first.serialNumber,
+        states: (['Waiting', 'Preparing', 'Ready', 'Collected', 'CantMake'] as const).map((state) => ({ state, quantity: q3(sum(sent.filter((l) => l.barState === state), (l) => l.quantity)) })).filter((x) => x.quantity > 0),
         back: first.barState === 'CantMake' ? first : null
       };
     });
@@ -919,7 +936,7 @@ export class PosBillingComponent implements OnInit {
 
   /** Takes off what has not been sent yet. For an item sold one per line that is one unit at a time, the last added first. */
   protected removeUnsent(r: BillRow): void {
-    const lines = r.locked ? r.unsent.slice(-1) : r.unsent;
+    const lines = r.locked ? r.unsent.slice(-1) : r.unsent;   // a serial-numbered unit comes off one at a time
     void this.run(async () => { for (const l of lines) await this.store.removeLine(l.id); });
   }
 
@@ -1074,7 +1091,15 @@ export class PosBillingComponent implements OnInit {
 
   // ---- void / discount / tip ----
   /** A line id voids that item; null voids the whole bill. */
+  /** Void on a row: asks how many of what was sent (one, when only one was). */
+  protected openVoidRow(r: BillRow): void {
+    this.openVoid(r.sent[r.sent.length - 1]?.id ?? null);
+    this.voidRow.set(r);
+    this.voidQty.set(r.sentQty > 1 ? 1 : r.sentQty);
+  }
+
   protected openVoid(lineId: string | null): void {
+    this.voidRow.set(null);
     this.voidLineId.set(lineId);
     this.voidReason.set('');
     this.voidWasted.set(false);
@@ -1091,7 +1116,9 @@ export class PosBillingComponent implements OnInit {
     this.voiding.set(true);
     this.voidError.set(null);
     try {
-      await this.store.voidWithAuthoriser(this.voidLineId(), this.voidReason().trim(), this.voidWasted(), authorizer);
+      const row = this.voidRow();
+      if (row) await this.store.voidUnits(row.sent, this.voidQty(), this.voidReason().trim(), this.voidWasted(), authorizer);
+      else await this.store.voidWithAuthoriser(this.voidLineId(), this.voidReason().trim(), this.voidWasted(), authorizer);
       this.dialog.set(null);
       this.authorizer.set(null);
       if (whole) this.store.close();

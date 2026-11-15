@@ -36,8 +36,9 @@ const STATUS_LABEL: Record<BarOrderStatus, string> = {
         @if (o.orderNotes) { <p class="mt-2 rounded-lg bg-ink/5 px-2 py-1 text-sm">Note: {{ o.orderNotes }}</p> }
 
         <ul class="mt-2 space-y-1.5" data-testid="bar-items">
-          @for (i of o.items; track i.id) {
-            <li class="flex items-start justify-between gap-2 text-sm" [class.opacity-60]="i.status === 'Cancelled'">
+          <!-- The same thing in the same state is one line with its total, however many times it was added: "3 x Beer", not three lines. -->
+          @for (i of collated(); track i.key) {
+            <li class="flex items-start justify-between gap-2 text-sm" [class.opacity-60]="i.status === 'Cancelled'" [attr.data-testid]="'bar-item-' + i.productName" [attr.data-quantity]="i.quantity">
               <div class="min-w-0">
                 <p class="font-medium" [class.line-through]="i.status === 'Cancelled'"><span class="font-bold">{{ i.quantity | number: '1.0-3' }} x</span> {{ i.productName }}@if (i.seat) { <span class="text-ink/70"> (seat {{ i.seat }})</span> }</p>
                 @for (m of i.modifiers; track m) { <p class="text-xs text-ink/70">+ {{ m }}</p> }
@@ -57,9 +58,15 @@ const STATUS_LABEL: Record<BarOrderStatus, string> = {
             @if (refusing()) {
               <form class="mt-3 space-y-2 rounded-lg border border-ink/15 p-2" (submit)="$event.preventDefault(); submitCantMake()" data-testid="bar-cant-form">
                 <fieldset>
-                  <legend class="app-label">Which items can't be made?</legend>
-                  @for (i of pending(); track i.id) {
-                    <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" [checked]="chosen().includes(i.id)" (change)="toggle(i.id)" /> {{ i.quantity | number: '1.0-3' }} x {{ i.productName }}</label>
+                  <legend class="app-label">How many of each can't be made?</legend>
+                  @for (g of pendingGroups(); track g.key) {
+                    <div class="flex min-h-11 items-center gap-2 text-sm">
+                      <input type="number" inputmode="decimal" min="0" [max]="g.quantity" step="any" class="app-input h-10 w-20 px-1 py-0 text-center" [attr.aria-label]="'How many ' + g.productName + ' cannot be made'" [attr.data-testid]="'bar-cant-qty-' + g.productName"
+                             [value]="cant()[g.key] || 0" (change)="setCant(g.key, $any($event.target).value, g.quantity, $any($event.target))" />
+                      <span class="min-w-0 flex-1">of {{ g.quantity | number: '1.0-3' }} x {{ g.productName }}@for (m of g.modifiers; track m) { <span class="text-ink/70"> + {{ m }}</span> }</span>
+                      <button type="button" class="btn-ghost px-2 py-1 text-xs" (click)="setCant(g.key, 0, g.quantity, null)">None</button>
+                      <button type="button" class="btn-ghost px-2 py-1 text-xs" (click)="setCant(g.key, g.quantity, g.quantity, null)">All</button>
+                    </div>
                   }
                 </fieldset>
                 <div>
@@ -68,7 +75,7 @@ const STATUS_LABEL: Record<BarOrderStatus, string> = {
                 </div>
                 <div class="flex justify-end gap-2">
                   <button type="button" class="btn-ghost" (click)="refusing.set(false)">Back</button>
-                  <button type="submit" class="btn-outline" data-testid="bar-cant-confirm" [disabled]="busy() || chosen().length === 0 || reason().trim().length < 3">Tell the attendant</button>
+                  <button type="submit" class="btn-outline" data-testid="bar-cant-confirm" [disabled]="busy() || cantTotal() === 0 || reason().trim().length < 3">Tell the attendant</button>
                 </div>
               </form>
             } @else {
@@ -102,17 +109,32 @@ export class BarOrderCardComponent {
   readonly take = output<string>();
   readonly release = output<string>();
   readonly ready = output<string>();
-  readonly cantMake = output<{ id: string; itemIds: string[]; reason: string }>();
+  readonly cantMake = output<{ id: string; itemIds: string[]; parts: { itemId: string; quantity: number }[]; reason: string }>();
   readonly acknowledge = output<string>();
 
   protected readonly refusing = signal(false);
-  protected readonly chosen = signal<readonly string[]>([]);
+  /** How many of each collated line cannot be made, by the line's key. */
+  protected readonly cant = signal<Readonly<Record<string, number>>>({});
+  protected readonly cantTotal = computed(() => Object.values(this.cant()).reduce((sum, n) => sum + n, 0));
   protected readonly reason = signal('');
 
   protected readonly place = computed(() => placeOf(this.order()));
   protected readonly age = computed(() => elapsed(this.order().sentAtUtc, this.now()));
   protected readonly isMine = computed(() => this.order().takenByMembershipId === this.me());
   protected readonly pending = computed(() => this.order().items.filter((i) => i.status === 'Pending'));
+
+  /** The items as the bar reads them: the same product, options, note, seat and state together, with the total. */
+  protected readonly collated = computed(() => {
+    const groups = new Map<string, { key: string; productName: string; quantity: number; seat: number | null; modifiers: readonly string[]; notes: string | null; status: string; cantMakeReason: string | null; ids: { id: string; quantity: number }[] }>();
+    for (const i of this.order().items) {
+      const key = [i.productName, (i.modifiers ?? []).join('+'), i.notes ?? '', i.seat ?? '', i.status, i.cantMakeReason ?? ''].join('|');
+      const g = groups.get(key);
+      if (g) { g.quantity = Math.round((g.quantity + i.quantity) * 1000) / 1000; g.ids.push({ id: i.id, quantity: i.quantity }); }
+      else groups.set(key, { key, productName: i.productName, quantity: i.quantity, seat: i.seat ?? null, modifiers: i.modifiers ?? [], notes: i.notes ?? null, status: i.status, cantMakeReason: i.cantMakeReason ?? null, ids: [{ id: i.id, quantity: i.quantity }] });
+    }
+    return [...groups.values()];
+  });
+  protected readonly pendingGroups = computed(() => this.collated().filter((g) => g.status === 'Pending'));
   protected readonly statusLabel = computed(() => STATUS_LABEL[this.order().status]);
 
   protected readonly badge = computed(() => {
@@ -138,20 +160,35 @@ export class BarOrderCardComponent {
     }
   });
 
+  /** Starts with everything marked, as most often nothing of the order can be made; the bar man lowers the numbers for what it can. */
   protected startRefusing(): void {
-    this.chosen.set(this.pending().map((i) => i.id));
+    this.cant.set(Object.fromEntries(this.pendingGroups().map((g) => [g.key, g.quantity])));
     this.reason.set('');
     this.refusing.set(true);
   }
 
-  protected toggle(id: string): void {
-    this.chosen.update((list) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]));
+  protected setCant(key: string, value: unknown, most: number, box: HTMLInputElement | null): void {
+    const typed = Number(value);
+    const quantity = Number.isFinite(typed) ? Math.max(0, Math.min(most, Math.round(typed * 1000) / 1000)) : 0;
+    this.cant.update((c) => ({ ...c, [key]: quantity }));
+    if (box) box.value = String(quantity);
   }
 
+  /** The numbers typed are shared out over the bill lines behind each collated line: whole lines where they fit, part of one for the rest. */
   protected submitCantMake(): void {
     const reason = this.reason().trim();
-    if (reason.length < 3 || this.chosen().length === 0) return;
-    this.cantMake.emit({ id: this.order().id, itemIds: [...this.chosen()], reason });
+    if (reason.length < 3 || this.cantTotal() === 0) return;
+    const itemIds: string[] = [];
+    const parts: { itemId: string; quantity: number }[] = [];
+    for (const g of this.pendingGroups()) {
+      let left = this.cant()[g.key] ?? 0;
+      for (const i of g.ids) {
+        if (left <= 0) break;
+        if (left >= i.quantity) itemIds.push(i.id); else parts.push({ itemId: i.id, quantity: Math.round(left * 1000) / 1000 });
+        left = Math.round((left - i.quantity) * 1000) / 1000;
+      }
+    }
+    this.cantMake.emit({ id: this.order().id, itemIds, parts, reason });
     this.refusing.set(false);
   }
 }

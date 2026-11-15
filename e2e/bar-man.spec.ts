@@ -117,7 +117,7 @@ test.describe('Bar man method', () => {
     await pinSignIn(waiter.page, who.slug, waiterCode, '7391');
     await tableWith(waiter.page, '12', 'Demo Gin & Tonic', 'Demo Gin & Tonic');
     await waiter.page.getByTestId('send-order').click();
-    await expect(waiter.page.getByTestId('bar-state-Demo Gin & Tonic').first()).toHaveText('waiting at the bar');
+    await expect(waiter.page.getByTestId('bar-state-Demo Gin & Tonic')).toHaveText('2 waiting at the bar');   // one mark with the total
 
     // The bar man's device shows the prompt by itself: the table, who asked, and how much.
     const prompt = barman.page.getByTestId('bar-prompt-Table 12');
@@ -137,7 +137,7 @@ test.describe('Bar man method', () => {
     await expect(barman.page.getByTestId('bar-dock-count')).toHaveCount(0);            // nothing is waiting to be taken any more
 
     // The attendant sees the bill follow along without touching anything, and nothing has left the shelf yet.
-    await expect(waiter.page.getByTestId('bar-state-Demo Gin & Tonic').first()).toHaveText('being prepared');
+    await expect(waiter.page.getByTestId('bar-state-Demo Gin & Tonic')).toHaveText('2 being prepared');
     expect(await ginOnHand(page)).toContain('2,100');
 
     await card.getByTestId('bar-ready').click();
@@ -154,7 +154,7 @@ test.describe('Bar man method', () => {
     await ready.getByTestId('bar-prompt-acknowledge').click();
     await expect(ready).toHaveCount(0);
     await expect(waiter.page.getByTestId('bar-bell')).toHaveAttribute('data-count', '0');
-    await expect(waiter.page.getByTestId('bar-state-Demo Gin & Tonic').first()).toHaveText('served');
+    await expect(waiter.page.getByTestId('bar-state-Demo Gin & Tonic')).toHaveText('2 served');
     // The bell opens the panel of what this person sent.
     await waiter.page.getByTestId('bar-bell').click();
     await expect(waiter.page.getByTestId('bar-panel')).toBeVisible();
@@ -204,7 +204,9 @@ test.describe('Bar man method', () => {
     await card.getByTestId('bar-take').click();
     await card.getByTestId('bar-cant').click();
     await expect(card.getByTestId('bar-cant-confirm')).toBeDisabled();                 // a reason is required
-    await card.getByRole('checkbox', { name: /Demo Canned Beans/ }).uncheck();          // only the cocktail cannot be made
+    await expect(card.getByTestId('bar-cant-qty-Demo Gin & Tonic')).toHaveValue('1');   // starts with everything marked
+    await card.getByTestId('bar-cant-qty-Demo Canned Beans').fill('0');                 // only the cocktail cannot be made
+    await card.getByTestId('bar-cant-qty-Demo Canned Beans').blur();
     await card.getByTestId('bar-cant-reason-input').fill('Out of tonic');
     await card.getByTestId('bar-cant-confirm').click();
     await expect(card.getByTestId('bar-cant-reason')).toHaveText("Can't make: Out of tonic");

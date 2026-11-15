@@ -13,6 +13,7 @@ import { InventoryApi } from '../../core/services/ops.services';
 import { SyncAgentService } from '../../core/services/sync-agent.service';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
+import { ItemFollowUpService } from '../../core/services/item-follow-up.service';
 import { StockCardComponent } from './stock-card.component';
 
 type Dialog = 'adjust' | 'receive' | 'transfer' | 'history' | null;
@@ -78,7 +79,7 @@ const UNIT_LABEL: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Eac
 
     <!-- New item and Edit open the stock card, the one place an item is set up (the same card as on the Items screen). -->
     @if (cardOpen()) {
-      <zp-stock-card [itemId]="cardId()" [siblings]="itemIds()" (savedItem)="load()" (closed)="cardOpen.set(false)" (navigate)="cardId.set($event)" />
+      <zp-stock-card [itemId]="cardId()" [siblings]="itemIds()" [startTab]="cardTab()" (savedItem)="load()" (closed)="cardOpen.set(false)" (navigate)="cardId.set($event)" />
     }
 
     <!-- Adjust -->
@@ -164,6 +165,17 @@ export class StockTabComponent {
   protected readonly lowOnly = signal(false);
   protected readonly cardOpen = signal(false);
   protected readonly cardId = signal<string | null>(null);
+  /** The tab the card opens on: the set-up tabs when "finish setting this one up" was chosen after adding an item. */
+  protected readonly cardTab = signal<string | null>(null);
+  private readonly follow = inject(ItemFollowUpService);
+  private handledRequest = this.follow.request()?.n ?? 0;
+  /** The "saved, add another?" box asks this screen to open the card again: blank, or on the item just added. */
+  private readonly followRequests = effect(() => {
+    const r = this.follow.request();
+    if (!r || r.n <= this.handledRequest) return;
+    this.handledRequest = r.n;
+    untracked(() => { this.cardTab.set(r.action === 'finish' ? 'units' : null); this.cardId.set(r.id); this.cardOpen.set(true); });
+  }, { allowSignalWrites: true });
   protected readonly itemIds = computed(() => this.items().map((i) => i.id));
   protected readonly canManageItems = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_ITEMS_MANAGE));
   protected readonly target = signal<InventoryItemDto | null>(null);
@@ -211,6 +223,7 @@ export class StockTabComponent {
 
   // ---- item ----
   protected openItem(i: InventoryItemDto | null): void {
+    this.cardTab.set(null);
     this.cardId.set(i?.id ?? null);
     this.cardOpen.set(true);
   }

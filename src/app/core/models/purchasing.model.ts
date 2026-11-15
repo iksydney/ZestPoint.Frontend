@@ -111,6 +111,8 @@ export interface WorkstationActionsDto {
 export interface ReceiptSummaryDto { id: string; number: number; status: ReceiptStatus; receivedAtUtc: string; receivedByName: string | null; totalValue: number | null; lineCount: number }
 
 export interface WorkstationOrderDto {
+  /** The secret of the order's web link (/po/{shareToken}) once someone has shared it. */
+  shareToken?: string | null;
   id: string;
   number: number;
   documentNumber: string;

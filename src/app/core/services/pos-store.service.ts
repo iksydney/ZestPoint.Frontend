@@ -221,9 +221,8 @@ export class PosStore {
     line.itemDiscountPercent = perUnit > 0 ? product.discountPercent ?? 0 : 0;
     line.discountAmount = round2(perUnit * quantity);
 
-    // The same thing again joins the line it is already on, unless that line has been sent, carries a serial number, or the item is
-    // sold one per line.
-    const mate = serialNumber || product.editQtyOnSales === false ? undefined
+    // The same thing again joins the line it is already on, unless that line has been sent or carries a serial number.
+    const mate = serialNumber ? undefined
       : o.lines.find((l) => l.status === 'Active' && !l.confirmed && !l.serialNumber && lineKey(l) === lineKey(line));
     if (mate) { await this.setQuantityNow(mate.id, round3(mate.quantity + quantity)); return; }
     await this.commit(
@@ -310,6 +309,23 @@ export class PosStore {
     this.requireEditable();
     const body = { reason, wasted, authorizer };
     await this.serverAction((id) => firstValueFrom(lineId ? this.ordersApi.voidLine(id, lineId, body) : this.ordersApi.voidOrder(id, body)), 'Voids');
+    await this.refreshBills();
+  }
+
+  /**
+   * Voids so many units of a row, under one authorisation. The row may be several lines underneath (sent at different times): the most
+   * recently sent go first, a whole line where it fits and part of one for the rest.
+   */
+  async voidUnits(lines: readonly OrderLineDto[], quantity: number, reason: string, wasted: boolean, authorizer: VoidAuthorizer): Promise<void> {
+    this.requireEditable();
+    let left = round3(quantity);
+    for (const line of [...lines].reverse()) {
+      if (left <= 0) break;
+      const take = Math.min(left, line.quantity);
+      const body = { reason, wasted, authorizer, ...(take < line.quantity ? { quantity: take } : {}) };
+      await this.serverAction((id) => firstValueFrom(this.ordersApi.voidLine(id, line.id, body)), 'Voids');
+      left = round3(left - take);
+    }
     await this.refreshBills();
   }
 

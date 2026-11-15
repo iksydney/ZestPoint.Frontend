@@ -1,3 +1,4 @@
+import { ItemSavedPromptComponent } from '../../shared/ui/item-saved-prompt.component';
 import { IdleLockService } from '../../core/services/idle-lock.service';
 import { LockScreenComponent } from '../../shared/ui/lock-screen.component';
 import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal, untracked } from '@angular/core';
@@ -28,7 +29,7 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
 @Component({
   selector: 'zp-app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, BarDockComponent, CommandPaletteComponent, TourHostComponent, LockScreenComponent],
+  imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, BarDockComponent, CommandPaletteComponent, TourHostComponent, LockScreenComponent, ItemSavedPromptComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="grid min-h-screen grid-cols-[minmax(0,1fr)] bg-canvas text-ink md:grid-cols-[17rem_minmax(0,1fr)] print:block" [attr.inert]="lock.locked() ? '' : null">
@@ -122,6 +123,7 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
     </div>
     <zp-command-palette [open]="searching()" (closed)="searching.set(false)" />
     <zp-tour-host />
+    <zp-item-saved-prompt />
     <zp-lock-screen />
   `,
   styles: [`

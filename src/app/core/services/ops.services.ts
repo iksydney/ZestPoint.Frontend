@@ -138,7 +138,7 @@ export class OrdersApi {
   }
 
   /** Voids a sent item. Needs the network: the server checks the authoriser's credentials at that moment. */
-  voidLine(id: string, lineId: string, body: { reason: string; wasted: boolean; authorizer: VoidAuthorizer }): Observable<OrderDto> {
+  voidLine(id: string, lineId: string, body: { reason: string; wasted: boolean; authorizer: VoidAuthorizer; quantity?: number }): Observable<OrderDto> {
     return this.http.post<ApiEnvelope<OrderDto>>(`/api/v1/orders/${id}/lines/${lineId}/void`, body).pipe(unwrap());
   }
 

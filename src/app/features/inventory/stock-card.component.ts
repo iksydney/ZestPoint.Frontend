@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AliasKind, ItemAliasDto, StockGroupDto } from '../../core/models/nav-ops.model';
-import { InventoryItemDto, PackageContentDto, PackageDto, SaveInventoryItemRequest, SellingUnitDto, StockUnit, SupplierDto } from '../../core/models/ops.model';
+import { InventoryItemDto, MovementDto, PackageContentDto, PackageDto, SaveInventoryItemRequest, SellingUnitDto, StockUnit, SupplierDto } from '../../core/models/ops.model';
 import { BinDto } from '../../core/models/purchasing.model';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { TenantTimePipe } from '../../core/pipes/tenant-time.pipe';
@@ -16,11 +16,12 @@ import { StockExtrasApi, StockGroupApi } from '../../core/services/nav-ops.servi
 import { InventoryApi } from '../../core/services/ops.services';
 import { BinApi } from '../../core/services/purchasing.services';
 import { utcToZoned, zonedToUtc } from '../../core/time-zone';
+import { ItemFollowUpService } from '../../core/services/item-follow-up.service';
 import { ToastService } from '../../shared/ui/feedback';
 import { ItemRecipeComponent } from './item-recipe.component';
 
 const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
-type Tab = 'details' | 'aliases' | 'units' | 'package' | 'recipe' | 'picture' | 'history' | 'sales' | 'purchases';
+type Tab = 'details' | 'aliases' | 'units' | 'package' | 'recipe' | 'picture' | 'activity';
 type PriceKey = 'sellingPrice' | 'tradePrice' | 'wholesalePrice' | 'resellerPrice' | 'bundlePrice' | 'specialPrice';
 
 const PRICE_LEVELS: readonly { key: PriceKey; label: string; testId: string }[] = [
@@ -87,7 +88,6 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
               <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-testid="item-expiry" [checked]="f().tracksBatches" (change)="patch({ tracksBatches: !f().tracksBatches })" /> Track expiry date</label>
               <label class="flex min-h-9 items-center gap-2" title="Stored on the item. The till does not read a scale for sales yet."><input type="checkbox" data-testid="item-use-scale" [checked]="!!f().useScale" (change)="patch({ useScale: !f().useScale })" /> Use scale <span class="text-xs text-ink/60">(stored)</span></label>
               <label class="flex min-h-9 items-center gap-2" title="Stored on the item. Receipts list every item today."><input type="checkbox" data-testid="item-print-invoice" [checked]="!!f().printOnInvoice" (change)="patch({ printOnInvoice: !f().printOnInvoice })" /> Print on invoice <span class="text-xs text-ink/60">(stored)</span></label>
-              <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-testid="item-edit-qty" [checked]="f().editQtyOnSales !== false" (change)="patch({ editQtyOnSales: f().editQtyOnSales === false })" /> Edit qty on sales</label>
               <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-testid="item-block-discount" [checked]="!!f().blockDiscount" (change)="patch({ blockDiscount: !f().blockDiscount })" /> Block discount</label>
               @if (fe('tracksSerials')) { <p class="app-error sm:col-span-2" role="alert">{{ fe('tracksSerials') }}</p> }
               @if (fe('blockQtyFractions')) { <p class="app-error sm:col-span-2" role="alert">{{ fe('blockQtyFractions') }}</p> }
@@ -104,7 +104,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
           <div class="flex flex-wrap gap-1 border-b border-ink/15 print:hidden" role="tablist" aria-label="Stock card sections">
             @for (t of tabs; track t.key) {
               <button type="button" role="tab" class="rounded-t-lg px-3 py-2 text-sm font-semibold" [class]="tab() === t.key ? 'bg-primary/15 text-ink' : 'text-ink/70 hover:bg-ink/10'" [attr.aria-selected]="tab() === t.key"
-                      [disabled]="t.needsItem && !saved()" [attr.title]="t.needsItem && !saved() ? 'Save the item first' : null" [attr.data-testid]="'sc-tab-' + t.key" (click)="tab.set(t.key)">{{ t.label }}</button>
+                      [attr.title]="t.needsItem && !saved() ? 'Opens once the item is saved: clicking saves it for you' : null" [attr.data-testid]="'sc-tab-' + t.key" (click)="pickTab(t.key, t.needsItem)">{{ t.label }}</button>
             }
           </div>
 
@@ -320,22 +320,43 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
               </div>
             }
 
-            @case ('history') {
-              <p class="text-sm text-ink/80">Every movement of this item (receipts, sales, adjustments, transfers), with dates and who did it.</p>
-              <a class="btn-outline" routerLink="/app/inventory/reports/items-history" [queryParams]="{ itemId: saved() }" data-testid="link-history" (click)="closed.emit()">Open Items History for this item</a>
-            }
             @case ('recipe') { <zp-item-recipe [productId]="item()?.productId ?? null" /> }
-            @case ('sales') {
-              <p class="text-sm text-ink/80">Sales of this item from the stock ledger. Last sold: {{ (item()?.lastSoldAtUtc | tenantTime) || 'never' }}.</p>
-              <a class="btn-outline" routerLink="/app/inventory/reports/transactions" [queryParams]="{ itemId: saved(), type: 'Sale' }" data-testid="link-sales" (click)="closed.emit()">Open the sales movements for this item</a>
-            }
-            @case ('purchases') {
-              <p class="text-sm text-ink/80">Goods received for this item. Still on order: {{ item()?.onOrderQuantity ?? 0 | number: '1.0-3' }}. Last purchase: {{ (item()?.lastReceiptAtUtc | tenantTime) || 'never' }}.</p>
-              <a class="btn-outline" routerLink="/app/inventory/reports/transactions" [queryParams]="{ itemId: saved(), type: 'Receipt' }" data-testid="link-purchases" (click)="closed.emit()">Open the receipts for this item</a>
+            @case ('activity') {
+              <div class="space-y-3" data-testid="activity-tab">
+                <dl class="grid gap-2 text-sm sm:grid-cols-3">
+                  <div class="rounded-lg border border-ink/10 p-2"><dt class="text-xs text-ink/70">Last sold</dt><dd class="font-semibold">{{ (item()?.lastSoldAtUtc | tenantTime) || 'Never' }}</dd></div>
+                  <div class="rounded-lg border border-ink/10 p-2"><dt class="text-xs text-ink/70">Last delivery</dt><dd class="font-semibold">{{ (item()?.lastReceiptAtUtc | tenantTime) || 'Never' }}</dd></div>
+                  <div class="rounded-lg border border-ink/10 p-2"><dt class="text-xs text-ink/70">Still on order</dt><dd class="font-semibold">{{ item()?.onOrderQuantity ?? 0 | number: '1.0-3' }}</dd></div>
+                </dl>
+                <div class="overflow-x-auto rounded-lg border border-ink/10">
+                  <table class="app-table" data-testid="activity-list"><caption class="sr-only">The latest stock movements of this item</caption>
+                    <thead><tr><th>When</th><th>What</th><th class="text-right">Quantity</th><th class="text-right">Stock after</th><th>Note</th></tr></thead>
+                    <tbody>
+                      @for (m of activity(); track m.id) {
+                        <tr><td class="whitespace-nowrap text-xs">{{ m.occurredAtUtc | tenantTime }}</td><td>{{ movementName(m.type) }}</td>
+                          <td class="text-right font-mono" [class.text-danger]="m.quantityDelta < 0">{{ m.quantityDelta > 0 ? '+' : '' }}{{ m.quantityDelta | number: '1.0-3' }}</td>
+                          <td class="text-right font-mono">{{ m.balanceAfter | number: '1.0-3' }}</td><td class="text-xs text-ink/80">{{ m.reasonNote }}</td></tr>
+                      } @empty { <tr><td colspan="5" class="py-6 text-center text-ink/70">{{ activityLoading() ? 'Loading...' : 'Nothing has moved yet: no deliveries, sales or adjustments at this branch.' }}</td></tr> }
+                    </tbody>
+                  </table>
+                </div>
+                <p class="text-xs text-ink/70">The latest 25 movements at {{ branches.active()?.name ?? 'this branch' }}. For everything, with filters:</p>
+                <div class="flex flex-wrap gap-2">
+                  <a class="btn-outline" routerLink="/app/inventory/reports/items-history" [queryParams]="{ itemId: saved() }" data-testid="link-history" (click)="closed.emit()">Full history</a>
+                  <a class="btn-outline" routerLink="/app/inventory/reports/transactions" [queryParams]="{ itemId: saved(), type: 'Sale' }" data-testid="link-sales" (click)="closed.emit()">Sales</a>
+                  <a class="btn-outline" routerLink="/app/inventory/reports/transactions" [queryParams]="{ itemId: saved(), type: 'Receipt' }" data-testid="link-purchases" (click)="closed.emit()">Deliveries</a>
+                </div>
+              </div>
             }
           }
 
           @if (formError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="stock-card-error">{{ formError() }}</p> }
+          @if (problems().length) {
+            <div class="sys-alert sys-alert-danger" role="alert" data-testid="item-problems">
+              <p class="font-semibold">This item cannot be saved yet:</p>
+              <ul class="ml-5 list-disc">@for (x of problems(); track x) { <li>{{ x }}</li> }</ul>
+            </div>
+          }
 
           <div class="flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3 print:hidden">
             <div class="flex flex-wrap gap-2">
@@ -348,7 +369,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
             </div>
             <div class="flex gap-2">
               <button type="button" class="btn-ghost" data-testid="sc-close" (click)="closed.emit()">Close (Esc)</button>
-              @if (!readOnly()) { <button type="submit" class="btn-primary touch-target" data-testid="item-save" [disabled]="saving() || !f().name.trim()">{{ saving() ? 'Saving...' : 'Save' }}</button> }
+              @if (!readOnly()) { <button type="submit" class="btn-primary touch-target" data-testid="item-save" [disabled]="saving()">{{ saving() ? 'Saving...' : 'Save' }}</button> }
             </div>
           </div>
           @if (saved() && !readOnly()) { <p class="text-right text-xs text-ink/60 print:hidden">Items are never deleted: deactivating hides the item and keeps all its sales and stock history.</p> }
@@ -375,6 +396,10 @@ export class StockCardComponent implements OnDestroy {
   /** The item to open, or null for a new one. */
   readonly itemId = input<string | null>(null);
   /** For a new item: what the person had already typed (a scanned code or a name). */
+  /** What happens once a NEW item is saved: 'ask' closes the card and offers to add another (the Items screens); 'close' just closes (a card opened from a purchase order). */
+  readonly afterSave = input<'ask' | 'close'>('ask');
+  /** The tab to open on, for "finish setting this one up". */
+  readonly startTab = input<string | null>(null);
   readonly prefill = input<{ name?: string; sku?: string; barcode?: string } | null>(null);
   /** The ids of the list the card was opened from, for Previous / Next. */
   readonly siblings = input<readonly string[]>([]);
@@ -387,7 +412,7 @@ export class StockCardComponent implements OnDestroy {
 
   protected readonly tabs: readonly { key: Tab; label: string; needsItem: boolean }[] = [
     { key: 'details', label: 'Details', needsItem: false }, { key: 'aliases', label: 'Equivalent part numbers', needsItem: true }, { key: 'units', label: 'Unit of measure', needsItem: true }, { key: 'package', label: 'Package content', needsItem: true }, { key: 'recipe', label: 'Recipe and options', needsItem: true }, { key: 'picture', label: 'Picture', needsItem: true },
-    { key: 'history', label: 'History', needsItem: true }, { key: 'sales', label: 'Sales', needsItem: true }, { key: 'purchases', label: 'Purchases', needsItem: true }
+    { key: 'activity', label: 'Activity', needsItem: true }
   ];
   protected readonly levels = PRICE_LEVELS;
   protected readonly priceErrors = ['sellingPrice', 'specialPrice', 'discountPercent', 'minimumPrice'] as const;
@@ -436,6 +461,52 @@ export class StockCardComponent implements OnDestroy {
   protected readonly canCost = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_COSTS_MANAGE));
   protected readonly canPrice = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.PRODUCTS_MANAGE));
   protected readonly activeGroups = computed(() => this.groups().filter((g) => g.isActive || g.id === this.f().groupId));
+  /** Tried to save: what is missing or was refused, in words, listed above the button. */
+  protected readonly attempted = signal(false);
+  private static readonly FIELD_NAMES: Readonly<Record<string, string>> = {
+    name: 'Item details (name)', sku: 'Part number (SKU)', barcode: 'Barcode', sellingPrice: 'Retail sell price', specialPrice: 'On special price', discountPercent: 'Discount %',
+    minimumPrice: 'Minimum price', reorderLevel: 'Reorder level', targetStock: 'Target stock', groupId: 'Stock group', supplierId: 'Default supplier', baseUnit: 'Units', kind: 'Item type',
+    tracksSerials: 'Track serial numbers', blockQtyFractions: 'Block qty fractions', purchaseUnitSize: 'Bought by the', specialCost: 'Special cost', salesAccountId: 'Sales A/C', purchaseAccountId: 'Purchase A/C'
+  };
+  protected readonly problems = computed<readonly string[]>(() => {
+    if (!this.attempted()) return [];
+    const list: string[] = [];
+    if (!this.f().name.trim()) list.push('Item details (name): type the item\'s name. It is the only thing an item must have.');
+    for (const [field, messages] of Object.entries(this.fieldErrors())) {
+      if (field === 'name' && !this.f().name.trim()) continue;
+      list.push(`${StockCardComponent.FIELD_NAMES[field] ?? field}: ${messages[0] ?? 'please check it.'}`);
+    }
+    return list;
+  });
+  private readonly follow = inject(ItemFollowUpService);
+  protected readonly activity = signal<readonly MovementDto[]>([]);
+  protected readonly activityLoading = signal(false);
+
+  protected movementName(type: string): string {
+    return ({ Opening: 'Opening stock', Receipt: 'Delivery', Sale: 'Sale', SaleReversal: 'Sale voided', Adjustment: 'Count corrected', Waste: 'Waste', Spillage: 'Spillage', Breakage: 'Breakage',
+      TransferIn: 'Transfer in', TransferOut: 'Transfer out', ConsignmentOut: 'Sent on consignment', ConsignmentReturn: 'Back from consignment' } as Record<string, string>)[type] ?? type;
+  }
+
+  /** A tab that belongs to a saved item: on a new item it saves first (when it can), then opens. */
+  protected async pickTab(key: Tab, needsItem: boolean): Promise<void> {
+    if (needsItem && !this.saved()) {
+      if (this.readOnly()) return;
+      await this.save(true);
+      if (!this.saved()) return;   // could not be saved: the reasons are listed above the Save button
+    }
+    this.tab.set(key);
+    if (key === 'activity') void this.loadActivity();
+  }
+
+  private async loadActivity(): Promise<void> {
+    const id = this.saved();
+    if (!id) return;
+    this.activityLoading.set(true);
+    try { this.activity.set((await firstValueFrom(this.inventory.movements({ itemId: id, branchId: this.branches.activeId() ?? undefined, pageSize: 25 }))).items); }
+    catch { this.activity.set([]); }
+    finally { this.activityLoading.set(false); }
+  }
+
   protected readonly title = computed(() => (this.saved() ? `Stock card: ${this.item()?.name ?? ''}` : 'Stock card: new item'));
   protected readonly unit = computed(() => UNIT[this.f().baseUnit]);
   protected readonly zone = computed(() => this.auth.tenant()?.timeZoneId || 'UTC');
@@ -448,11 +519,18 @@ export class StockCardComponent implements OnDestroy {
   protected readonly nextId = computed(() => { const i = this.siblings().indexOf(this.saved() ?? ''); return i >= 0 && i < this.siblings().length - 1 ? this.siblings()[i + 1]! : null; });
 
   constructor() {
+    this.follow.dismiss();   // a card is open: the box about the last item added has done its job
     void firstValueFrom(this.groupApi.list(true)).then((g) => this.groups.set(g)).catch(() => undefined);
     void firstValueFrom(this.inventory.suppliers()).then((s) => this.suppliers.set(s)).catch(() => undefined);
     void this.branches.load().then(() => this.loadBins());
     // Opening another item (Previous / Next, or a different row) reloads the card.
-    effect(() => { const id = this.itemId(); untracked(() => void this.open(id)); }, { allowSignalWrites: true });
+    effect(() => {
+      const id = this.itemId();
+      untracked(() => void this.open(id).then(() => {
+        const start = this.startTab();
+        if (start && this.saved() && this.tabs.some((t) => t.key === start)) void this.pickTab(start as Tab, true);
+      }));
+    }, { allowSignalWrites: true });
   }
 
   ngOnDestroy(): void { this.revokePicture(); }
@@ -555,8 +633,17 @@ export class StockCardComponent implements OnDestroy {
 
   // ---- Save ------------------------------------------------------------------------------------
 
-  protected async save(): Promise<void> {
+  /** `stay` keeps the card open afterwards (a tab asked for the save); otherwise a saved card closes. */
+  protected async save(stay = false): Promise<void> {
     if (this.saving() || this.readOnly()) return;
+    this.attempted.set(true);
+    if (!this.f().name.trim()) {
+      // Nothing is sent: say what is missing and put the cursor there.
+      this.fieldErrors.set({});
+      this.tab.set('details');
+      setTimeout(() => document.getElementById('sc-name')?.focus());
+      return;
+    }
     this.saving.set(true);
     this.fieldErrors.set({});
     this.formError.set(null);
@@ -573,8 +660,15 @@ export class StockCardComponent implements OnDestroy {
         catch (err) { this.toast.error(`The item was saved, but its bin was not: ${toApiError(err).message}`); }
       }
       this.adopt(await firstValueFrom(this.inventory.item(result.id, branch ?? undefined)).catch(() => result));
-      this.toast.success('Item saved.');
+      this.attempted.set(false);
       this.savedItem.emit(this.item()!);
+      if (stay) this.toast.success('Item saved.');
+      else {
+        // The card closes. After a new item, a small box offers to add another or to finish setting this one up.
+        if (isNew && this.afterSave() === 'ask') this.follow.itemAdded(result.id, this.item()?.name ?? body.name);
+        else this.toast.success('Item saved.');
+        this.closed.emit();
+      }
     } catch (err) {
       const e = toApiError(err) as ApiError;
       this.fieldErrors.set(e.fieldErrors);
