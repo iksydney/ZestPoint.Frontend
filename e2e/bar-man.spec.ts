@@ -253,7 +253,7 @@ test.describe('Bar man method', () => {
     await page.getByTestId('settings-save').click();
     await expect(page.getByTestId('settings-msg')).toHaveText('Saved.');
     await expect(page.getByTestId('bar-dock-button')).toBeVisible();
-    expect((await posMenu(page)).slice(0, 3)).toEqual(['Point of Sale', 'Start / End of Day', 'Bar Orders']);
+    expect((await posMenu(page)).slice(0, 4)).toEqual(['Point of Sale', 'Start / End of Day', 'My Sales', 'Bar Orders']);
 
     // A waiter takes part as an attendant (they have the button) but cannot open the bar's own screen.
     const waiterCode = await addPinStaff(page, 'Wale Waiter', 'waiter', '7391');

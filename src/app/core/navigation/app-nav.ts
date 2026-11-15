@@ -63,6 +63,8 @@ export const APP_NAV: readonly NavDefinition[] = [
     load: () => import('../../features/pos-billing/pos-billing.component').then((m) => m.PosBillingComponent), description: 'Open tabs, take orders and payments.' },
   { key: 'pos.day', label: 'Start / End of Day', route: '/app/pos/day-management', icon: 'clock', permission: P.POS_DAY_VIEW, feature: FEATURES.CORE_POS, group: 'pos', kind: 'screen', needsBranch: true, quickAccess: true,
     load: () => import('../../features/pos-billing/day-management.component').then((m) => m.DayManagementComponent), description: 'Start your shift, count the till and close.' },
+  { key: 'pos.sales', label: 'My Sales', route: '/app/pos/my-sales', icon: 'clipboard', permission: P.POS_SALES_VIEW_OWN, feature: FEATURES.CORE_POS, group: 'pos', kind: 'screen', needsBranch: true,
+    load: () => import('../../features/pos-billing/my-sales.component').then((m) => m.MySalesComponent), description: 'The bills you served or took payment on, and their receipts to share.' },
   // The bar man method. The menu offers it only to a company that uses the method (the shell filters on that); the route and the API are guarded as usual.
   { key: 'pos.bar', label: 'Bar Orders', route: '/app/pos/bar-orders', icon: 'inbox', permission: P.POS_BAR_ORDER_FULFIL, feature: FEATURES.CORE_POS, group: 'pos', kind: 'screen', needsBranch: true,
     load: () => import('../../features/pos-billing/bar-orders.component').then((m) => m.BarOrdersComponent), description: 'Orders sent by attendants: take, make and dispatch them.' },

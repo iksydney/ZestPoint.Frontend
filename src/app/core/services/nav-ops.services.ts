@@ -34,6 +34,11 @@ export class ShiftApi {
     return this.http.get<ApiEnvelope<ShiftDto>>(`/api/v1/pos/shifts/${id}`).pipe(unwrap());
   }
 
+  /** Tells the server the person was reminded to end a long shift and what they answered; it goes to the activity log. */
+  endReminder(id: string, answer: 'still_working' | 'end_now'): Observable<boolean> {
+    return this.http.post<ApiEnvelope<boolean>>(`/api/v1/pos/shifts/${id}/end-reminder`, { answer }).pipe(unwrap());
+  }
+
   open(body: OpenShiftRequest): Observable<ShiftDto> {
     return this.http.post<ApiEnvelope<ShiftDto>>('/api/v1/pos/shifts/open', body).pipe(unwrap());
   }

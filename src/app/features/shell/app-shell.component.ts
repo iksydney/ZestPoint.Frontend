@@ -1,4 +1,6 @@
 import { ItemSavedPromptComponent } from '../../shared/ui/item-saved-prompt.component';
+import { ShiftPromptComponent } from '../../shared/ui/shift-prompt.component';
+import { ShiftPromptService } from '../../core/services/shift-prompt.service';
 import { IdleLockService } from '../../core/services/idle-lock.service';
 import { LockScreenComponent } from '../../shared/ui/lock-screen.component';
 import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal, untracked } from '@angular/core';
@@ -29,10 +31,10 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
 @Component({
   selector: 'zp-app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, BarDockComponent, CommandPaletteComponent, TourHostComponent, LockScreenComponent, ItemSavedPromptComponent],
+  imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, BarDockComponent, CommandPaletteComponent, TourHostComponent, LockScreenComponent, ItemSavedPromptComponent, ShiftPromptComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="grid min-h-screen grid-cols-[minmax(0,1fr)] bg-canvas text-ink md:grid-cols-[17rem_minmax(0,1fr)] print:block" [attr.inert]="lock.locked() ? '' : null">
+    <div class="grid min-h-screen grid-cols-[minmax(0,1fr)] bg-canvas text-ink md:grid-cols-[17rem_minmax(0,1fr)] print:block" [attr.inert]="lock.locked() || shiftPrompt.mustStart() ? '' : null">
       <div class="hidden md:block print:hidden">
         <zp-nav-sidebar class="block h-screen md:sticky md:top-0" [currentUrl]="url()" [name]="branding()?.shortName ?? 'ZestPoint'" [initials]="branding()?.initialsFallback ?? 'ZP'" [logoUrl]="branding()?.logoUrl ?? null" (search)="openSearch()" />
       </div>
@@ -124,6 +126,7 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
     <zp-command-palette [open]="searching()" (closed)="searching.set(false)" />
     <zp-tour-host />
     <zp-item-saved-prompt />
+    <zp-shift-prompt />
     <zp-lock-screen />
   `,
   styles: [`
@@ -173,6 +176,8 @@ export class AppShellComponent {
     ];
   });
 
+  protected readonly shiftPrompt = inject(ShiftPromptService);
+
   constructor() {
     // Finds out whether the company uses the bar man method and, if this person takes part in it, starts the live connection.
     this.lock.start(); void this.bar.start();
@@ -180,7 +185,8 @@ export class AppShellComponent {
     // A tour the person has not seen starts once the screen they landed on has had a moment to draw. Never during first-time set-up.
     effect((onCleanup) => {
       const url = this.url();
-      if (url.includes('/onboarding') || this.auth.locked()) return;
+      // Not while a cashier is being asked to start their shift: the tour waits until the box is gone.
+      if (url.includes('/onboarding') || this.auth.locked() || this.shiftPrompt.mustStart()) return;
       const timer = setTimeout(() => void this.tour.arrived(url), 600);
       onCleanup(() => clearTimeout(timer));
     });

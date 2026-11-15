@@ -1,6 +1,6 @@
 import { Page, expect, test } from '@playwright/test';
 import { TOURS, TourDefinition, stepsSince } from '../src/app/core/tour/tours';
-import { newContext, registerViaUi } from './helpers';
+import { newContext, registerViaUi, startShiftWhenAsked } from './helpers';
 
 /**
  * The guided tours. A new person is shown round the application the first time they sign in, and round a main screen the first time
@@ -118,6 +118,7 @@ test.describe('Guided tours', () => {
     await staff.page.getByTestId('login-code').fill(code);
     await staff.page.getByTestId('login-pin').fill('7391');
     await staff.page.getByTestId('login-submit').click();
+    await startShiftWhenAsked(staff.page);                                              // the tour waits until the shift is started
     await expect(staff.page.getByTestId('tour')).toBeVisible({ timeout: 15_000 });
     const cashierSteps = await walk(staff.page, app);
     expect(cashierSteps).toContain('sell');

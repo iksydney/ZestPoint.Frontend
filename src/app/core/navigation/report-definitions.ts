@@ -68,6 +68,20 @@ export const REPORTS = {
   },
   /** Every voided item with who asked and who authorised it. Read by people who may authorise voids. */
   voidHistory: { path: 'pos/reports/void-history', period: 'range', branch: true, staff: 'Asked or authorised by', search: 'Item or reason' },
+  /** A person's own sales: the bills they served or took a payment on. The server shows nobody else's without the right to. */
+  mySales: {
+    path: 'pos/reports/my-sales', period: 'range', branch: true, amount: true, search: 'Bill number, customer, tab or table',
+    view: { label: 'Show', default: '', options: opts(['', 'Bills I served or took payment on'], ['served', 'Bills I served'], ['took', 'Bills I took payment on']) },
+    method: { label: 'Paid by', options: opts(['', 'Any method'], ['Cash', 'Cash'], ['Card', 'Card'], ['Transfer', 'Transfer']) },
+    status: { label: 'Status', options: opts(['', 'All'], ['paid', 'Paid in full'], ['part', 'Part paid'], ['refunded', 'With a refund']) }
+  },
+  /** The same, with a staff picker, for people who may see everyone's sales. */
+  mySalesAll: {
+    path: 'pos/reports/my-sales', period: 'range', branch: true, staff: 'Whose sales (yours if empty)', amount: true, search: 'Bill number, customer, tab or table',
+    view: { label: 'Show', default: '', options: opts(['', 'Bills served or paid with them'], ['served', 'Bills they served'], ['took', 'Bills they took payment on']) },
+    method: { label: 'Paid by', options: opts(['', 'Any method'], ['Cash', 'Cash'], ['Card', 'Card'], ['Transfer', 'Transfer']) },
+    status: { label: 'Status', options: opts(['', 'All'], ['paid', 'Paid in full'], ['part', 'Part paid'], ['refunded', 'With a refund']) }
+  },
   /** Every payment, with the filters an audit needs. */
   paymentsHistory: {
     path: 'pos/reports/payments-history', period: 'range', branch: true, staff: 'Staff member', amount: true, search: 'Bill number, customer, table or reference',

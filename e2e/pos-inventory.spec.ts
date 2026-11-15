@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { PASSWORD, newContext, registerViaUi } from './helpers';
+import { PASSWORD, newContext, registerViaUi, startShiftWhenAsked } from './helpers';
 
 /** Registers a company, publishes the starter brand and loads the labelled demonstration data (the dev environment allows it). */
 async function shopWithDemoData(page: Page) {
@@ -219,6 +219,7 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
     await cashier.page.getByTestId('login-pin').fill('7391');
     await cashier.page.getByTestId('login-submit').click();
     await expect(cashier.page).toHaveURL(/\/app\/(dashboard|pos)$/);
+    await startShiftWhenAsked(cashier.page);
     await cashier.page.getByTestId('main-nav').getByRole('link', { name: 'Point of Sale' }).click();
     // The cashier's own bill: a bill is worked on by whoever opened it.
     await expect(cashier.page.getByTestId('product-grid')).toContainText('Demo Canned Beans');

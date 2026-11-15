@@ -107,3 +107,16 @@ export async function setHex(page: Page, which: 'primary' | 'secondary' | 'backg
   const field = page.getByTestId(`hex-${which}`);
   await field.fill(value);
 }
+
+/**
+ * A cashier who signs in with no shift running must start one before anything else (owner's rule, 2026-11-15): the box is filled and
+ * the shift started, after which the application behind it can be used.
+ */
+export async function startShiftWhenAsked(page: Page, float = '0'): Promise<void> {
+  const box = page.getByTestId('shift-box');
+  await expect(box).toBeVisible();
+  await box.getByTestId('shift-box-float').fill(float);
+  await box.getByTestId('shift-box-confirm').check();
+  await box.getByTestId('shift-box-start').click();
+  await expect(box).toHaveCount(0);
+}
