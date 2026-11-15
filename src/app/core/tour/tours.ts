@@ -47,8 +47,8 @@ export const APP_TOUR = 'app';
 
 export const TOURS: readonly TourDefinition[] = [
   {
-    key: APP_TOUR, title: 'Welcome to ZestPoint', version: 2,
-    changes: [{ version: 2, steps: [{ id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Set-up has moved', body: 'Branches, Settings and Branding have left the menu. Things you set up once and change now and then are behind one Set-up entry: branches, tables, settings and your brand, each with a line on what it is for. Search finds them too.' }] }],
+    key: APP_TOUR, title: 'Welcome to ZestPoint', version: 3,
+    changes: [{ version: 2, steps: [{ id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Set-up has moved', body: 'Branches, Settings and Branding have left the menu. Things you set up once and change now and then are behind one Set-up entry: branches, tables, settings and your brand, each with a line on what it is for. Search finds them too.' }] }, { version: 3, steps: [{ id: 'head', target: '[data-tour="nav-area-head"]', menu: true, optional: true, title: 'Head Office', body: 'All your branches together: two reports (every branch side by side, and a comparison over time) behind its Reports entry, and Prices and Menus, which has moved here from Stock.' }] }],
     steps: [
       { id: 'welcome', title: 'Welcome', body: 'This takes about a minute. It shows where things are; you can leave at any time and take it again from Help.' },
       { id: 'menu', target: '[data-tour="nav"]', menu: true, title: 'The menu', body: 'Everything you can do is here, grouped by the job you are doing. You only see what your role allows. Click an area\'s name to fold it away.' },
@@ -57,6 +57,7 @@ export const TOURS: readonly TourDefinition[] = [
       { id: 'stock', target: '[data-tour="nav-area-stock"]', menu: true, optional: true, title: 'Stock', body: 'The items you sell, their groups and prices, counts and adjustments, where stock is kept, and goods out with agents.' },
       { id: 'purchasing', target: '[data-tour="nav-area-purchasing"]', menu: true, optional: true, title: 'Purchasing', body: 'Order from suppliers, check deliveries in and record what you pay.' },
       { id: 'finance', target: '[data-tour="nav-area-finance"]', menu: true, optional: true, title: 'Finance', body: 'The ledger. Nothing is typed into it: every sale, payment and delivery posts its own entry.' },
+      { id: 'head', target: '[data-tour="nav-area-head"]', menu: true, optional: true, title: 'Head Office', body: 'All your branches together: reports that put every branch side by side and compare them over time, and the prices and menus they share under Set-up.' },
       { id: 'admin', target: '[data-tour="nav-area-admin"]', menu: true, optional: true, title: 'Admin', body: 'Staff and their roles, your subscription and support. Branches, tables, settings and your brand are under Set-up.' },
       { id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Set-up', body: 'Things you set up once and change now and then are behind one Set-up entry: branches, tables, settings and your brand, each with a line on what it is for. Search finds them too.' },
       { id: 'reports', target: '[data-nav^="reports."]', menu: true, optional: true, title: 'Reports', body: 'Each area keeps its reports behind one Reports entry: a page listing them, each with a line on what it shows.' },
@@ -103,13 +104,33 @@ export const TOURS: readonly TourDefinition[] = [
     ]
   },
   {
-    key: 'stock.prices', nav: 'stock.prices', title: 'Prices and menus', version: 1,
+    key: 'stock.prices', nav: 'stock.prices', title: 'Prices and menus', version: 2,
+    changes: [{ version: 2, steps: [{ id: 'moved', title: 'Prices and Menus has moved', body: 'It is now under Head Office, in its Set-up page, beside the reports on your branches. It works as before.' }] }],
     steps: [
       { id: 'what', title: 'A price for every branch', body: 'The grid shows what each item costs at each branch and where the price comes from: the branch\'s own price, a price list it uses, or the company price.' },
       { id: 'change', target: '[data-testid="prices-change"]', title: 'Change prices', body: 'Tick items, then change the price for one branch, a price list or the whole company: set it, or raise or lower it by a percentage or an amount, now or from a date. A price below an item\'s minimum price is refused.' },
       { id: 'table', target: '[data-testid="prices-table"]', title: 'The grid', body: 'Not sold marks what a branch does not sell. Use Stop selling at to take items off one branch\'s till. History shows every change with who made it.' },
       { id: 'lists', target: '[data-testid="prices-tab-lists"]', title: 'Price lists', body: 'A price list holds prices for some branches, for example an airport or a happy hour. Say which branches use it, and on which days and times.' },
       { id: 'pending', target: '[data-testid="prices-tab-pending"]', title: 'Scheduled changes', body: 'A change set for a later date waits here and starts by itself. Cancel it here before it starts.' }
+    ]
+  },
+  {
+    key: 'head.report.overview', nav: 'head.report.overview', title: 'Head office overview', version: 1,
+    steps: [
+      { id: 'what', title: 'Every branch side by side', body: 'One row for each branch you may see, for the period you choose: net sales and each branch\'s share of them, how it moved on the period before, bills, discounts, voids, refunds, cash differences and stock. The bottom row adds them up.' },
+      { id: 'period', target: '[data-testid="report-filters"]', title: 'Choose the period', body: 'Pick the dates and press Apply. The change is against the period of the same length just before.' },
+      { id: 'summary', target: '[data-testid="report-summary"]', title: 'The headline', body: 'Net sales for all the branches together, the bills, the average bill and which branch sold most.' },
+      { id: 'table', target: '[data-testid="report-table"]', title: 'The branches', body: 'Click a column heading to sort by it. Export CSV and Print are at the top if your role allows them. You only see the branches your role covers, and the totals add up only those.' }
+    ]
+  },
+  {
+    key: 'head.report.compare', nav: 'head.report.compare', title: 'Branch comparison', version: 1,
+    steps: [
+      { id: 'what', title: 'Branches over time', body: 'Choose one measure and see your branches as lines on one chart, with a ranking underneath. Each branch keeps its colour.' },
+      { id: 'filters', target: '[data-testid="cmp-filters"]', title: 'Measure, dates and branches', body: 'Net sales, bills, average bill, void rate, discount rate, cash difference or top items, for the dates you choose. Tick branches to draw only those (up to eight), then press Apply.' },
+      { id: 'chart', target: '[data-testid="cmp-chart"]', optional: true, title: 'The chart', body: 'Move over it (or use the arrow keys) to read the figures of each day, week or month. A gap in a line means there was nothing to divide by, such as no bills that day.' },
+      { id: 'table', target: '[data-testid="cmp-table-details"]', optional: true, title: 'As a table', body: 'The same figures as a table, if you find them easier to read or to check.' },
+      { id: 'ranking', target: '[data-testid="cmp-ranking"]', title: 'Who comes first', body: 'The branches in order, first being best. For void rate and discount rate lower is better; for cash difference, the closest to zero.' }
     ]
   },
   {

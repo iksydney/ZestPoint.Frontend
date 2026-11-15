@@ -125,6 +125,10 @@ export const APP_NAV: readonly NavDefinition[] = [
     load: () => import('../../features/inventory/consignments.component').then((m) => m.ConsignmentsComponent), description: 'Goods sent to agents to sell for you: send, record sold and returned.' },
   { key: 'stock.prices', label: 'Prices and Menus', route: '/app/inventory/prices', icon: 'tag', permission: [P.PRODUCTS_PRICES_MANAGE, P.PRODUCTS_PRICES_MANAGE_BRANCH], feature: FEATURES.HEAD_OFFICE, group: 'stock', kind: 'screen',
     load: () => import('../../features/inventory/prices.component').then((m) => m.PricesComponent), description: 'What each item costs at each branch, price lists, what a branch sells, and scheduled changes.' },
+  { key: 'head.report.overview', label: 'Head Office Overview', route: '/app/head-office/overview', icon: 'branch', permission: P.REPORTS_HEAD_OFFICE_VIEW, feature: FEATURES.HEAD_OFFICE, kind: 'screen', data: { report: REPORTS.headOffice }, load: reportPage,
+    description: 'Every branch side by side for a period: sales, bills, discounts, voids, cash differences and stock, with each branch\'s share.' },
+  { key: 'head.report.compare', label: 'Branch Comparison', route: '/app/head-office/comparison', icon: 'chart', permission: P.REPORTS_HEAD_OFFICE_VIEW, feature: FEATURES.HEAD_OFFICE, kind: 'screen',
+    load: () => import('../../features/head-office/branch-comparison.component').then((m) => m.BranchComparisonComponent), description: 'One measure for your branches over time, who comes first, and what each sells most.' },
   report('stock.report.consignment', 'Consignment Out Report', 'inventory/reports/consignment-out', 'stock', REPORTS.consignmentOut, P.INVENTORY_CONSIGNMENT_MANAGE, FEATURES.INVENTORY, 'o', 'truck'),
 
   // ---- Purchasing --------------------------------------------------------------------------------

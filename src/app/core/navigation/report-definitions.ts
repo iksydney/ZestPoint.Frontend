@@ -42,6 +42,7 @@ export const REPORTS = {
   // ---- POS ---------------------------------------------------------------------------------------
   summaryIncome: {
     path: 'pos/reports/summary-income', period: 'range', branch: true, compare: true,
+    view: { label: 'Show', default: '', options: opts(['', 'Summary'], ['branch', 'Branch by branch']) },
     status: { label: 'Sales status', options: opts(['', 'All completed'], ['paid', 'Paid'], ['refunded', 'Refunded']) }
   },
   dailySales: {
@@ -66,6 +67,8 @@ export const REPORTS = {
     path: 'pos/reports/multi-currency', period: 'range', branch: true,
     view: { label: 'Show', default: 'currency', options: opts(['currency', 'By currency'], ['transactions', 'Bills in other currencies']) }
   },
+  /** Head office: every branch the person may see side by side for a period. The server adds each branch up and applies the person's own branches first. */
+  headOffice: { path: 'head-office/overview', period: 'range' },
   /** Every voided item with who asked and who authorised it. Read by people who may authorise voids. */
   voidHistory: { path: 'pos/reports/void-history', period: 'range', branch: true, staff: 'Asked or authorised by', search: 'Item or reason' },
   /** A person's own sales: the bills they served or took a payment on. The server shows nobody else's without the right to. */
@@ -90,7 +93,7 @@ export const REPORTS = {
   /** Every payment, with the filters an audit needs. */
   paymentsHistory: {
     path: 'pos/reports/payments-history', period: 'range', branch: true, staff: 'Staff member', amount: true, search: 'Bill number, customer, table or reference',
-    view: { label: 'Staff member as', default: '', options: opts(['', 'Served the bill or took the payment'], ['served', 'Served the bill'], ['took', 'Took the payment']) },
+    view: { label: 'Show', default: '', options: opts(['', 'Every payment (a staff member served the bill or took the payment)'], ['served', 'Every payment (a staff member served the bill)'], ['took', 'Every payment (a staff member took the payment)'], ['branch', 'Totals branch by branch']) },
     method: { label: 'Method', options: opts(['', 'All methods'], ['Cash', 'Cash'], ['Card', 'Card'], ['Transfer', 'Transfer']) },
     status: { label: 'Status', options: opts(['', 'All'], ['Succeeded', 'Succeeded'], ['Failed', 'Failed'], ['Pending', 'Pending'], ['refunded', 'With a refund']) },
     flag: { label: 'Only', options: opts(['', 'Everything'], ['tips', 'Payments with a tip'], ['refunded', 'Payments with a refund'], ['reference', 'With a reference'], ['noreference', 'Card or transfer without a reference']) }
@@ -98,7 +101,7 @@ export const REPORTS = {
   /** Tips collected per person, per bill, and what went out of them. */
   tips: {
     path: 'pos/reports/tips', period: 'range', branch: true, staff: 'Staff member',
-    view: { label: 'Show', default: 'staff', options: opts(['staff', 'By staff member'], ['bills', 'Every bill with a tip'], ['payouts', 'Payouts and donations']) }
+    view: { label: 'Show', default: 'staff', options: opts(['staff', 'By staff member'], ['branch', 'By branch'], ['bills', 'Every bill with a tip'], ['payouts', 'Payouts and donations']) }
   },
 
   /** What customers are waiting for. Waiting ones unless another status is chosen. */

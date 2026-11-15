@@ -10,7 +10,7 @@ import { NavDefinition, NavIcon } from './app-nav';
  * and every tour step must point at something on screen (e2e/tour.spec.ts).
  */
 
-export type NavAreaKey = 'sell' | 'customers' | 'stock' | 'purchasing' | 'finance' | 'admin';
+export type NavAreaKey = 'sell' | 'customers' | 'stock' | 'purchasing' | 'finance' | 'head' | 'admin';
 
 export interface NavArea {
   readonly key: NavAreaKey;
@@ -35,16 +35,17 @@ export const NAV_AREAS: readonly NavArea[] = [
   { key: 'customers', label: 'Customers', icon: 'users', blurb: 'The people you sell to: their points, their laybys and what they are waiting for.', screens: ['customers', 'pos.laybys', 'pos.backorders'] },
   {
     key: 'stock', label: 'Stock', icon: 'box', blurb: 'What you hold and sell: items, groups, counts and where things are.',
-    screens: ['inventory', 'stock.items', 'stock.groups', 'stock.adjust', 'stock.global', 'stock.bins', 'stock.labels', 'stock.consignment'], setup: ['stock.prices']
+    screens: ['inventory', 'stock.items', 'stock.groups', 'stock.adjust', 'stock.global', 'stock.bins', 'stock.labels', 'stock.consignment']
   },
   { key: 'purchasing', label: 'Purchasing', icon: 'truck', blurb: 'Order from suppliers, receive goods and pay for them.', screens: ['purchasing.orders', 'purchasing.receiving', 'purchasing.suppliers', 'purchasing.payments'] },
   { key: 'finance', label: 'Finance', icon: 'wallet', blurb: 'The ledger: accounts and the entries posted from sales, purchases and stock.', screens: ['ledger.accounts'] },
+  { key: 'head', label: 'Head Office', icon: 'branch', blurb: 'All your branches together: how each is doing side by side, and the prices and menus they share.', screens: [], setup: ['stock.prices'] },
   { key: 'admin', label: 'Admin', icon: 'settings', blurb: 'People, branches, settings, your brand and your subscription.', screens: ['staff', 'subscription', 'support'], setup: ['branches', 'pos.tables', 'pos.stations', 'operations', 'branding'] }
 ];
 
 /** Reports that belong to another area than their key prefix suggests. */
 const REPORT_AREA_OVERRIDES: Readonly<Record<string, NavAreaKey>> = { 'pos.report.laybys': 'customers', 'pos.report.backorders': 'customers' };
-const REPORT_AREA_BY_PREFIX: Readonly<Record<string, NavAreaKey>> = { pos: 'sell', stock: 'stock', purchasing: 'purchasing', ledger: 'finance' };
+const REPORT_AREA_BY_PREFIX: Readonly<Record<string, NavAreaKey>> = { pos: 'sell', stock: 'stock', purchasing: 'purchasing', ledger: 'finance', head: 'head' };
 
 /** A report is reached from its area's Reports page, not from the menu. */
 export const isReport = (n: NavDefinition): boolean => n.key.includes('.report.');
@@ -116,6 +117,8 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
   'stock.labels': 'Print shelf and barcode labels for items.',
   'stock.consignment': 'Goods sent to agents to sell for you: send, record sold and returned.',
   'stock.prices': 'What each item costs at each branch and why: price lists, what a branch sells, and changes scheduled for a date.',
+  'head.report.overview': 'Every branch side by side for a period: sales, bills, discounts, voids, cash differences and stock, with each branch\'s share and how it moved.',
+  'head.report.compare': 'One measure for your branches over time as a chart, a ranking of the branches, and what each one sells most.',
   'stock.report.items': 'Look up items and where they are held.',
   'stock.report.transactions': 'Every stock movement: receipts, sales, adjustments and transfers.',
   'stock.report.quantities': 'How much of each item is on hand.',

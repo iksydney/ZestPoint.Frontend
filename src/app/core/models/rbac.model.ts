@@ -85,6 +85,7 @@ export const SCREEN_PERMISSIONS = {
   REPORTS_STOCK_GROUP_SALES_VIEW: 'reports.stock_group_sales.view',
   REPORTS_SALES_ANALYSIS_VIEW: 'reports.sales_analysis.view',
   REPORTS_MULTI_CURRENCY_VIEW: 'reports.multi_currency.view',
+  REPORTS_HEAD_OFFICE_VIEW: 'reports.head_office.view',
   REPORTS_EXPORT: 'reports.export',
 
   STAFF_VIEW: 'staff.view',

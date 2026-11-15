@@ -138,6 +138,7 @@ const PAGE_SIZES = [25, 50, 100, 200] as const;
         <span>Generated {{ r.generatedAtUtc | tenantTime }} ({{ r.timeZoneId }})</span>
         @if (r.from) { <span>Period {{ date(r.from) }} to {{ date(r.to!) }}</span> }
         <span>Currency {{ r.currencyCode }}</span>
+        @if (definition().branch && branches.branches().length > 0) { <span class="app-badge app-badge-primary" data-testid="report-scope">{{ branchScope(r) }}</span> }
         @for (f of filterChips(r); track f.key) { <span class="app-badge app-badge-primary">{{ f.key }}: {{ f.value }}</span> }
       </div>
 
@@ -443,7 +444,15 @@ export class ReportViewComponent implements OnInit {
   }
 
   protected filterChips(r: ReportDto): { key: string; value: string }[] {
-    return Object.entries(r.filters).filter(([k]) => k !== 'view').map(([key, value]) => ({ key, value }));
+    return Object.entries(r.filters).filter(([k]) => k !== 'view' && k !== 'branch').map(([key, value]) => ({ key, value }));
+  }
+
+  /** Which branches the figures cover, in words: one branch by name, or all of the ones this person may see. */
+  protected branchScope(r: ReportDto): string {
+    const list = this.branches.branches();
+    const one = r.filters['branch'];
+    if (one) return list.find((b) => b.id === one)?.name ?? 'One branch';
+    return list.length > 1 ? 'All my branches' : list[0]?.name ?? 'All branches';
   }
 
   protected toggleColumn(key: string): void {

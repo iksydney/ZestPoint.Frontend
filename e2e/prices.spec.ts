@@ -39,8 +39,8 @@ test.describe('Prices and menus', () => {
     await newItem(page, 'Lager', '1000');
     await newItem(page, 'Cola', '500');
 
-    // The screen is behind Stock > Set-up, and shows each item at each branch.
-    await page.locator('[data-nav="setup.stock"]').click();
+    // The screen is behind Head Office > Set-up, and shows each item at each branch.
+    await page.locator('[data-nav="setup.head"]').click();
     await page.locator('[data-testid="hub-list"] [data-nav="stock.prices"]').click();
     await expect(page.getByTestId('prices-table')).toBeVisible();
     await expect(page.getByTestId('price-row-Lager')).toBeVisible();                             // the table shows before its rows arrive
