@@ -2,6 +2,6 @@
 export const environment = {
   production: false,
   /** Absolute API root without trailing slash. Empty = same-origin relative /api (dev proxy). */
-  apiBaseUrl: "https://localhost:7021/api",
+  apiBaseUrl: "",
   siteUrl: "http://localhost:4200"
 };
