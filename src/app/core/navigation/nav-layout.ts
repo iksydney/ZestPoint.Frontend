@@ -40,7 +40,7 @@ export const NAV_AREAS: readonly NavArea[] = [
   { key: 'purchasing', label: 'Purchasing', icon: 'truck', blurb: 'Order from suppliers, receive goods and pay for them.', screens: ['purchasing.orders', 'purchasing.receiving', 'purchasing.suppliers', 'purchasing.payments'] },
   { key: 'finance', label: 'Finance', icon: 'wallet', blurb: 'The ledger: accounts and the entries posted from sales, purchases and stock.', screens: ['ledger.accounts'] },
   { key: 'head', label: 'Head Office', icon: 'branch', blurb: 'All your branches together: how each is doing side by side, and the prices and menus they share.', screens: [], setup: ['stock.prices'] },
-  { key: 'admin', label: 'Admin', icon: 'settings', blurb: 'People, branches, settings, your brand and your subscription.', screens: ['staff', 'subscription', 'support'], setup: ['branches', 'pos.tables', 'pos.stations', 'operations', 'messages', 'branding'] }
+  { key: 'admin', label: 'Admin', icon: 'settings', blurb: 'People, branches, settings, your brand and your subscription.', screens: ['staff', 'subscription', 'support'], setup: ['branches', 'pos.tables', 'pos.stations', 'operations', 'dailysummary', 'messages', 'branding'] }
 ];
 
 /** Reports that belong to another area than their key prefix suggests. */
@@ -92,6 +92,7 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
   'pos.kitchen': 'A station\'s tickets on a wall screen: tick items off, bump them when ready, call one back if it was a mistake.',
   'pos.report.prep': 'How long tickets wait for someone to start them, how long they take to make, and how long the guest waits.',
   'pos.report.income': 'Sales, discounts, tax, tips and payments for a period, in one summary.',
+  'pos.report.summary': 'How each day went: sales against last week, money taken, shifts, voids and discounts, stock and the best sellers. Built each morning and kept.',
   'pos.report.daily': 'Sales day by day.',
   'pos.report.staff': 'What each member of staff sold.',
   'pos.report.groups': 'Sales by stock group.',
@@ -164,6 +165,7 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
   'pos.tables': 'The tables at each branch. The till offers them and shows which have a bill running.',
   'pos.stations': 'The bar, the kitchen and other places orders are prepared: which items go where, and whether payment and stock wait for them.',
   'operations': 'Tax, payments, shifts, layby rules and other settings for how you trade.',
+  'dailysummary': 'Whether the daily summary is sent, at what time, and to whom: staff or anyone with an e-mail address or a number, for every branch or one.',
   'messages': 'What the system has sent to your people in the app, by e-mail, SMS or WhatsApp, whether it arrived, and what is left of the paid messages.',
   'branding': 'Your name, logo and colours, on screen and on receipts.',
   'subscription': 'Your plan, what it includes and your invoices.',

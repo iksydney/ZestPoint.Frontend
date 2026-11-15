@@ -144,6 +144,22 @@ export const TOURS: readonly TourDefinition[] = [
     ]
   },
   {
+    key: 'pos.report.summary', nav: 'pos.report.summary', title: 'Daily summary', version: 1,
+    steps: [
+      { id: 'what', title: 'How each day went', body: 'Yesterday and every earlier day, built once each morning and kept as it was: sales against the same day last week, money taken, shifts, voids and discounts, stock and what sold best. Choose a day on the left to read it; choose a branch to see just that one.' },
+      { id: 'setup', target: '[data-testid="sum-setup-link"]', optional: true, title: 'Who gets it', body: 'The summary can also be sent to you and to others each morning, in the app, by e-mail, SMS or WhatsApp. Set up who gets it, and at what time.' }
+    ]
+  },
+  {
+    key: 'dailysummary', nav: 'dailysummary', title: 'Daily summary set-up', version: 1,
+    steps: [
+      { id: 'when', target: '[data-testid="dss-when"]', title: 'On or off, and when', body: 'Switch the summary on and choose the time it goes each morning, in your company\'s time. It covers the day before.' },
+      { id: 'build', target: '[data-testid="dss-build"]', title: 'Look before the first morning', body: 'Build yesterday now makes the summary of a day that has none yet, so you can read it first. A day is never rebuilt once built: what was sent stays as it was.' },
+      { id: 'who', target: '[data-testid="dss-table"]', title: 'Who gets it', body: 'A member of staff, or anyone with an e-mail address or a phone number, for every branch or one, in the app, by e-mail, SMS or WhatsApp. A way that is not available yet says so.' },
+      { id: 'add', target: '[data-testid="dss-add"]', title: 'Add someone', body: 'Add yourself first to see what arrives. Then add the people who should have it each morning.' }
+    ]
+  },
+  {
     key: 'pos.kitchen', nav: 'pos.kitchen', title: 'Kitchen display', version: 1,
     steps: [
       { id: 'what', title: 'Your station\'s tickets', body: 'Choose the station this screen is for (Kitchen, Grill...). Its tickets appear by themselves, oldest first, and the screen remembers your choice.' },

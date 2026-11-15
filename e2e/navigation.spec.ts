@@ -4,7 +4,7 @@ import { newContext, pick, registerViaUi, startShiftWhenAsked } from './helpers'
 /** The menu contract: group, order, label and route of every screen (POS 9, Stock 22, Purchasing 16; Bar Orders is offered only to a company that uses the bar man method). */
 /** The menu as the owner of a new company sees it: working screens by area, in order, each area's reports behind one Reports entry. */
 const AREAS: [string, string[], number][] = [
-  ['sell', ['Point of Sale', 'Start / End of Day', 'My Sales', 'Tips'], 9],   // + My Sales (2026-11-15);   // + Tips, and the Tips Report and Payments History
+  ['sell', ['Point of Sale', 'Start / End of Day', 'My Sales', 'Tips'], 10],   // + Daily Summary (2026-11-15);   // + My Sales (2026-11-15);   // + Tips, and the Tips Report and Payments History
   ['customers', ['Customers', 'Laybys', 'Sales Back Orders'], 2],
   ['stock', ['Stock Overview', 'Items', 'Stock Groups', 'Adjustments', 'Bulk Changes', 'Bin Locations', 'Labels', 'Consignment Out'], 17],
   ['purchasing', ['Purchase Orders', 'Goods Receiving', 'Suppliers', 'Supplier Payments'], 12],
@@ -82,10 +82,10 @@ test.describe('Navigation', () => {
     await page.locator('[data-nav="reports.sell"]').click();
     await expect(page).toHaveURL(/\/app\/reports\/sell$/);
     await expect(page.getByRole('heading', { name: 'Sell reports' })).toBeVisible();
-    await expect(page.getByTestId('hub-list').locator('a')).toHaveCount(9);
+    await expect(page.getByTestId('hub-list').locator('a')).toHaveCount(10);
     await expect(page.locator('[data-testid="hub-list"] [data-nav="pos.report.voids"]')).toContainText('who authorised it');
     await expect(page.locator('[data-nav="reports.sell"]')).toHaveAttribute('aria-current', 'page');
-    await page.getByTestId('hub-filter').fill('daily');
+    await page.getByTestId('hub-filter').fill('daily sales');
     await expect(page.getByTestId('hub-list').locator('a')).toHaveCount(1);
     await page.locator('[data-testid="hub-list"] [data-nav="pos.report.daily"]').click();
     await expect(page).toHaveURL(/\/app\/pos\/reports\/daily-sales/);
@@ -134,7 +134,7 @@ test.describe('Navigation', () => {
         reports++;
       }
     }
-    expect(reports).toBe(45);   // + Head Office Overview and Branch Comparison (2026-11-15)
+    expect(reports).toBe(46);   // + Daily Summary (2026-11-15);   // + Head Office Overview and Branch Comparison (2026-11-15)
   });
 
   test('search (Ctrl+K) reaches any screen or report, by its old name too, and the keyboard moves through the menu', async ({ page }) => {

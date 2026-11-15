@@ -87,6 +87,8 @@ export const SCREEN_PERMISSIONS = {
   REPORTS_MULTI_CURRENCY_VIEW: 'reports.multi_currency.view',
   REPORTS_HEAD_OFFICE_VIEW: 'reports.head_office.view',
   MESSAGING_MANAGE: 'messaging.manage',
+  DAILY_SUMMARY_VIEW: 'reports.daily_summary.view',
+  DAILY_SUMMARY_MANAGE: 'settings.daily_summary.manage',
   REPORTS_EXPORT: 'reports.export',
 
   STAFF_VIEW: 'staff.view',
