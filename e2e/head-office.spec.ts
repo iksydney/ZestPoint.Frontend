@@ -54,7 +54,7 @@ test.describe('Head office', () => {
     const group = page.getByTestId('nav-group-head');
     if ((await group.getAttribute('aria-expanded')) === 'false') await group.click();
     await expect(page.locator('[data-group-list="head"] a span.truncate')).toHaveText(['Set-up', 'Reports']);
-    await expect(page.locator('[data-nav="reports.head"] .nav-count')).toHaveText('2');
+    await expect(page.locator('[data-nav="reports.head"] .nav-count')).toHaveText('3');
     await page.locator('[data-nav="setup.head"]').click();
     await expect(page.locator('[data-testid="hub-list"] [data-nav="stock.prices"]')).toBeVisible();
 

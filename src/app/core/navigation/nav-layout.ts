@@ -119,6 +119,7 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
   'stock.consignment': 'Goods sent to agents to sell for you: send, record sold and returned.',
   'stock.prices': 'What each item costs at each branch and why: price lists, what a branch sells, and changes scheduled for a date.',
   'head.report.overview': 'Every branch side by side for a period: sales, bills, discounts, voids, cash differences and stock, with each branch\'s share and how it moved.',
+  'head.report.loss': 'Unusual voids, discounts, refunds, cash differences, receipts, stock, tips, prices and open bills, found in what is recorded, ranked for each person and branch, and reviewed one by one. Pointers, never proof.',
   'head.report.compare': 'One measure for your branches over time as a chart, a ranking of the branches, and what each one sells most.',
   'stock.report.items': 'Look up items and where they are held.',
   'stock.report.transactions': 'Every stock movement: receipts, sales, adjustments and transfers.',

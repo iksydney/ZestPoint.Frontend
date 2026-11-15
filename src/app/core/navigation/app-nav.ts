@@ -174,6 +174,8 @@ export const APP_NAV: readonly NavDefinition[] = [
   { key: 'branches', label: 'Branches', route: '/app/settings/branches', icon: 'branch', permission: P.BRANCHES_MANAGE, kind: 'screen' },
   { key: 'messages', label: 'Messages', route: '/app/messages', icon: 'inbox', permission: P.MESSAGING_MANAGE, feature: FEATURES.MESSAGING, kind: 'screen',
     load: () => import('../../features/messaging/messages.component').then((m) => m.MessagesComponent), description: 'What the system has sent to your people, whether it arrived, and what is left of the paid messages.' },
+  { key: 'head.report.loss', label: 'Loss Prevention', route: '/app/head-office/loss-prevention', icon: 'clipboard', permission: P.LOSS_PREVENTION_VIEW, feature: FEATURES.LOSS_PREVENTION, kind: 'screen',
+    load: () => import('../../features/head-office/loss-prevention.component').then((m) => m.LossPreventionComponent), description: 'Unusual voids, discounts, cash differences and more, found in what is recorded, ranked and reviewed.' },
   { key: 'pos.report.summary', label: 'Daily Summary', route: '/app/pos/reports/daily-summary', icon: 'calendar', permission: P.DAILY_SUMMARY_VIEW, feature: FEATURES.CORE_POS, group: 'pos', kind: 'screen',
     load: () => import('../../features/reports/daily-summary.component').then((m) => m.DailySummaryComponent), description: 'How each day went: sales, money, shifts, anything unusual, stock and what sold best.' },
   { key: 'dailysummary', label: 'Daily Summary Set-up', route: '/app/settings/daily-summary', icon: 'calendar', permission: P.DAILY_SUMMARY_MANAGE, feature: FEATURES.CORE_POS, kind: 'screen',

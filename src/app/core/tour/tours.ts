@@ -144,6 +144,15 @@ export const TOURS: readonly TourDefinition[] = [
     ]
   },
   {
+    key: 'head.report.loss', nav: 'head.report.loss', title: 'Loss prevention', version: 1,
+    steps: [
+      { id: 'what', title: 'Unusual things, found for you', body: 'ZestPoint looks over what is already recorded each hour (voids, discounts, refunds, cash, receipts, stock, tips, prices and bills) and raises an alert for anything unusual. An alert is a pointer for you to look at, never proof.' },
+      { id: 'overview', target: '[data-testid="lp-tab-overview"]', title: 'Who stands out', body: 'The overview ranks people and branches by what was found, set against how much they sold, and says in words what each score is made of. You do not see yourself here.' },
+      { id: 'alerts', target: '[data-testid="lp-tab-alerts"]', title: 'Alerts', body: 'Each alert with what was found. Open one, look at the evidence, and mark it reviewed: no concern, or followed up with what you did. Nobody can review an alert about themselves.' },
+      { id: 'rules', target: '[data-testid="lp-tab-rules"]', title: 'Rules', body: 'The rules and their defaults. Change the number a rule looks for or its weight, or switch it off, if it does not suit how you trade.' }
+    ]
+  },
+  {
     key: 'pos.report.summary', nav: 'pos.report.summary', title: 'Daily summary', version: 1,
     steps: [
       { id: 'what', title: 'How each day went', body: 'Yesterday and every earlier day, built once each morning and kept as it was: sales against the same day last week, money taken, shifts, voids and discounts, stock and what sold best. Choose a day on the left to read it; choose a branch to see just that one.' },

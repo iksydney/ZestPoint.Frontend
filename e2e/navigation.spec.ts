@@ -9,7 +9,7 @@ const AREAS: [string, string[], number][] = [
   ['stock', ['Stock Overview', 'Items', 'Stock Groups', 'Adjustments', 'Bulk Changes', 'Bin Locations', 'Labels', 'Consignment Out'], 17],
   ['purchasing', ['Purchase Orders', 'Goods Receiving', 'Suppliers', 'Supplier Payments'], 12],
   ['finance', ['Chart of Accounts'], 3],
-  ['head', ['Set-up'], 2],   // Overview and Comparison are its reports; Prices and Menus is behind Set-up (2026-11-15)
+  ['head', ['Set-up'], 3],   // Overview and Comparison are its reports; Prices and Menus is behind Set-up (2026-11-15)
   ['admin', ['Staff', 'Subscription', 'Support', 'Set-up'], 0]   // Branches, Tables, Settings and Branding are behind Set-up (2026-11-15)
 ];
 
@@ -134,7 +134,7 @@ test.describe('Navigation', () => {
         reports++;
       }
     }
-    expect(reports).toBe(46);   // + Daily Summary (2026-11-15);   // + Head Office Overview and Branch Comparison (2026-11-15)
+    expect(reports).toBe(47);   // + Loss Prevention (2026-11-15);   // + Daily Summary (2026-11-15);   // + Head Office Overview and Branch Comparison (2026-11-15)
   });
 
   test('search (Ctrl+K) reaches any screen or report, by its old name too, and the keyboard moves through the menu', async ({ page }) => {
