@@ -199,6 +199,12 @@ export interface AppliedModifierDto { id: string; name: string; priceDelta: numb
 
 export interface OrderLineDto {
   id: string;
+  /** The station this line goes to or went to, when the company uses stations. */
+  stationName?: string | null;
+  /** Still waiting on a station that holds payment: the bill cannot be paid until it is made. */
+  holdsPayment?: boolean;
+  /** Stock for this line has left the shelf (at Send, or when its station marked it ready). */
+  stockDeducted?: boolean;
   productId: string;
   productName: string;
   unitPrice: number;
@@ -270,6 +276,9 @@ export interface BarOrderItemDto {
 export interface BarOrderDto {
   id: string;
   branchId: string;
+  /** The station this ticket is for (null only for tickets from before stations). */
+  stationId?: string | null;
+  stationName?: string | null;
   orderId: string;
   orderNumber: number;
   orderKind: OrderKind;
@@ -312,6 +321,21 @@ export interface PaymentDto {
   isDemo: boolean;
   completedAtUtc: string | null;
   refunded: number;
+}
+
+/** A preparation station (bar, kitchen, grill) and how it behaves. */
+export interface StationDto {
+  id: string;
+  name: string;
+  /** The bill cannot be paid until this station has marked its items ready. */
+  holdsPayment: boolean;
+  /** Stock leaves when the station marks the items ready; otherwise when the bill is sent. */
+  stockWhenReady: boolean;
+  isDefault: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  groupCount: number;
+  itemCount: number;
 }
 
 /** A table at a branch, and how many bills are running at it now. */
@@ -545,6 +569,8 @@ export interface InventoryItemDto {
   /** The item's own ledger accounts; null = as its stock group says, else the company's Sales / Stock account. */
   salesAccountId?: string | null;
   purchaseAccountId?: string | null;
+  /** Where this item is prepared, overriding its stock group's station; null = as the group says. */
+  stationId?: string | null;
   userPrompt?: string | null;
   notes?: string | null;
   onSpecial?: boolean;
@@ -628,6 +654,8 @@ export interface SaveInventoryItemRequest {
   /** The item's own ledger accounts; null = as its stock group says, else the company's Sales / Stock account. */
   salesAccountId?: string | null;
   purchaseAccountId?: string | null;
+  /** Where this item is prepared, overriding its stock group's station; null = as the group says. */
+  stationId?: string | null;
   userPrompt?: string | null;
   notes?: string | null;
   /** Cost of the most recent purchase; applied only with the cost right. */

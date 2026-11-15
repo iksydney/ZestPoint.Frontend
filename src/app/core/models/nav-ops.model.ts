@@ -150,9 +150,11 @@ export interface StockGroupDto {
   /** The ledger accounts for the group's sales and stock; null = the company's Sales / Stock account. */
   readonly salesAccountId?: string | null;
   readonly purchaseAccountId?: string | null;
+  /** Where the group's items are prepared; null = the company's default station. */
+  readonly stationId?: string | null;
 }
 
-export interface SaveStockGroupRequest { name: string; code: string | null; description: string | null; parentId: string | null; sortOrder: number; isActive: boolean; salesAccountId?: string | null; purchaseAccountId?: string | null }
+export interface SaveStockGroupRequest { name: string; code: string | null; description: string | null; parentId: string | null; sortOrder: number; isActive: boolean; salesAccountId?: string | null; purchaseAccountId?: string | null; stationId?: string | null }
 
 // ---- Adjustments -------------------------------------------------------------------------------
 

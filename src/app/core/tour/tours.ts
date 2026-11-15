@@ -103,6 +103,14 @@ export const TOURS: readonly TourDefinition[] = [
     ]
   },
   {
+    key: 'pos.stations', nav: 'pos.stations', title: 'Preparation stations', version: 1,
+    steps: [
+      { id: 'what', title: 'Where orders are prepared', body: 'A station is a place that makes what you sell: the bar, the kitchen, a grill. When someone presses Send, each station gets its own ticket with its items.' },
+      { id: 'add', target: '[data-testid="station-new"]', title: 'Add a station', body: 'Name it, and choose how it behaves: whether a bill waits for it before it can be paid (a bar usually does, a kitchen usually does not), and whether stock leaves when it is ready or when the bill is sent.' },
+      { id: 'list', target: '[data-testid="station-list"]', title: 'Your stations', body: 'Give each stock group a station on the Stock Groups screen, and one item its own on its stock card. The default station takes whatever has none. A station is switched off, never deleted.' }
+    ]
+  },
+  {
     key: 'pos.tables', nav: 'pos.tables', title: 'Tables', version: 1,
     steps: [
       { id: 'what', title: 'Your tables', body: 'List the tables of each branch once. When someone opens a table bill, the till offers the list and shows which tables already have a bill running. A name typed at the till still works for anything not listed.' },

@@ -38,12 +38,25 @@ interface BillRow {
   /** No quantity box: a serial-numbered unit. */
   readonly locked: boolean;
   /** Where the sent units are at the bar, one entry per state with its total. */
-  readonly states: readonly { readonly state: BarLineState; readonly quantity: number }[];
+  readonly states: readonly { readonly state: BarLineState; readonly station: string | null; readonly quantity: number }[];
   /** The bar handed this line back (it could not make it): the attendant may change its quantity or take it off, with nobody's PIN. */
   readonly back: OrderLineDto | null;
 }
 
 const q3 = (value: number): number => Math.round(value * 1000) / 1000;
+
+/** One mark per state and station with its total: "5 waiting at the bar", "2 ready to collect". */
+function stateMarks(sent: readonly OrderLineDto[]): readonly { readonly state: BarLineState; readonly station: string | null; readonly quantity: number }[] {
+  const order = ['Waiting', 'Preparing', 'Ready', 'Collected', 'CantMake'];
+  const marks = new Map<string, { state: BarLineState; station: string | null; quantity: number }>();
+  for (const l of sent) {
+    if (!l.barState) continue;
+    const key = `${l.barState}|${l.stationName ?? ''}`;
+    const m = marks.get(key);
+    if (m) m.quantity += l.quantity; else marks.set(key, { state: l.barState, station: l.stationName ?? null, quantity: l.quantity });
+  }
+  return [...marks.values()].sort((a, b) => order.indexOf(a.state) - order.indexOf(b.state)).map((m) => ({ ...m, quantity: q3(m.quantity) })).filter((m) => m.quantity > 0);
+}
 
 /** One part of a split payment: how it is paid, how much, and (cash) what was handed over or (card, transfer) its reference. */
 interface PayPart { readonly method: PaymentMethod; readonly amount: number; readonly tendered: number; readonly reference: string }
@@ -169,12 +182,13 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
                       @if (pk.mixed && pk.splitNoDiscount + pk.splitExemptNoDiscount > 0) { <span class="app-badge bg-ink/10 text-ink/80">part no discount</span> }
                     }
                     <!-- One mark per state with its total ("5 waiting at the bar"), however many times the item was sent. -->
-                    @for (s of r.states; track s.state) {
-                      <span class="app-badge" [class]="barTone(s.state)" [attr.data-testid]="'bar-state-' + r.name" [attr.data-quantity]="s.quantity">{{ s.quantity !== 1 || s.quantity !== r.quantity || r.states.length > 1 ? (s.quantity | number: '1.0-3') + ' ' : '' }}{{ barLabel(s.state) }}</span>
+                    @for (s of r.states; track s.state + '|' + s.station) {
+                      <span class="app-badge" [class]="barTone(s.state)" [attr.data-testid]="'bar-state-' + r.name" [attr.data-quantity]="s.quantity">{{ s.quantity !== 1 || s.quantity !== r.quantity || r.states.length > 1 ? (s.quantity | number: '1.0-3') + ' ' : '' }}{{ barLabel(s.state, s.station) }}</span>
                     }
                     @for (l of r.sent; track l.id) {
                       @if (l.barState) {
-                        @if (l.barState === 'CantMake') { <p class="text-xs font-semibold text-danger" role="status" [attr.data-testid]="'handed-back-' + r.name">The bar handed this back: {{ l.barNote }}. Change the quantity or take it off, then Send again.</p> }
+                        @if (l.barState === 'CantMake' && l.stockDeducted) { <p class="text-xs font-semibold text-danger" role="status" [attr.data-testid]="'cant-make-' + r.name">The {{ stationWord(l) }} cannot make this: {{ l.barNote }}. Void it to take it off the bill and give the stock back.</p> }
+                        @else if (l.barState === 'CantMake') { <p class="text-xs font-semibold text-danger" role="status" [attr.data-testid]="'handed-back-' + r.name">The {{ stationWord(l) }} handed this back: {{ l.barNote }}. Change the quantity or take it off, then Send again.</p> }
                       }
                     }
                     @if (r.plainSentQty > 0) { <span class="app-badge app-badge-success" [attr.data-testid]="'sent-' + r.name">{{ r.plainSentQty < r.quantity ? (r.plainSentQty | number: '1.0-3') + ' sent' : 'sent' }}</span> }
@@ -718,10 +732,13 @@ export class PosBillingComponent implements OnInit {
     const o = this.store.current();
     if (!o || !this.bar.enabled() || o.layby || o.consignmentSaleId || o.paymentUnlocked) return null;
     const lines = this.activeLines();
-    if (lines.some((l) => !l.confirmed)) return 'Send this bill to the bar first. Payment is taken once the bar has marked the order ready.';
-    const refused = lines.filter((l) => l.barState === 'CantMake').map((l) => l.productName);
-    if (refused.length) return `The bar could not make ${[...new Set(refused)].join(', ')}. Change its quantity or take it off before taking payment.`;
-    if (lines.some((l) => l.barState === 'Waiting' || l.barState === 'Preparing')) return 'Waiting for the bar: payment is taken once it marks this order ready.';
+    // The server says which lines wait on a station that holds payment (holdsPayment); a kitchen's lines never do.
+    const unsent = lines.find((l) => l.holdsPayment && !l.confirmed);
+    if (unsent) return `Send this bill to the ${this.stationWord(unsent)} first. Payment is taken once the ${this.stationWord(unsent)} has marked the order ready.`;
+    const refused = lines.filter((l) => l.barState === 'CantMake');
+    if (refused.length) return `The ${this.stationWord(refused[0]!)} could not make ${[...new Set(refused.map((l) => l.productName))].join(', ')}. Change its quantity or take it off before taking payment.`;
+    const waiting = lines.find((l) => l.holdsPayment && (l.barState === 'Waiting' || l.barState === 'Preparing'));
+    if (waiting) return `Waiting for the ${this.stationWord(waiting)}: payment is taken once it marks this order ready.`;
     return null;
   });
   protected readonly canUnlock = computed(() => this.online() && this.activeLines().length > 0);
@@ -736,7 +753,7 @@ export class PosBillingComponent implements OnInit {
   protected readonly rows = computed<readonly BillRow[]>(() => {
     const groups = new Map<string, OrderLineDto[]>();
     for (const l of this.activeLines()) {
-      const key = l.barState === 'CantMake' ? `back:${l.id}` : lineKey(l);   // what the bar handed back is a row of its own
+      const key = l.barState === 'CantMake' && !l.stockDeducted ? `back:${l.id}` : lineKey(l);   // what a station handed back before any stock left is a row of its own
       const list = groups.get(key);
       if (list) list.push(l); else groups.set(key, [l]);
     }
@@ -752,8 +769,8 @@ export class PosBillingComponent implements OnInit {
         total: Math.round(sum(lines, (l) => l.lineTotal) * 100) / 100, discount: Math.round(sum(lines, (l) => l.discountAmount) * 100) / 100,
         voidPending: lines.some((l) => l.voidPending),
         locked: !!first.serialNumber,
-        states: (['Waiting', 'Preparing', 'Ready', 'Collected', 'CantMake'] as const).map((state) => ({ state, quantity: q3(sum(sent.filter((l) => l.barState === state), (l) => l.quantity)) })).filter((x) => x.quantity > 0),
-        back: first.barState === 'CantMake' ? first : null
+        states: stateMarks(sent),
+        back: first.barState === 'CantMake' && !first.stockDeducted ? first : null
       };
     });
   });
@@ -815,9 +832,13 @@ export class PosBillingComponent implements OnInit {
     }, { allowSignalWrites: true });
   }
 
-  protected barLabel(state: BarLineState): string {
-    return { Waiting: 'waiting at the bar', Preparing: 'being prepared', Ready: 'ready to collect', Collected: 'served', CantMake: "bar can't make this" }[state];
+  protected barLabel(state: BarLineState, station: string | null = null): string {
+    const where = (station ?? 'bar').toLowerCase();
+    return { Waiting: `waiting at the ${where}`, Preparing: 'being prepared', Ready: 'ready to collect', Collected: 'served', CantMake: `${where} can't make this` }[state];
   }
+
+  /** The station a line goes to, for a sentence ("the bar", "the kitchen"). */
+  protected stationWord(l: OrderLineDto): string { return (l.stationName ?? 'bar').toLowerCase(); }
 
   protected barTone(state: BarLineState): string {
     return state === 'CantMake' ? 'app-badge-danger' : state === 'Waiting' ? 'app-badge-warning' : state === 'Preparing' ? 'app-badge-primary' : 'app-badge-success';

@@ -9,6 +9,7 @@ import { BinDto } from '../../core/models/purchasing.model';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { TenantTimePipe } from '../../core/pipes/tenant-time.pipe';
 import { ApiError, toApiError } from '../../core/services/api.util';
+import { StationsService } from '../../core/services/stations.service';
 import { LedgerAccountOptionDto, LedgerApi } from '../../core/services/ledger.services';
 import { AuthService } from '../../core/services/auth.service';
 import { BranchContextService } from '../../core/services/branch-context.service';
@@ -34,7 +35,7 @@ const blank = (): SaveInventoryItemRequest => ({
   averageCost: 0, supplierId: null, tracksBatches: false, tracksSerials: false, groupId: null, barcode: null, description: null, purchaseUnitName: null, purchaseUnitSize: null,
   reorderQuantity: 0, targetStock: null, listedOnWebStore: false, sellingPrice: null, tradePrice: null, wholesalePrice: null, resellerPrice: null, bundlePrice: null,
   specialPrice: null, specialFromUtc: null, specialToUtc: null, discountPercent: null, discountFromUtc: null, discountToUtc: null, minimumPrice: null, suggestedRetailPrice: null, lastCost: null, specialCost: null, specialCostFrom: null, specialCostTo: null,
-  blockQtyFractions: false, useScale: false, printOnInvoice: true, editQtyOnSales: true, blockDiscount: false, taxExempt: false, pointsValue: 0, salesAccountId: null, purchaseAccountId: null,
+  blockQtyFractions: false, useScale: false, printOnInvoice: true, editQtyOnSales: true, blockDiscount: false, taxExempt: false, pointsValue: 0, salesAccountId: null, purchaseAccountId: null, stationId: null,
   userPrompt: null, notes: null, isActive: true, rowVersion: null
 });
 
@@ -153,6 +154,9 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
                   <div class="grid gap-2 sm:grid-cols-2">
                     <div><label class="app-label" for="sc-points">Points value</label><input id="sc-points" type="number" min="0" step="0.01" class="app-input" data-testid="item-points" [ngModel]="f().pointsValue" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ pointsValue: n($event) ?? 0 })" /><p class="app-hint">Loyalty points a customer earns per unit when their bill is paid.</p></div>
                     <div><label class="app-label" for="sc-tax">Tax</label><select id="sc-tax" class="app-input" data-testid="item-tax" [ngModel]="f().taxExempt ? 'exempt' : 'taxable'" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ taxExempt: $event === 'exempt' })"><option value="taxable">Taxable (company rate)</option><option value="exempt">Tax exempt</option></select></div>
+                    <div><label class="app-label" for="sc-station">Prepared at</label><select id="sc-station" class="app-input" data-testid="item-station" [ngModel]="f().stationId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ stationId: $event || null })">
+            <option [ngValue]="null">As the stock group says</option>@for (s of stations.list(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select>
+                      @if (fe('stationId')) { <p class="app-error" role="alert">{{ fe('stationId') }}</p> }</div>
                     <div><label class="app-label" for="sc-sales-ac">Sales A/C</label><select id="sc-sales-ac" class="app-input" data-testid="item-sales-ac" [ngModel]="f().salesAccountId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ salesAccountId: $event || null })">
             <option [ngValue]="null">As the stock group says</option>@for (a of salesAccounts(); track a.id) { <option [ngValue]="a.id">{{ a.code }} {{ a.name }}</option> }</select>
                       @if (fe('salesAccountId')) { <p class="app-error" role="alert">{{ fe('salesAccountId') }}</p> }</div>
@@ -382,6 +386,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
 export class StockCardComponent implements OnDestroy {
   private readonly inventory = inject(InventoryApi);
   private readonly ledgerApi = inject(LedgerApi);
+  protected readonly stations = inject(StationsService);
   private readonly accountOptions = signal<readonly LedgerAccountOptionDto[]>([]);
   /** Sales go to an income account; stock is held on an asset account (or, for a company that prefers it, an expense). */
   protected readonly salesAccounts = computed(() => this.accountOptions().filter((a) => a.type === 'Income'));
@@ -466,7 +471,7 @@ export class StockCardComponent implements OnDestroy {
   private static readonly FIELD_NAMES: Readonly<Record<string, string>> = {
     name: 'Item details (name)', sku: 'Part number (SKU)', barcode: 'Barcode', sellingPrice: 'Retail sell price', specialPrice: 'On special price', discountPercent: 'Discount %',
     minimumPrice: 'Minimum price', reorderLevel: 'Reorder level', targetStock: 'Target stock', groupId: 'Stock group', supplierId: 'Default supplier', baseUnit: 'Units', kind: 'Item type',
-    tracksSerials: 'Track serial numbers', blockQtyFractions: 'Block qty fractions', purchaseUnitSize: 'Bought by the', specialCost: 'Special cost', salesAccountId: 'Sales A/C', purchaseAccountId: 'Purchase A/C'
+    tracksSerials: 'Track serial numbers', blockQtyFractions: 'Block qty fractions', purchaseUnitSize: 'Bought by the', stationId: 'Prepared at', specialCost: 'Special cost', salesAccountId: 'Sales A/C', purchaseAccountId: 'Purchase A/C'
   };
   protected readonly problems = computed<readonly string[]>(() => {
     if (!this.attempted()) return [];
@@ -562,6 +567,7 @@ export class StockCardComponent implements OnDestroy {
 
   private async open(id: string | null): Promise<void> {
     if (!this.accountOptions().length) void firstValueFrom(this.ledgerApi.options()).then((o) => this.accountOptions.set(o)).catch(() => undefined);
+    void this.stations.load();
     this.tab.set('details');
     this.fieldErrors.set({});
     this.formError.set(null);
@@ -610,7 +616,7 @@ export class StockCardComponent implements OnDestroy {
       minimumPrice: i.minimumPrice ?? null, suggestedRetailPrice: i.suggestedRetailPrice ?? null, lastCost: i.lastPurchaseCost ?? null, specialCost: i.specialCost ?? null,
       specialCostFrom: i.specialCostFrom ?? null, specialCostTo: i.specialCostTo ?? null, blockQtyFractions: !!i.blockQtyFractions, useScale: !!i.useScale, printOnInvoice: i.printOnInvoice !== false,
       editQtyOnSales: i.editQtyOnSales !== false, blockDiscount: !!i.blockDiscount, taxExempt: !!i.taxExempt, pointsValue: i.pointsValue ?? 0, salesAccountId: i.salesAccountId ?? null,
-      purchaseAccountId: i.purchaseAccountId ?? null, userPrompt: i.userPrompt ?? null, notes: i.notes ?? null, isActive: i.isActive, rowVersion: i.rowVersion
+      purchaseAccountId: i.purchaseAccountId ?? null, stationId: i.stationId ?? null, userPrompt: i.userPrompt ?? null, notes: i.notes ?? null, isActive: i.isActive, rowVersion: i.rowVersion
     });
     if (i.hasPicture) void this.loadPicture(i.id); else this.revokePicture();
   }

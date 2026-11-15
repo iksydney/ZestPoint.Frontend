@@ -25,7 +25,7 @@ test.describe('Tables', () => {
     await expect(page).toHaveURL(/\/app\/setup\/admin$/);
     const cards = page.getByTestId('hub-list');
     await expect(page.getByTestId('setup-admin')).toContainText('Admin set-up');
-    await expect(cards.locator('a')).toHaveText([/Branches/, /Tables/, /Settings/, /Branding/]);
+    await expect(cards.locator('a')).toHaveText([/Branches/, /Tables/, /Preparation Stations/, /Settings/, /Branding/]);
     await page.getByTestId('hub-filter').fill('brand');
     await expect(cards.locator('a')).toHaveCount(1);
     await page.getByTestId('hub-filter').fill('');

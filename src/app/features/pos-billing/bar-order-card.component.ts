@@ -23,7 +23,7 @@ const STATUS_LABEL: Record<BarOrderStatus, string> = {
       <article class="rounded-xl border bg-panel p-3 text-ink" [class]="o.needsAttention && side() === 'mine' ? 'border-primary' : 'border-ink/15'" [attr.data-testid]="'bar-order-' + place()" [attr.data-status]="o.status">
         <header class="flex items-start justify-between gap-2">
           <div class="min-w-0">
-            <h3 class="truncate text-lg font-bold leading-tight" data-testid="bar-place">{{ place() }}</h3>
+            <h3 class="truncate text-lg font-bold leading-tight" data-testid="bar-place">{{ place() }}@if (showStation() && o.stationName) { <span class="app-badge app-badge-primary ml-2 align-middle text-xs" data-testid="bar-station">{{ o.stationName }}</span> }</h3>
             <p class="text-xs text-ink/70">
               Bill #{{ o.orderNumber }}
               @if (side() === 'bar') { &middot; from <span class="font-semibold text-ink" data-testid="bar-from">{{ o.requestedByName }}</span> }
@@ -105,6 +105,8 @@ export class BarOrderCardComponent {
   readonly me = input<string | null>(null);
   readonly now = input(Date.now());
   readonly busy = input(false);
+  /** Show which station the ticket is for (when the company has more than one). */
+  readonly showStation = input(false);
 
   readonly take = output<string>();
   readonly release = output<string>();

@@ -48,11 +48,19 @@ const STATUS_LABEL: Record<BarOrderStatus, string> = {
       } @else {
         @if (bar.error()) { <p class="sys-alert sys-alert-warning" role="alert">{{ bar.error() }}</p> }
 
+        @if (stationNames().length > 1) {
+          <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Station" data-testid="bar-stations">
+            <span class="text-sm text-ink/70">Show</span>
+            <button type="button" class="btn-outline px-3 py-1 text-sm" [class.ring-2]="!station()" [attr.aria-pressed]="!station()" data-testid="bar-station-all" (click)="station.set(null)">All stations</button>
+            @for (n of stationNames(); track n) { <button type="button" class="btn-outline px-3 py-1 text-sm" [class.ring-2]="station() === n" [attr.aria-pressed]="station() === n" [attr.data-testid]="'bar-station-' + n" (click)="station.set(n)">{{ n }}</button> }
+          </div>
+        }
+
         <section aria-label="Queue">
           <h2 class="mb-2 font-semibold">Queue <span class="font-normal text-ink/70">({{ bar.waiting().length }} waiting, {{ bar.queue().length - bar.waiting().length }} being prepared)</span></h2>
           <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" data-testid="bar-queue">
-            @for (o of bar.queue(); track o.id) {
-              <zp-bar-order-card [order]="o" side="bar" [me]="bar.myId()" [now]="bar.now()" [busy]="busy()"
+            @for (o of shownQueue(); track o.id) {
+              <zp-bar-order-card [order]="o" side="bar" [me]="bar.myId()" [now]="bar.now()" [busy]="busy()" [showStation]="stationNames().length > 1"
                                  (take)="run(bar.take($event))" (release)="run(bar.release($event))" (ready)="run(bar.ready($event), 'Dispatched. The attendant has been told.')"
                                  (cantMake)="run(bar.cantMake($event.id, $event.itemIds, $event.reason, $event.parts), 'The attendant has been told.')" />
             } @empty { <p class="app-card col-span-full py-8 text-center text-ink/70" data-testid="bar-queue-empty">No orders are waiting. New ones appear here by themselves.</p> }
@@ -68,13 +76,14 @@ const STATUS_LABEL: Record<BarOrderStatus, string> = {
           <div class="overflow-x-auto">
             <table class="w-full min-w-[46rem] text-left text-sm" data-testid="bar-history">
               <thead class="border-y border-ink/10 text-xs uppercase tracking-wide text-ink/70">
-                <tr><th class="px-4 py-2">Sent</th><th class="px-2 py-2">Where</th><th class="px-2 py-2">Items</th><th class="px-2 py-2">Attendant</th><th class="px-2 py-2">Bar man</th><th class="px-2 py-2">Waited</th><th class="px-2 py-2">Made in</th><th class="px-4 py-2">Status</th></tr>
+                <tr><th class="px-4 py-2">Sent</th><th class="px-2 py-2">Where</th>@if (stationNames().length > 1) { <th class="px-2 py-2">Station</th> }<th class="px-2 py-2">Items</th><th class="px-2 py-2">Attendant</th><th class="px-2 py-2">Bar man</th><th class="px-2 py-2">Waited</th><th class="px-2 py-2">Made in</th><th class="px-4 py-2">Status</th></tr>
               </thead>
               <tbody>
-                @for (o of history(); track o.id) {
+                @for (o of shownHistory(); track o.id) {
                   <tr class="border-b border-ink/10" [attr.data-testid]="'bar-history-' + place(o)">
                     <td class="whitespace-nowrap px-4 py-2">{{ o.sentAtUtc | tenantTime }}</td>
                     <td class="px-2 py-2 font-medium">{{ place(o) }} <span class="font-normal text-ink/70">#{{ o.orderNumber }}</span></td>
+                    @if (stationNames().length > 1) { <td class="px-2 py-2">{{ o.stationName ?? '' }}</td> }
                     <td class="px-2 py-2">{{ itemsOf(o) }}</td>
                     <td class="px-2 py-2">{{ o.requestedByName }}</td>
                     <td class="px-2 py-2">{{ o.takenByName ?? '' }}</td>
@@ -82,7 +91,7 @@ const STATUS_LABEL: Record<BarOrderStatus, string> = {
                     <td class="whitespace-nowrap px-2 py-2">{{ span(o.takenAtUtc, o.readyAtUtc) }}</td>
                     <td class="px-4 py-2"><span class="app-badge" [class]="tone(o.status)">{{ label(o.status) }}</span></td>
                   </tr>
-                } @empty { <tr><td colspan="8" class="px-4 py-8 text-center text-ink/70">{{ loading() ? 'Loading...' : 'Nothing was sent to the bar in the last 24 hours.' }}</td></tr> }
+                } @empty { <tr><td colspan="8" class="px-4 py-8 text-center text-ink/70">{{ loading() ? 'Loading...' : 'Nothing was sent here in the last 24 hours.' }}</td></tr> }
               </tbody>
             </table>
           </div>
@@ -102,6 +111,11 @@ export class BarOrdersComponent implements OnInit {
   protected readonly historyError = signal<string | null>(null);
   protected readonly loading = signal(false);
   protected readonly busy = signal(false);
+  /** The station shown, by name; null shows them all. The filter appears when more than one station has sent a ticket. */
+  protected readonly station = signal<string | null>(null);
+  protected readonly stationNames = computed(() => [...new Set([...this.bar.queue(), ...this.history()].map((o) => o.stationName).filter((n): n is string => !!n))].sort());
+  protected readonly shownQueue = computed(() => this.bar.queue().filter((o) => !this.station() || o.stationName === this.station()));
+  protected readonly shownHistory = computed(() => this.history().filter((o) => !this.station() || o.stationName === this.station()));
   protected readonly canConfigure = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.SETTINGS_COMPANY_MANAGE));
 
   constructor() {

@@ -5,13 +5,14 @@ import { SaveStockGroupRequest, StockGroupDto } from '../../core/models/nav-ops.
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { toApiError, ApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
+import { StationsService } from '../../core/services/stations.service';
 import { LedgerAccountOptionDto, LedgerApi } from '../../core/services/ledger.services';
 import { StockGroupApi } from '../../core/services/nav-ops.services';
 import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 
-const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description: null, parentId: null, sortOrder: 0, isActive: true, salesAccountId: null, purchaseAccountId: null });
+const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description: null, parentId: null, sortOrder: 0, isActive: true, stationId: null, salesAccountId: null, purchaseAccountId: null });
 
 /**
  * Stock groups are the one grouping used by the POS menu, stock items and the sales-by-group reports. A group that is referenced by
@@ -70,6 +71,11 @@ const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description:
           <select id="g-parent" class="app-input" data-testid="group-parent" [ngModel]="form().parentId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ parentId: $event || null })">
             <option [ngValue]="null">None (top level)</option>@for (p of parents(); track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }</select>
           @if (fe('parentId')) { <p class="app-error" role="alert">{{ fe('parentId') }}</p> }</div>
+        <div><label class="app-label" for="g-station">Prepared at</label>
+          <select id="g-station" class="app-input" data-testid="group-station" [ngModel]="form().stationId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ stationId: $event || null })">
+            <option [ngValue]="null">{{ defaultStation() ? 'The default station (' + defaultStation() + ')' : 'Nowhere: confirmed when the bill is sent' }}</option>@for (s of stations.list(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select>
+          @if (fe('stationId')) { <p class="app-error" role="alert">{{ fe('stationId') }}</p> }
+          <p class="mt-1 text-xs text-ink/70">Where the items of this group are prepared when a bill is sent. An item can name its own station on its stock card.</p></div>
         <div class="grid gap-3 sm:grid-cols-2">
           <div><label class="app-label" for="g-sales-ac">Sales account</label>
             <select id="g-sales-ac" class="app-input" data-testid="group-sales-ac" [ngModel]="form().salesAccountId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ salesAccountId: $event || null })">
@@ -101,6 +107,8 @@ const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description:
 export class StockGroupsComponent implements OnInit {
   private readonly api = inject(StockGroupApi);
   private readonly ledgerApi = inject(LedgerApi);
+  protected readonly stations = inject(StationsService);
+  protected readonly defaultStation = computed(() => this.stations.list().find((s) => s.isDefault)?.name ?? null);
   private readonly accountOptions = signal<readonly LedgerAccountOptionDto[]>([]);
   /** Sales go to an income account; stock is held on an asset account (or, for a company that prefers it, an expense). */
   protected readonly salesAccounts = computed(() => this.accountOptions().filter((a) => a.type === 'Income'));
@@ -130,6 +138,7 @@ export class StockGroupsComponent implements OnInit {
   ngOnInit(): void {
     void this.load();
     void firstValueFrom(this.ledgerApi.options()).then((a) => this.accountOptions.set(a)).catch(() => undefined);
+    void this.stations.load();
   }
 
   protected fe = (name: string): string | null => this.fieldErrors()[name]?.[0] ?? null;
@@ -145,7 +154,7 @@ export class StockGroupsComponent implements OnInit {
 
   protected openEdit(g: StockGroupDto | null): void {
     this.editingId.set(g?.id ?? null);
-    this.form.set(g ? { name: g.name, code: g.code, description: g.description, parentId: g.parentId, sortOrder: g.sortOrder, isActive: g.isActive, salesAccountId: g.salesAccountId ?? null, purchaseAccountId: g.purchaseAccountId ?? null } : blank());
+    this.form.set(g ? { name: g.name, code: g.code, description: g.description, parentId: g.parentId, sortOrder: g.sortOrder, isActive: g.isActive, stationId: g.stationId ?? null, salesAccountId: g.salesAccountId ?? null, purchaseAccountId: g.purchaseAccountId ?? null } : blank());
     this.fieldErrors.set({});
     this.dialogError.set(null);
     this.dialog.set('edit');
