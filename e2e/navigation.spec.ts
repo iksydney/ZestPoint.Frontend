@@ -9,7 +9,7 @@ const AREAS: [string, string[], number][] = [
   ['stock', ['Stock Overview', 'Items', 'Stock Groups', 'Adjustments', 'Bulk Changes', 'Bin Locations', 'Labels', 'Consignment Out'], 17],
   ['purchasing', ['Purchase Orders', 'Goods Receiving', 'Suppliers', 'Supplier Payments'], 12],
   ['finance', ['Chart of Accounts'], 3],
-  ['admin', ['Staff', 'Branches', 'Settings', 'Branding', 'Subscription', 'Support'], 0]
+  ['admin', ['Staff', 'Subscription', 'Support', 'Set-up'], 0]   // Branches, Tables, Settings and Branding are behind Set-up (2026-11-15)
 ];
 
 async function ownerInApp(page: Page) {

@@ -7,7 +7,7 @@ import {
   MovementDto, OrderDto, OrderSummaryDto, PagedResult, PayRequest, ProductDto, PurchaseOrderDto, ReceiptDto, ReceiveGoodsRequest, RecipeDto,
   SaveInventoryItemRequest, SaveSellingUnitRequest, SellingUnitDto, PackageDto, SavePackageRequest, SavePurchaseOrderRequest, SaveProductRequest, SaveRecipeRequest, SaveSupplierRequest, SplitPreviewDto, SuggestedOrderDto,
   SupplierDto, SyncOperationDto, SyncOperationResultDto, TransferStockRequest, UpdateCompanySettingsRequest, UsageRowDto, VarianceDto,
-  VarianceSummaryRowDto, VoidAuthorizer, VoidRequestDto
+  VarianceSummaryRowDto, VoidAuthorizer, VoidRequestDto, TableDto
 } from '../models/ops.model';
 import { unwrap } from './api.util';
 
@@ -86,6 +86,11 @@ export class CatalogApi {
 @Injectable({ providedIn: 'root' })
 export class OrdersApi {
   private readonly http = inject(HttpClient);
+
+  /** The branch's tables in use, for opening a table bill, with how many bills each has running. */
+  tables(branchId: string): Observable<TableDto[]> {
+    return this.http.get<ApiEnvelope<TableDto[]>>('/api/v1/pos/tables', { params: { branchId } }).pipe(unwrap());
+  }
 
   list(filter: { branchId?: string; openOnly?: boolean; status?: string; ownerId?: string; search?: string; page?: number; pageSize?: number }): Observable<PagedResult<OrderSummaryDto>> {
     return this.http.get<ApiEnvelope<PagedResult<OrderSummaryDto>>>('/api/v1/orders', { params: q(filter) }).pipe(unwrap());

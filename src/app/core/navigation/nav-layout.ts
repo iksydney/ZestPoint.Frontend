@@ -2,7 +2,7 @@ import { NavDefinition, NavIcon } from './app-nav';
 
 /**
  * How the screens in APP_NAV are laid out for people: a short menu of working screens grouped by the job being done, with each area's
- * reports behind one "Reports" entry (a page of cards). APP_NAV stays the single list of what exists and who may use it; this file only
+ * reports behind one "Reports" entry and its set-up screens behind one "Set-up" entry (each a page of cards). APP_NAV stays the single list of what exists and who may use it; this file only
  * decides where a screen appears, what it is called in the menu, and the one-line explanation shown beside it.
  *
  * RULE (owner, 2026-11-14): when a screen is added, moved, renamed or removed, this file and core/tour/tours.ts change in the same
@@ -20,6 +20,11 @@ export interface NavArea {
   readonly blurb: string;
   /** The working screens of the area, in menu order (APP_NAV keys). */
   readonly screens: readonly string[];
+  /**
+   * Screens used once in a while to set things up (owner's decision, 2026-11-15). They are reached from the area's one "Set-up" entry,
+   * a page of cards like the Reports page, so the menu stays the short list of places to work. Search finds them all the same.
+   */
+  readonly setup?: readonly string[];
 }
 
 /** The screen above every area. */
@@ -34,7 +39,7 @@ export const NAV_AREAS: readonly NavArea[] = [
   },
   { key: 'purchasing', label: 'Purchasing', icon: 'truck', blurb: 'Order from suppliers, receive goods and pay for them.', screens: ['purchasing.orders', 'purchasing.receiving', 'purchasing.suppliers', 'purchasing.payments'] },
   { key: 'finance', label: 'Finance', icon: 'wallet', blurb: 'The ledger: accounts and the entries posted from sales, purchases and stock.', screens: ['ledger.accounts'] },
-  { key: 'admin', label: 'Admin', icon: 'settings', blurb: 'People, branches, settings, your brand and your subscription.', screens: ['staff', 'branches', 'operations', 'branding', 'subscription', 'support'] }
+  { key: 'admin', label: 'Admin', icon: 'settings', blurb: 'People, branches, settings, your brand and your subscription.', screens: ['staff', 'subscription', 'support'], setup: ['branches', 'pos.tables', 'operations', 'branding'] }
 ];
 
 /** Reports that belong to another area than their key prefix suggests. */
@@ -46,8 +51,12 @@ export const isReport = (n: NavDefinition): boolean => n.key.includes('.report.'
 
 export function areaOf(n: NavDefinition): NavAreaKey | null {
   if (isReport(n)) return REPORT_AREA_OVERRIDES[n.key] ?? REPORT_AREA_BY_PREFIX[n.key.split('.')[0]!] ?? null;
-  return NAV_AREAS.find((a) => a.screens.includes(n.key))?.key ?? null;
+  return NAV_AREAS.find((a) => a.screens.includes(n.key) || !!a.setup?.includes(n.key))?.key ?? null;
 }
+
+/** A set-up screen is reached from its area's Set-up page, not from the menu. */
+export const isSetup = (n: NavDefinition): boolean => NAV_AREAS.some((a) => !!a.setup?.includes(n.key));
+export const setupRoute = (area: NavAreaKey): string => `/app/setup/${area}`;
 
 export const areaByKey = (key: string | null | undefined): NavArea | null => NAV_AREAS.find((a) => a.key === key) ?? null;
 export const reportsRoute = (area: NavAreaKey): string => `/app/reports/${area}`;
@@ -146,6 +155,7 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
 
   'staff': 'The people who work here, their roles and their sign-in.',
   'branches': 'Your branches and their details.',
+  'pos.tables': 'The tables at each branch. The till offers them and shows which have a bill running.',
   'operations': 'Tax, payments, shifts, layby rules and other settings for how you trade.',
   'branding': 'Your name, logo and colours, on screen and on receipts.',
   'subscription': 'Your plan, what it includes and your invoices.',

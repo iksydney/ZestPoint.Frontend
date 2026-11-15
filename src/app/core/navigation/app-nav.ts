@@ -162,7 +162,9 @@ export const APP_NAV: readonly NavDefinition[] = [
   { key: 'staff', label: 'Staff', route: '/app/staff', icon: 'users', permission: P.STAFF_VIEW, kind: 'screen' },
   { key: 'branding', label: 'Branding', route: '/app/settings/branding', icon: 'palette', permission: P.SETTINGS_BRANDING_VIEW, kind: 'screen' },
   { key: 'operations', label: 'Operations', route: '/app/settings/operations', icon: 'settings', permission: P.SETTINGS_COMPANY_MANAGE, kind: 'screen' },
-  { key: 'branches', label: 'Branches', route: '/app/settings/branches', icon: 'branch', permission: P.BRANCHES_MANAGE, kind: 'screen' }
+  { key: 'branches', label: 'Branches', route: '/app/settings/branches', icon: 'branch', permission: P.BRANCHES_MANAGE, kind: 'screen' },
+  { key: 'pos.tables', label: 'Tables', route: '/app/settings/tables', icon: 'grid', permission: P.POS_TABLES_MANAGE, feature: FEATURES.CORE_POS, kind: 'screen', needsBranch: true,
+    load: () => import('../../features/settings/tables.component').then((m) => m.TablesComponent), description: 'The tables at each branch, offered by the till when a table bill is opened.' }
 ];
 
 /** The permissions a screen accepts, always as a list ("any of"). */

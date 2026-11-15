@@ -47,7 +47,8 @@ export const APP_TOUR = 'app';
 
 export const TOURS: readonly TourDefinition[] = [
   {
-    key: APP_TOUR, title: 'Welcome to ZestPoint', version: 1,
+    key: APP_TOUR, title: 'Welcome to ZestPoint', version: 2,
+    changes: [{ version: 2, steps: [{ id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Set-up has moved', body: 'Branches, Settings and Branding have left the menu. Things you set up once and change now and then are behind one Set-up entry: branches, tables, settings and your brand, each with a line on what it is for. Search finds them too.' }] }],
     steps: [
       { id: 'welcome', title: 'Welcome', body: 'This takes about a minute. It shows where things are; you can leave at any time and take it again from Help.' },
       { id: 'menu', target: '[data-tour="nav"]', menu: true, title: 'The menu', body: 'Everything you can do is here, grouped by the job you are doing. You only see what your role allows. Click an area\'s name to fold it away.' },
@@ -56,7 +57,8 @@ export const TOURS: readonly TourDefinition[] = [
       { id: 'stock', target: '[data-tour="nav-area-stock"]', menu: true, optional: true, title: 'Stock', body: 'The items you sell, their groups and prices, counts and adjustments, where stock is kept, and goods out with agents.' },
       { id: 'purchasing', target: '[data-tour="nav-area-purchasing"]', menu: true, optional: true, title: 'Purchasing', body: 'Order from suppliers, check deliveries in and record what you pay.' },
       { id: 'finance', target: '[data-tour="nav-area-finance"]', menu: true, optional: true, title: 'Finance', body: 'The ledger. Nothing is typed into it: every sale, payment and delivery posts its own entry.' },
-      { id: 'admin', target: '[data-tour="nav-area-admin"]', menu: true, optional: true, title: 'Admin', body: 'Staff and their roles, branches, settings, your brand and your subscription.' },
+      { id: 'admin', target: '[data-tour="nav-area-admin"]', menu: true, optional: true, title: 'Admin', body: 'Staff and their roles, your subscription and support. Branches, tables, settings and your brand are under Set-up.' },
+      { id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Set-up', body: 'Things you set up once and change now and then are behind one Set-up entry: branches, tables, settings and your brand, each with a line on what it is for. Search finds them too.' },
       { id: 'reports', target: '[data-nav^="reports."]', menu: true, optional: true, title: 'Reports', body: 'Each area keeps its reports behind one Reports entry: a page listing them, each with a line on what it shows.' },
       { id: 'search', target: '[data-tour="nav-search"]', menu: true, title: 'Search', body: 'The quickest way anywhere: press Ctrl+K (or click here) and type part of a screen\'s or report\'s name.' },
       { id: 'help', target: '[data-tour="help"]', title: 'Help', body: 'Take this tour again, or the tour of the screen you are on, whenever you like. When something changes in ZestPoint you will be shown what moved.' },
@@ -98,6 +100,14 @@ export const TOURS: readonly TourDefinition[] = [
       { id: 'search', target: '[data-testid="customer-search"]', title: 'Find a customer', body: 'By part of their name, their phone number or their customer number.' },
       { id: 'new', target: '[data-testid="customer-new"]', title: 'Add a customer', body: 'A name and a phone number are enough. A phone number belongs to one customer only. Customers can also be added at the till, on a bill.' },
       { id: 'list', target: '[data-testid="customers-table"]', title: 'Points', body: 'A customer earns each item\'s loyalty points when their bill is paid. Points shows what they have and where it came from.' }
+    ]
+  },
+  {
+    key: 'pos.tables', nav: 'pos.tables', title: 'Tables', version: 1,
+    steps: [
+      { id: 'what', title: 'Your tables', body: 'List the tables of each branch once. When someone opens a table bill, the till offers the list and shows which tables already have a bill running. A name typed at the till still works for anything not listed.' },
+      { id: 'add', target: '[data-testid="table-new"]', title: 'Add tables', body: 'Add one table with its name, area and seats, or use Add several to make Table 1 to Table 20 in one go.' },
+      { id: 'list', target: '[data-testid="table-list"]', title: 'The list', body: 'Edit renames a table or switches it off. A table is never deleted, so old bills keep their table, and one with a bill still open cannot be switched off.' }
     ]
   },
   {

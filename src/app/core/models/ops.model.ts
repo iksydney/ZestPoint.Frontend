@@ -314,7 +314,21 @@ export interface PaymentDto {
   refunded: number;
 }
 
+/** A table at a branch, and how many bills are running at it now. */
+export interface TableDto {
+  id: string;
+  branchId: string;
+  name: string;
+  area: string | null;
+  seats: number;
+  isActive: boolean;
+  sortOrder: number;
+  openBills: number;
+}
+
 export interface OrderDto {
+  /** The branch table this bill is for, when it is one of the branch's list. */
+  tableId?: string | null;
   id: string;
   branchId: string;
   number: number;

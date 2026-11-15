@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, output, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { NavDefinition } from '../../core/navigation/app-nav';
-import { areaByKey, areaOf, helpFor, isReport, menuLabel, reportsRoute } from '../../core/navigation/nav-layout';
+import { areaByKey, areaOf, helpFor, isReport, isSetup, menuLabel, reportsRoute, setupRoute } from '../../core/navigation/nav-layout';
 import { NavService } from '../../core/navigation/nav.service';
 
 interface Hit { readonly key: string; readonly label: string; readonly where: string; readonly help: string; readonly route: string }
@@ -55,14 +55,18 @@ export class CommandPaletteComponent {
   private readonly all = computed<readonly (Hit & { readonly words: string; readonly report: boolean })[]>(() => {
     const screens = this.nav.items().map((n: NavDefinition) => {
       const area = areaByKey(areaOf(n));
-      const where = area ? (isReport(n) ? `${area.label} report` : area.label) : 'Home';
+      const where = area ? (isReport(n) ? `${area.label} report` : isSetup(n) ? `${area.label} set-up` : area.label) : 'Home';
       return { key: n.key, label: menuLabel(n), where, help: helpFor(n), route: n.route, report: isReport(n), words: `${menuLabel(n)} ${n.label} ${where} ${helpFor(n)}`.toLowerCase() };
     });
     const hubs = this.nav.sections().filter((s) => s.reports.length > 0).map((s) => ({
       key: `reports.${s.area.key}`, label: `${s.area.label} reports`, where: s.area.label, help: `All ${s.reports.length} ${s.area.label.toLowerCase()} reports on one page.`, route: reportsRoute(s.area.key), report: false,
       words: `${s.area.label} reports report`.toLowerCase()
     }));
-    return [...screens, ...hubs];
+    const setups = this.nav.sections().filter((s) => s.setup.length > 0).map((s) => ({
+      key: `setup.${s.area.key}`, label: `${s.area.label} set-up`, where: s.area.label, help: `${s.setup.map((n) => menuLabel(n)).join(', ')}.`, route: setupRoute(s.area.key), report: false,
+      words: `${s.area.label} set-up setup settings`.toLowerCase()
+    }));
+    return [...screens, ...hubs, ...setups];
   });
 
   protected readonly hits = computed<readonly Hit[]>(() => {

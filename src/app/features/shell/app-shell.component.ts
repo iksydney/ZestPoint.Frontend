@@ -8,7 +8,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 import { navFor } from '../../core/navigation/app-nav';
-import { areaByKey, areaOf, isReport, menuLabel, reportsRoute } from '../../core/navigation/nav-layout';
+import { areaByKey, areaOf, isReport, isSetup, menuLabel, reportsRoute, setupRoute } from '../../core/navigation/nav-layout';
 import { NavService } from '../../core/navigation/nav.service';
 import { AuthService } from '../../core/services/auth.service';
 import { BarStore } from '../../core/services/bar.services';
@@ -160,10 +160,10 @@ export class AppShellComponent {
   /** Home / area / (Reports) / screen. */
   protected readonly crumbs = computed<readonly { label: string; route: string | null }[]>(() => {
     const path = this.url().split('?')[0]!.split('#')[0]!;
-    const hub = /^\/app\/reports\/([a-z]+)/.exec(path);
+    const hub = /^\/app\/(reports|setup)\/([a-z]+)/.exec(path);
     if (hub) {
-      const area = areaByKey(hub[1]);
-      return area ? [{ label: 'Home', route: '/app' }, { label: area.label, route: null }, { label: 'Reports', route: reportsRoute(area.key) }] : [];
+      const area = areaByKey(hub[2]);
+      return area ? [{ label: 'Home', route: '/app' }, { label: area.label, route: null }, hub[1] === 'setup' ? { label: 'Set-up', route: setupRoute(area.key) } : { label: 'Reports', route: reportsRoute(area.key) }] : [];
     }
     const here = navFor(this.url());
     if (!here) return [];
@@ -172,6 +172,7 @@ export class AppShellComponent {
       { label: 'Home', route: '/app' },
       ...(area ? [{ label: area.label, route: null as string | null }] : []),
       ...(area && isReport(here) ? [{ label: 'Reports', route: reportsRoute(area.key) as string | null }] : []),
+      ...(area && isSetup(here) ? [{ label: 'Set-up', route: setupRoute(area.key) as string | null }] : []),
       { label: menuLabel(here), route: here.route }
     ];
   });

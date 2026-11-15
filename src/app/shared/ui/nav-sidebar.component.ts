@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NavDefinition, NavIcon, navFor } from '../../core/navigation/app-nav';
-import { NavAreaKey, areaOf, helpFor, isReport, menuLabel, reportsRoute } from '../../core/navigation/nav-layout';
+import { NavAreaKey, areaOf, helpFor, isReport, isSetup, menuLabel, reportsRoute, setupRoute } from '../../core/navigation/nav-layout';
 import { NavService } from '../../core/navigation/nav.service';
 import { BrandMarkComponent } from './brand-mark.component';
 import { ICON_PATHS } from './icon-paths';
@@ -10,7 +10,7 @@ const OPEN_KEY = 'zp.nav.areas';
 
 /**
  * The application menu: the working screens this person may use, grouped by the job being done (Sell, Customers, Stock, Purchasing,
- * Finance, Admin). Reports are not listed here; each area has one Reports entry that opens a page of them. Search (Ctrl+K) reaches
+ * Finance, Admin). Reports and set-up screens are not listed here; an area has one Reports entry and one Set-up entry, each a page of them. Search (Ctrl+K) reaches
  * every screen and report by name.
  *
  * Keyboard: Up/Down/Home/End move between entries; Enter or Space opens or closes an area.
@@ -55,6 +55,12 @@ const OPEN_KEY = 'zp.nav.areas';
                 @for (n of s.screens; track n.key) {
                   <li><a class="nav-link" [routerLink]="n.route" (click)="chosen.emit()" [class.nav-active]="activeKey() === n.key" [attr.aria-current]="activeKey() === n.key ? 'page' : null" [attr.data-nav]="n.key" [attr.title]="help(n)">
                     <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="icon(n.icon)" /></svg><span class="truncate">{{ label(n) }}</span></a></li>
+                }
+                @if (s.setup.length) {
+                  <li><a class="nav-link" [routerLink]="setup(s.area.key)" (click)="chosen.emit()" [class.nav-active]="activeKey() === 'setup.' + s.area.key" [attr.aria-current]="activeKey() === 'setup.' + s.area.key ? 'page' : null"
+                         [attr.data-nav]="'setup.' + s.area.key" [attr.title]="'Set up ' + names(s.setup)">
+                    <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="icon('settings')" /></svg><span class="truncate">Set-up</span>
+                    <span class="nav-count" [attr.aria-label]="s.setup.length + ' set-up screens'">{{ s.setup.length }}</span></a></li>
                 }
                 @if (s.reports.length) {
                   <li><a class="nav-link" [routerLink]="reports(s.area.key)" (click)="chosen.emit()" [class.nav-active]="activeKey() === 'reports.' + s.area.key" [attr.aria-current]="activeKey() === 'reports.' + s.area.key ? 'page' : null"
@@ -108,11 +114,11 @@ export class NavSidebarComponent {
   /** The entry to mark as current: the screen itself, or its area's Reports entry for a report and for the Reports page. */
   protected readonly activeKey = computed<string | null>(() => {
     const path = this.currentUrl().split('?')[0]!.split('#')[0]!;
-    const hub = /^\/app\/reports\/([a-z]+)/.exec(path);
-    if (hub) return `reports.${hub[1]}`;
+    const hub = /^\/app\/(reports|setup)\/([a-z]+)/.exec(path);
+    if (hub) return `${hub[1]}.${hub[2]}`;
     const here = navFor(this.currentUrl());
     if (!here) return null;
-    return isReport(here) ? `reports.${areaOf(here)}` : here.key;
+    return isReport(here) ? `reports.${areaOf(here)}` : isSetup(here) ? `setup.${areaOf(here)}` : here.key;
   });
 
   constructor() {
@@ -121,7 +127,7 @@ export class NavSidebarComponent {
       const key = this.activeKey();
       if (!key) return;
       const here = navFor(this.currentUrl());
-      const area = key.startsWith('reports.') ? (key.slice('reports.'.length) as NavAreaKey) : here ? areaOf(here) : null;
+      const area = key.startsWith('reports.') || key.startsWith('setup.') ? (key.slice(key.indexOf('.') + 1) as NavAreaKey) : here ? areaOf(here) : null;
       if (area && !this.open().has(area)) this.open.update((s) => new Set(s).add(area));
     }, { allowSignalWrites: true });
   }
@@ -130,6 +136,8 @@ export class NavSidebarComponent {
   protected label = (n: NavDefinition): string => menuLabel(n);
   protected help = (n: NavDefinition): string => helpFor(n);
   protected reports = (area: NavAreaKey): string => reportsRoute(area);
+  protected setup = (area: NavAreaKey): string => setupRoute(area);
+  protected names = (list: readonly NavDefinition[]): string => list.map((n) => menuLabel(n)).join(', ');
   protected isOpen = (key: NavAreaKey): boolean => this.open().has(key);
 
   /** Opens an area from outside (the tour shows what is inside each one). */

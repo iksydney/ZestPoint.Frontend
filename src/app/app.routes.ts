@@ -118,6 +118,8 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', canActivate: [landingGuard], children: [] },
       // The reports of one area on one page. It lists only what the person may open; each report's own route and API stay guarded.
       { path: 'reports/:area', title: 'Reports', loadComponent: () => import('./features/reports/report-hub.component').then((m) => m.ReportHubComponent) },
+      // The set-up screens of one area on one page (Branches, Tables, Settings, Branding ...), listed the same way.
+      { path: 'setup/:area', title: 'Set-up', data: { hub: 'setup' }, loadComponent: () => import('./features/reports/report-hub.component').then((m) => m.ReportHubComponent) },
       {
         path: 'dashboard',
         title: 'Dashboard',

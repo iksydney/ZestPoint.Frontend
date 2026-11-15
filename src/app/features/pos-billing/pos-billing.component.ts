@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { CustomerDto, CustomersApi, LaybysApi } from '../../core/services/customer.services';
-import { BarLineState, OrderKind, OrderLineDto, PaymentMethod, ProductDto, ReceiptDto, SellingUnitDto, VoidAuthorizer, VoidRequestDto } from '../../core/models/ops.model';
+import { BarLineState, OrderKind, OrderLineDto, PaymentMethod, ProductDto, ReceiptDto, SellingUnitDto, VoidAuthorizer, VoidRequestDto, TableDto } from '../../core/models/ops.model';
 import { lineKey, splitEvenly } from '../../core/offline/order-calc';
 import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
@@ -262,7 +262,23 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
             <option value="Tab">Tab</option><option value="Table">Table</option><option value="WalkUp">Walk-up</option><option value="Takeaway">Takeaway</option>
           </select></div>
         <div><label class="app-label" for="nb-label">Name</label><input id="nb-label" class="app-input" data-testid="nb-label" placeholder="e.g. Ada's tab" [ngModel]="form().label" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ label: $event })" /></div>
-        @if (form().kind === 'Table') { <div><label class="app-label" for="nb-table">Table</label><input id="nb-table" class="app-input" data-testid="nb-table" [ngModel]="form().table" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ table: $event })" /></div> }
+        @if (form().kind === 'Table') {
+          <div><label class="app-label" for="nb-table">Table</label><input id="nb-table" class="app-input" data-testid="nb-table" [placeholder]="tillTables().length ? 'Choose below, or type a name' : ''" [ngModel]="form().table" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ table: $event })" />
+            <!-- The branch's own tables: one tap fills the box. A table with a bill running says so; a second bill there is allowed (people who pay separately). -->
+            @if (tillTables().length) {
+              <div class="mt-2 max-h-48 overflow-y-auto" role="group" aria-label="Tables at this branch" data-testid="nb-tables">
+                @for (g of tillTableGroups(); track g.area) {
+                  @if (g.area) { <p class="mt-1 text-xs font-semibold text-ink/70">{{ g.area }}</p> }
+                  <div class="flex flex-wrap gap-1.5 py-1">
+                    @for (t of g.tables; track t.id) {
+                      <button type="button" class="btn-outline min-h-11 px-3 py-1 text-sm" [class.ring-2]="form().table.trim().toLowerCase() === t.name.toLowerCase()" [attr.aria-pressed]="form().table.trim().toLowerCase() === t.name.toLowerCase()" [attr.data-testid]="'nb-table-' + t.name" [attr.data-open]="t.openBills" (click)="patch({ table: t.name })">{{ t.name }}@if (t.openBills) { <span class="ml-1 text-xs text-warning">&bull; bill open</span> }</button>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
         <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="nb-create">Start bill</button></div>
       </form>
     </zp-dialog>
@@ -827,9 +843,20 @@ export class PosBillingComponent implements OnInit {
     try { await this.store.open(id); } catch (err) { this.error.set(toApiError(err).message); }
   }
 
+  /** The branch's tables, offered when a table bill is opened. Kept from the last time they were read, so the box still has them offline. */
+  protected readonly tillTables = signal<readonly TableDto[]>([]);
+  protected readonly tillTableGroups = computed(() => {
+    const groups = new Map<string, TableDto[]>();
+    for (const t of this.tillTables()) { const k = t.area ?? ''; const list = groups.get(k); if (list) list.push(t); else groups.set(k, [t]); }
+    return [...groups.entries()].map(([area, tables]) => ({ area, tables }));
+  });
+
   protected openNew(): void {
     this.form.set({ kind: 'Tab', label: '', table: '' });
     this.dialog.set('new');
+    const branch = this.branches.activeId();
+    // Read in the background: the box opens at once, and a failure (offline) simply leaves the last list.
+    if (branch) void firstValueFrom(this.ordersApi.tables(branch)).then((list) => this.tillTables.set(list)).catch(() => undefined);
   }
 
   protected async createBill(): Promise<void> {

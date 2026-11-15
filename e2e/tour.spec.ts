@@ -133,9 +133,23 @@ test.describe('Guided tours', () => {
     await ownerInApp(page);                                                                // tours do not start by themselves here: each is asked for
     for (const tour of TOURS) {
       if (tour.nav) {
-        await page.locator(`[data-testid="main-nav"] [data-nav="${tour.nav}"]`).click();
-        // The screen asked for is the one on show before its tour is asked for (the heading of the last screen is not enough).
-        await expect(page.locator(`[data-testid="main-nav"] [data-nav="${tour.nav}"]`).first(), tour.key).toHaveAttribute('aria-current', 'page');
+        const entry = page.locator(`[data-testid="main-nav"] [data-nav="${tour.nav}"]`);
+        if (await entry.count()) {
+          await entry.click();
+          // The screen asked for is the one on show before its tour is asked for (the heading of the last screen is not enough).
+          await expect(entry.first(), tour.key).toHaveAttribute('aria-current', 'page');
+        } else {
+          // A set-up screen is not in the menu: it is opened from its area's Set-up page, as a person would.
+          const card = page.locator(`[data-testid="hub-list"] [data-nav="${tour.nav}"]`);
+          for (const setup of await page.locator('[data-testid="main-nav"] [data-nav^="setup."]').all()) {
+            await setup.click();
+            await expect(page.getByTestId('hub-list'), tour.key).toBeVisible();
+            if (await card.count()) break;
+          }
+          await card.click();
+          await expect(page.getByTestId('hub-list'), tour.key).toHaveCount(0);
+          await expect(page.locator('[data-testid="main-nav"] [aria-current="page"]'), tour.key).toHaveAttribute('data-nav', /^setup\./);
+        }
         await expect(page.locator('main h1').first(), tour.key).toBeVisible();
       } else await page.goto('/app/dashboard');
       await page.getByTestId('help-open').click();

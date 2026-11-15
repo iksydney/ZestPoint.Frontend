@@ -9,6 +9,8 @@ import { NAV_AREAS, NAV_HOME, NavArea, NavAreaKey, areaOf, isReport } from './na
 export interface NavSection {
   readonly area: NavArea;
   readonly screens: readonly NavDefinition[];
+  /** The set-up screens behind the area's Set-up page. */
+  readonly setup: readonly NavDefinition[];
   readonly reports: readonly NavDefinition[];
 }
 
@@ -35,8 +37,9 @@ export class NavService {
     return NAV_AREAS.map((area) => ({
       area,
       screens: area.screens.map((key) => mine.find((n) => n.key === key)).filter((n): n is NavDefinition => !!n),
+      setup: (area.setup ?? []).map((key) => mine.find((n) => n.key === key)).filter((n): n is NavDefinition => !!n),
       reports: mine.filter((n) => isReport(n) && areaOf(n) === area.key)
-    })).filter((s) => s.screens.length > 0 || s.reports.length > 0);
+    })).filter((s) => s.screens.length > 0 || s.setup.length > 0 || s.reports.length > 0);
   });
 
   section = (key: NavAreaKey | string | null | undefined): NavSection | null => this.sections().find((s) => s.area.key === key) ?? null;
