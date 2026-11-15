@@ -35,6 +35,8 @@ export interface CompanySettingsDto {
   discountApprovalPercent: number;
   cashVarianceReviewThreshold: number;
   requireOpenShiftToSell: boolean;
+  /** Branch managers may set their own branch's prices and what it sells. Off: only head office does. */
+  branchManagersMaySetPrices?: boolean;
   adjustmentApprovalAboveValue: number | null;
   expiryWarningDays: number;
   allowCashPayments: boolean;

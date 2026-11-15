@@ -61,6 +61,8 @@ export const SCREEN_PERMISSIONS = {
   PURCHASING_REPORTS_VIEW: 'purchasing.reports.view',
 
   PRODUCTS_MANAGE: 'products.manage',
+  PRODUCTS_PRICES_MANAGE: 'products.prices.manage',
+  PRODUCTS_PRICES_MANAGE_BRANCH: 'products.prices.manage_branch',
 
   POS_LAYBY_MANAGE: 'pos.layby.manage',
   POS_TIPS_MANAGE: 'pos.tips.manage',
@@ -117,7 +119,8 @@ export const FEATURES = {
   HOTEL_PMS: 'hotel_pms_room_charging',
   FINANCIAL_REPORTING: 'financial_reporting',
   ADVANCED_ANALYTICS: 'advanced_analytics',
-  ENTERPRISE_API: 'enterprise_api'
+  ENTERPRISE_API: 'enterprise_api',
+  HEAD_OFFICE: 'head_office'
 } as const;
 
 export type FeatureCode = (typeof FEATURES)[keyof typeof FEATURES];

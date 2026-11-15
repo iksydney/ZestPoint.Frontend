@@ -86,7 +86,8 @@ export const MODULE_LABELS: Readonly<Record<FeatureCode, string>> = {
   [FEATURES.HOTEL_PMS]: 'Hotel PMS / room charging',
   [FEATURES.FINANCIAL_REPORTING]: 'Financial reporting',
   [FEATURES.ADVANCED_ANALYTICS]: 'Advanced analytics',
-  [FEATURES.ENTERPRISE_API]: 'Enterprise API & integrations'
+  [FEATURES.ENTERPRISE_API]: 'Enterprise API & integrations',
+  [FEATURES.HEAD_OFFICE]: 'Head office'
 };
 
 export const CHECKOUT_STYLE_LABELS: Readonly<Record<string, string>> = {

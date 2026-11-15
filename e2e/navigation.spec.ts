@@ -6,7 +6,7 @@ import { newContext, pick, registerViaUi, startShiftWhenAsked } from './helpers'
 const AREAS: [string, string[], number][] = [
   ['sell', ['Point of Sale', 'Start / End of Day', 'My Sales', 'Tips'], 9],   // + My Sales (2026-11-15);   // + Tips, and the Tips Report and Payments History
   ['customers', ['Customers', 'Laybys', 'Sales Back Orders'], 2],
-  ['stock', ['Stock Overview', 'Items', 'Stock Groups', 'Adjustments', 'Bulk Changes', 'Bin Locations', 'Labels', 'Consignment Out'], 17],
+  ['stock', ['Stock Overview', 'Items', 'Stock Groups', 'Adjustments', 'Bulk Changes', 'Bin Locations', 'Labels', 'Consignment Out', 'Set-up'], 17],   // Set-up: Prices and Menus (2026-11-15)
   ['purchasing', ['Purchase Orders', 'Goods Receiving', 'Suppliers', 'Supplier Payments'], 12],
   ['finance', ['Chart of Accounts'], 3],
   ['admin', ['Staff', 'Subscription', 'Support', 'Set-up'], 0]   // Branches, Tables, Settings and Branding are behind Set-up (2026-11-15)

@@ -103,6 +103,16 @@ export const TOURS: readonly TourDefinition[] = [
     ]
   },
   {
+    key: 'stock.prices', nav: 'stock.prices', title: 'Prices and menus', version: 1,
+    steps: [
+      { id: 'what', title: 'A price for every branch', body: 'The grid shows what each item costs at each branch and where the price comes from: the branch\'s own price, a price list it uses, or the company price.' },
+      { id: 'change', target: '[data-testid="prices-change"]', title: 'Change prices', body: 'Tick items, then change the price for one branch, a price list or the whole company: set it, or raise or lower it by a percentage or an amount, now or from a date. A price below an item\'s minimum price is refused.' },
+      { id: 'table', target: '[data-testid="prices-table"]', title: 'The grid', body: 'Not sold marks what a branch does not sell. Use Stop selling at to take items off one branch\'s till. History shows every change with who made it.' },
+      { id: 'lists', target: '[data-testid="prices-tab-lists"]', title: 'Price lists', body: 'A price list holds prices for some branches, for example an airport or a happy hour. Say which branches use it, and on which days and times.' },
+      { id: 'pending', target: '[data-testid="prices-tab-pending"]', title: 'Scheduled changes', body: 'A change set for a later date waits here and starts by itself. Cancel it here before it starts.' }
+    ]
+  },
+  {
     key: 'pos.kitchen', nav: 'pos.kitchen', title: 'Kitchen display', version: 1,
     steps: [
       { id: 'what', title: 'Your station\'s tickets', body: 'Choose the station this screen is for (Kitchen, Grill...). Its tickets appear by themselves, oldest first, and the screen remembers your choice.' },

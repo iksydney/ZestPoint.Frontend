@@ -35,7 +35,7 @@ export const NAV_AREAS: readonly NavArea[] = [
   { key: 'customers', label: 'Customers', icon: 'users', blurb: 'The people you sell to: their points, their laybys and what they are waiting for.', screens: ['customers', 'pos.laybys', 'pos.backorders'] },
   {
     key: 'stock', label: 'Stock', icon: 'box', blurb: 'What you hold and sell: items, groups, counts and where things are.',
-    screens: ['inventory', 'stock.items', 'stock.groups', 'stock.adjust', 'stock.global', 'stock.bins', 'stock.labels', 'stock.consignment']
+    screens: ['inventory', 'stock.items', 'stock.groups', 'stock.adjust', 'stock.global', 'stock.bins', 'stock.labels', 'stock.consignment'], setup: ['stock.prices']
   },
   { key: 'purchasing', label: 'Purchasing', icon: 'truck', blurb: 'Order from suppliers, receive goods and pay for them.', screens: ['purchasing.orders', 'purchasing.receiving', 'purchasing.suppliers', 'purchasing.payments'] },
   { key: 'finance', label: 'Finance', icon: 'wallet', blurb: 'The ledger: accounts and the entries posted from sales, purchases and stock.', screens: ['ledger.accounts'] },
@@ -115,6 +115,7 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
   'stock.bins': 'Where stock is kept in the branch: bins, their security and what each holds.',
   'stock.labels': 'Print shelf and barcode labels for items.',
   'stock.consignment': 'Goods sent to agents to sell for you: send, record sold and returned.',
+  'stock.prices': 'What each item costs at each branch and why: price lists, what a branch sells, and changes scheduled for a date.',
   'stock.report.items': 'Look up items and where they are held.',
   'stock.report.transactions': 'Every stock movement: receipts, sales, adjustments and transfers.',
   'stock.report.quantities': 'How much of each item is on hand.',

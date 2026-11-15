@@ -123,6 +123,8 @@ export const APP_NAV: readonly NavDefinition[] = [
     data: { report: REPORTS.serialNumbers }, load: () => import('../../features/inventory/serials.component').then((m) => m.SerialsComponent) },
   { key: 'stock.consignment', label: 'Consignment Out', route: '/app/inventory/consignment', icon: 'truck', permission: P.INVENTORY_CONSIGNMENT_MANAGE, feature: FEATURES.INVENTORY, group: 'stock', kind: 'screen', shortcut: 'c', needsBranch: true,
     load: () => import('../../features/inventory/consignments.component').then((m) => m.ConsignmentsComponent), description: 'Goods sent to agents to sell for you: send, record sold and returned.' },
+  { key: 'stock.prices', label: 'Prices and Menus', route: '/app/inventory/prices', icon: 'tag', permission: [P.PRODUCTS_PRICES_MANAGE, P.PRODUCTS_PRICES_MANAGE_BRANCH], feature: FEATURES.HEAD_OFFICE, group: 'stock', kind: 'screen',
+    load: () => import('../../features/inventory/prices.component').then((m) => m.PricesComponent), description: 'What each item costs at each branch, price lists, what a branch sells, and scheduled changes.' },
   report('stock.report.consignment', 'Consignment Out Report', 'inventory/reports/consignment-out', 'stock', REPORTS.consignmentOut, P.INVENTORY_CONSIGNMENT_MANAGE, FEATURES.INVENTORY, 'o', 'truck'),
 
   // ---- Purchasing --------------------------------------------------------------------------------
