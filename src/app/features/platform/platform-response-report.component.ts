@@ -12,11 +12,10 @@ import { PlatformSupportApi } from '../../core/services/support.services';
  * are still unanswered past the time, and the average time to the first reply. Tickets are counted by when they were opened. For support leads and administrators.
  */
 @Component({
-  selector: 'zp-platform-response-report',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule, RouterLink],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-platform-response-report',
+    imports: [DecimalPipe, FormsModule, RouterLink],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <a routerLink="/platform/support" class="text-sm underline">&larr; All tickets</a>
     <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
       <h1 class="text-2xl font-bold">Reply times</h1>

@@ -9,11 +9,10 @@ import { NoticesStore } from '../../core/services/notices.store';
  * unread. It is a separate button from the bar's bell, which is about work waiting at the bar. A notice with a link takes the person there.
  */
 @Component({
-  selector: 'zp-notices-bell',
-  standalone: true,
-  imports: [DatePipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-notices-bell',
+    imports: [DatePipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="relative">
       <button type="button" class="btn-ghost relative px-2" data-testid="notices-bell" data-tour="notices" [attr.data-count]="store.unread()" aria-haspopup="dialog" [attr.aria-expanded]="open()"
               [attr.aria-label]="store.unread() ? store.unread() + ' unread notice(s)' : 'Notices'" (click)="toggle()">

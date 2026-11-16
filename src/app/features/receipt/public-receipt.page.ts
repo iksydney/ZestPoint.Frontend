@@ -13,11 +13,10 @@ import { ReceiptShareComponent, ReceiptViewComponent } from '../../shared/ui/rec
  * the address is the only key: it opens this one receipt, read-only. Nothing else of the business is reachable from here.
  */
 @Component({
-  selector: 'zp-public-receipt',
-  standalone: true,
-  imports: [ReceiptViewComponent, ReceiptShareComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-public-receipt',
+    imports: [ReceiptViewComponent, ReceiptShareComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <main class="min-h-screen bg-slate-100 px-4 py-8 text-slate-900" data-testid="public-receipt">
       <div class="mx-auto max-w-sm space-y-4">
         @if (receipt(); as r) {

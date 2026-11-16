@@ -24,11 +24,10 @@ const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'ea
  * approval rule applies, then written as ONE append-only stock movement. Nothing here edits a quantity directly.
  */
 @Component({
-  selector: 'zp-adjustments',
-  standalone: true,
-  imports: [EntitledActionDirective, DecimalPipe, FormsModule, TenantTimePipe, DialogComponent, StatusBadgeComponent, BranchPickerComponent, SearchSelectComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-adjustments',
+    imports: [EntitledActionDirective, DecimalPipe, FormsModule, TenantTimePipe, DialogComponent, StatusBadgeComponent, BranchPickerComponent, SearchSelectComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Stock Qty Adjustments</h1>
       <div class="flex items-center gap-4"><zp-branch-picker />@if (canManageReasons()) { <button type="button" class="btn-outline" data-testid="reasons-open" (click)="reasonsOpen.set(true)">Reasons</button> }</div>

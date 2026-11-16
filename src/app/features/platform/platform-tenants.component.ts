@@ -15,11 +15,10 @@ const dayKey = (d: Date): string => d.toISOString().slice(0, 10);
 const addDays = (d: Date, n: number): Date => new Date(d.getTime() + n * 86_400_000);
 
 @Component({
-  selector: 'zp-platform-tenants',
-  standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-platform-tenants',
+    imports: [DatePipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <h1 class="text-2xl font-bold">Companies</h1>
     <div class="my-3 flex flex-wrap items-end gap-3">
       <div><label class="app-label" for="t-search">Search</label><input id="t-search" type="search" class="app-input w-64" placeholder="Name, subdomain or email" data-testid="tenant-search" [ngModel]="search()" (ngModelChange)="search.set($event)" (keydown.enter)="load()" /></div>

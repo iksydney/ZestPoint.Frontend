@@ -18,11 +18,10 @@ const PAGE = 25;
  * have no access, a person never sees themselves here, and nobody can review an alert about themselves.
  */
 @Component({
-  selector: 'zp-loss-prevention',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-loss-prevention',
+    imports: [DatePipe, DecimalPipe, FormsModule, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3">
       <h1 class="text-2xl font-bold" data-testid="lp-title">Loss Prevention</h1>
       <p class="mt-1 max-w-3xl text-sm text-ink/80">Unusual things found in what is already recorded: voids, discounts, refunds, cash, receipts, stock, tips, prices and bills. Each is a pointer for you to look at, never proof of anything.</p>

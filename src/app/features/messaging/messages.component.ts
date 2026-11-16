@@ -15,11 +15,10 @@ const PAGE = 25;
  * pretended: a channel that is not set up says so, and a message that cannot go stays in the list with its reason.
  */
 @Component({
-  selector: 'zp-messages',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-messages',
+    imports: [DatePipe, DecimalPipe, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3">
       <h1 class="text-2xl font-bold" data-testid="msg-title">Messages</h1>
       <p class="mt-1 max-w-3xl text-sm text-ink/80">What the system has sent to your people, in the app and by e-mail, SMS or WhatsApp, and whether it arrived. A message that could not be sent stays here with the reason.</p>

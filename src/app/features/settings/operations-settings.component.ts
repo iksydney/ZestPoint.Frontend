@@ -9,11 +9,10 @@ import { ConfirmService, ToastService } from '../../shared/ui/feedback';
 
 /** Tax, discount approval, payment methods, pour-variance thresholds and demonstration data. Existing bills keep the tax they were opened with. */
 @Component({
-  selector: 'zp-operations-settings',
-  standalone: true,
-  imports: [FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-operations-settings',
+    imports: [FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <h1 class="text-2xl font-bold">Operations settings</h1>
     <p class="mt-1 text-sm text-ink/80">How bills are taxed and paid, and when a stock variance needs attention.</p>
     @if (error()) { <p class="sys-alert sys-alert-danger my-3" role="alert">{{ error() }}</p> }

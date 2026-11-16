@@ -6,11 +6,10 @@ import { NewsletterBoxComponent } from './newsletter-box.component';
 import { PricingPreviewComponent } from './pricing-preview.component';
 
 @Component({
-  selector: 'zp-home-page',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [HeroSectionComponent, FeatureGridComponent, ComparisonTableComponent, PricingPreviewComponent, NewsletterBoxComponent],
-  template: `
+    selector: 'zp-home-page',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [HeroSectionComponent, FeatureGridComponent, ComparisonTableComponent, PricingPreviewComponent, NewsletterBoxComponent],
+    template: `
     <zp-hero-section />
     <zp-feature-grid />
     <zp-comparison-table />

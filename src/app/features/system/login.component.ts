@@ -23,11 +23,10 @@ type Mode = 'password' | 'pin';
  * code + PIN. Error messages never reveal which part was wrong.
  */
 @Component({
-  selector: 'zp-login',
-  standalone: true,
-  imports: [FormsModule, RouterLink, BrandMarkComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-login',
+    imports: [FormsModule, RouterLink, BrandMarkComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <main class="grid min-h-screen place-items-center p-4 text-ink" [style]="vars()" style="background-color: rgb(var(--canvas-rgb)); font-family: var(--font-app)">
       <div class="w-full max-w-sm">
         <div class="mb-5 flex flex-col items-center gap-2 text-center">

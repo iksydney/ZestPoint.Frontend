@@ -24,11 +24,10 @@ const NEXT: Record<SerialStatus, readonly SerialStatus[]> = {
  * (in stock, sold, dispatched, returned, damaged) or to another branch. Serials are required at receipt; they are never generated.
  */
 @Component({
-  selector: 'zp-serials',
-  standalone: true,
-  imports: [FormsModule, ReportViewComponent, DialogComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-serials',
+    imports: [FormsModule, ReportViewComponent, DialogComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <zp-report-view #view [definition]="definition" title="Serial Numbers Report" description="Every serial-tracked unit, where it is and what happened to it." [rowActions]="canAct() ? actions : null" />
 
     @if (canRegister()) { <div class="no-print mt-4"><button type="button" class="btn-outline" data-testid="serial-register" [disabled]="readOnly()" (click)="openRegister()">Register serial numbers</button></div> }

@@ -12,11 +12,10 @@ import { BrandMarkComponent } from './brand-mark.component';
 // ---- Product tile (POS grid) ----------------------------------------------------------------
 
 @Component({
-  selector: 'zp-product-tile',
-  standalone: true,
-  imports: [CurrencyPipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-product-tile',
+    imports: [CurrencyPipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <button type="button" class="app-focus touch-target flex w-full flex-col items-start gap-1 rounded-xl border p-3 text-left transition"
             [class]="selected() ? 'border-primary bg-primary text-on-primary' : 'border-ink/15 bg-panel text-ink hover:border-primary/60'"
             [attr.aria-pressed]="selected()" [disabled]="disabled()">
@@ -84,11 +83,10 @@ export interface ReceiptLine {
 }
 
 @Component({
-  selector: 'zp-receipt',
-  standalone: true,
-  imports: [CurrencyPipe, BrandMarkComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-receipt',
+    imports: [CurrencyPipe, BrandMarkComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <article class="mx-auto w-full max-w-[18rem] rounded-md bg-white p-4 font-mono text-[11px] leading-5 text-slate-900 shadow-md" aria-label="Sample receipt">
       <header class="flex flex-col items-center gap-1 text-center">
         <zp-brand-mark [logoUrl]="logoUrl()" [initials]="initials()" [name]="shortName()" [size]="40" />
@@ -135,11 +133,10 @@ export interface NavItem {
 }
 
 @Component({
-  selector: 'zp-sidebar',
-  standalone: true,
-  imports: [RouterLink, RouterLinkActive, BrandMarkComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-sidebar',
+    imports: [RouterLink, RouterLinkActive, BrandMarkComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <nav class="flex h-full flex-col gap-1 border-r border-ink/10 bg-panel p-3 text-ink" aria-label="Main">
       <div class="mb-3 flex items-center gap-2 px-1">
         <zp-brand-mark [logoUrl]="logoUrl()" [initials]="initials()" [name]="name()" [size]="32" />

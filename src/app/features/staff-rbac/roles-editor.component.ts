@@ -14,11 +14,10 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
  * person may grant, so toggles for permissions they do not hold are disabled here AND rejected by the API if forced.
  */
 @Component({
-  selector: 'zp-roles-editor',
-  standalone: true,
-  imports: [FormsModule, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-roles-editor',
+    imports: [FormsModule, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (loading()) { <p role="status">Loading roles...</p> } @else {
       <div class="grid gap-4 lg:grid-cols-[16rem_1fr]">
         <aside aria-label="Roles" class="space-y-1">

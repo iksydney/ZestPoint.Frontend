@@ -27,11 +27,10 @@ const LEDGER_LABEL: Record<string, string> = {
  * always pay its way out. Every figure comes from the server; nothing here decides what a company may do.
  */
 @Component({
-  selector: 'zp-subscription',
-  standalone: true,
-  imports: [CurrencyPipe, DecimalPipe, FormsModule, StatusBadgeComponent, TenantTimePipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-subscription',
+    imports: [CurrencyPipe, DecimalPipe, FormsModule, StatusBadgeComponent, TenantTimePipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-4"><h1 class="text-2xl font-bold">Subscription</h1><p class="mt-1 text-sm text-ink/80">Your plan, what it includes, and how to pay for it. Times are shown in your company's time zone.</p></div>
     @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert" data-testid="sub-error">{{ error() }}</p> }
 

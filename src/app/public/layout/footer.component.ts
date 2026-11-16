@@ -11,11 +11,10 @@ interface FooterLink {
 }
 
 @Component({
-  selector: 'zp-public-footer',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LogoComponent, ThemeToggleComponent],
-  template: `
+    selector: 'zp-public-footer',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [RouterLink, LogoComponent, ThemeToggleComponent],
+    template: `
     <footer class="border-t border-line-light bg-white dark:border-line-dark dark:bg-navy">
       <div class="container-page grid gap-10 py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div class="space-y-4">

@@ -11,11 +11,10 @@ import { BarOrderCardComponent } from './bar-order-card.component';
  * Shown only for a company that uses the method and a person who takes part in it. Nothing here decides access: the API does.
  */
 @Component({
-  selector: 'zp-bar-dock',
-  standalone: true,
-  imports: [RouterLink, BarOrderCardComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-bar-dock',
+    imports: [RouterLink, BarOrderCardComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (bar.active()) {
       <div class="pointer-events-none fixed bottom-20 right-4 z-40 flex max-w-[calc(100vw-2rem)] flex-col items-end gap-2 print:hidden" data-testid="bar-dock">
 

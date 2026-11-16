@@ -6,11 +6,10 @@ import { ReportViewComponent } from './report-view.component';
 
 /** A route screen for one report: the navigation entry supplies the title and the report definition, the shared view does the rest. */
 @Component({
-  selector: 'zp-report-page',
-  standalone: true,
-  imports: [ReportViewComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<zp-report-view [definition]="definition" [title]="title" [description]="description()" (loaded)="description.set($event.description)" />`
+    selector: 'zp-report-page',
+    imports: [ReportViewComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `<zp-report-view [definition]="definition" [title]="title" [description]="description()" (loaded)="description.set($event.description)" />`
 })
 export class ReportPageComponent {
   private readonly route = inject(ActivatedRoute);

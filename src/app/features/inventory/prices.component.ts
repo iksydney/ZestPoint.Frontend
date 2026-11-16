@@ -30,11 +30,10 @@ const timeOf = (minute: number | null): string => (minute === null ? '' : `${pad
  * a branch manager only their own branch, and only if the company allows it. The server decides all of that and refuses the rest.
  */
 @Component({
-  selector: 'zp-prices',
-  standalone: true,
-  imports: [FormsModule, CurrencyPipe, DatePipe, DialogComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-prices',
+    imports: [FormsModule, CurrencyPipe, DatePipe, DialogComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="flex flex-col gap-4" data-testid="prices">
       <div>
         <h1 class="text-2xl font-bold">Prices and menus</h1>

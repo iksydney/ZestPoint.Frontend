@@ -17,11 +17,10 @@ export interface ScanFeedback { readonly text: string; readonly ok: boolean }
  * On a phone it fills the screen.
  */
 @Component({
-  selector: 'zp-camera-scanner',
-  standalone: true,
-  imports: [FormsModule, DialogComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-camera-scanner',
+    imports: [FormsModule, DialogComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <zp-dialog [open]="open()" [title]="title()" [phoneFull]="true" (closed)="closed.emit()">
       <div class="space-y-3" data-testid="scanner" [attr.data-engine]="engine()">
         <div class="relative overflow-hidden rounded-xl bg-black" [class.hidden]="!!fatal()">

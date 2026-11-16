@@ -6,10 +6,9 @@ import { APP_NAV } from '../../core/navigation/app-nav';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
-  selector: 'zp-forbidden',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'zp-forbidden',
+    imports: [RouterLink],
+    template: `
     <main class="grid min-h-screen place-items-center bg-canvas p-6 text-center text-ink">
       <div class="max-w-md space-y-2">
         <h1 class="text-2xl font-bold">No access</h1>
@@ -22,10 +21,9 @@ export class ForbiddenComponent {}
 
 /** A clear prompt, not a silent failure: names the module, says it is not in the plan, and says who can change that. */
 @Component({
-  selector: 'zp-upgrade-required',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'zp-upgrade-required',
+    imports: [RouterLink],
+    template: `
     <main class="grid min-h-screen place-items-center bg-canvas p-6 text-center text-ink">
       <div class="max-w-md space-y-3" data-testid="upgrade-prompt">
         <h1 class="text-2xl font-bold">{{ screen() ? 'Not included in your plan' : 'Upgrade required' }}</h1>

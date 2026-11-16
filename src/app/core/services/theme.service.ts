@@ -1,5 +1,5 @@
-import { DOCUMENT } from '@angular/common';
-import { Injectable, computed, effect, inject, signal } from '@angular/core';
+
+import { Injectable, computed, effect, inject, signal, DOCUMENT } from '@angular/core';
 import { BrandingDto } from '../models/api.model';
 import { relativeLuminance, readableOn } from '../theme/color';
 import { themeVariables } from '../theme/theme-tokens';

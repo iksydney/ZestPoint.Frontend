@@ -9,11 +9,10 @@ import { giftCardQr, printGiftCardSlip } from '../../core/receipt/gift-card-slip
  * screen: the server keeps a scrambled form of it, so it cannot be shown again, and nothing here is kept on the device after it is closed.
  */
 @Component({
-  selector: 'zp-gift-card-issued',
-  standalone: true,
-  imports: [CurrencyPipe, DatePipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-gift-card-issued',
+    imports: [CurrencyPipe, DatePipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="space-y-3" data-testid="gift-card-issued">
       <p class="text-sm" role="note">This is the only time the code is shown. Print the slip or give the code to the customer now: it cannot be shown again. If it is lost, a manager can cancel the card and issue a new one.</p>
       <div class="rounded-lg bg-ink/5 p-4 text-center">

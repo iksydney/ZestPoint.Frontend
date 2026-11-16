@@ -8,11 +8,10 @@ import { DialogComponent } from '../../shared/ui/feedback';
 
 /** Find a supplier by typing part of its name, code, contact or tax id. */
 @Component({
-  selector: 'zp-supplier-lookup',
-  standalone: true,
-  imports: [FormsModule, DialogComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-supplier-lookup',
+    imports: [FormsModule, DialogComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <zp-dialog [open]="open()" title="Find a supplier" (closed)="closed.emit()">
       <label class="app-label" for="sl-q">Search</label>
       <input id="sl-q" class="app-input" autocomplete="off" placeholder="Name, code, contact or tax id" data-testid="supplier-lookup-search" [ngModel]="text()" (ngModelChange)="text.set($event)" />
@@ -64,11 +63,10 @@ const blank = (): SupplierForm => ({ name: '', contactName: '', email: '', phone
 
 /** Add or edit a supplier without leaving the order. */
 @Component({
-  selector: 'zp-supplier-form',
-  standalone: true,
-  imports: [FormsModule, DialogComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-supplier-form',
+    imports: [FormsModule, DialogComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <zp-dialog [open]="open()" [title]="supplier() ? 'Edit supplier' : 'New supplier'" [wide]="true" (closed)="closed.emit()">
       <form class="grid gap-3 sm:grid-cols-2" (submit)="$event.preventDefault(); save()">
         <div class="sm:col-span-2"><label class="app-label" for="sf-name">Supplier name</label><input id="sf-name" class="app-input" maxlength="160" data-testid="supplier-name" [ngModel]="f().name" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ name: $event })" />

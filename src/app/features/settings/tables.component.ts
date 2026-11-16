@@ -22,11 +22,10 @@ interface TableForm { id: string | null; name: string; area: string; seats: numb
  * change the list and refuses a second table with the same name at a branch.
  */
 @Component({
-  selector: 'zp-tables',
-  standalone: true,
-  imports: [FormsModule, BranchPickerComponent, DialogComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-tables',
+    imports: [FormsModule, BranchPickerComponent, DialogComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="flex flex-col gap-4" data-testid="tables">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div><h1 class="text-2xl font-bold">Tables</h1><p class="text-sm text-ink/70">The tables at this branch. The till offers them when you open a table bill, and shows which have a bill running.</p></div>

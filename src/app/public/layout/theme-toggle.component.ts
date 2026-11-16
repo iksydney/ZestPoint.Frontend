@@ -4,11 +4,10 @@ import { PublicThemeService } from '../public-theme.service';
 
 /** Sun/Moon switch for the public site (header and footer). */
 @Component({
-  selector: 'zp-theme-toggle',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule],
-  template: `
+    selector: 'zp-theme-toggle',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [LucideAngularModule],
+    template: `
     <button
       type="button"
       role="switch"

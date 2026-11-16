@@ -10,11 +10,10 @@ import { AccordionComponent, AccordionItem } from './accordion.component';
 const EMPTY: ContactForm = { name: '', businessName: '', venueType: '', staffCount: '', email: '', phone: '', message: '' };
 
 @Component({
-  selector: 'zp-contact-page',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, RouterLink, LucideAngularModule, AccordionComponent],
-  template: `
+    selector: 'zp-contact-page',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [FormsModule, RouterLink, LucideAngularModule, AccordionComponent],
+    template: `
     <section class="container-page pb-6 pt-16 text-center sm:pt-24">
       <p class="eyebrow">Contact</p>
       <h1 class="mx-auto mt-3 max-w-2xl text-4xl font-bold sm:text-5xl">Book a live demo</h1>

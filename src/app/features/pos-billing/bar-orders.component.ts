@@ -21,11 +21,10 @@ const STATUS_LABEL: Record<BarOrderStatus, string> = {
  * each step took. It is the same data as the floating panel, with room to work. Times shown are what the server recorded.
  */
 @Component({
-  selector: 'zp-bar-orders',
-  standalone: true,
-  imports: [RouterLink, BranchPickerComponent, BarOrderCardComponent, TenantTimePipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-bar-orders',
+    imports: [RouterLink, BranchPickerComponent, BarOrderCardComponent, TenantTimePipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="flex flex-col gap-4" data-testid="bar-orders-screen">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>

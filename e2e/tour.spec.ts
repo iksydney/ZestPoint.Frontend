@@ -70,7 +70,10 @@ test.describe('Guided tours', () => {
     await expect(host).toHaveAttribute('data-tour-step', 'menu');
     await page.getByTestId('tour-back').click();
     await expect(host).toHaveAttribute('data-tour-step', 'welcome');
+    // Finishing saves to the account in the background; wait for that to land before reloading, as a person would (they never reload in the same instant).
+    const saved = page.waitForResponse((r) => r.url().includes('/api/v1/me/tours/app') && r.request().method() === 'PUT');
     expect(await walk(page, app)).toEqual(app.steps.map((s) => s.id));
+    expect((await saved).ok()).toBe(true);
 
     // Seen is seen: it does not start again on a reload, nor in another browser (it is kept on the account, not in this browser).
     await page.reload();
@@ -82,8 +85,10 @@ test.describe('Guided tours', () => {
     await page.goto('/app/pos');
     await expect(host).toBeVisible({ timeout: 15_000 });
     await expect(host).toHaveAttribute('data-tour-key', 'pos');
+    const posSaved = page.waitForResponse((r) => r.url().includes('/api/v1/me/tours/pos') && r.request().method() === 'PUT');
     await page.keyboard.press('Escape');
     await expect(host).toHaveCount(0);
+    expect((await posSaved).ok()).toBe(true);
     await page.goto('/app/dashboard');
     await page.goto('/app/pos');
     await expect(page.getByTestId('product-search')).toBeVisible();
@@ -96,12 +101,16 @@ test.describe('Guided tours', () => {
     await page.getByTestId('help-tour-screen').click();
     await walk(page, TOURS.find((t) => t.key === 'pos')!);
     await page.getByTestId('help-open').click();
+    const forgotten = page.waitForResponse((r) => r.url().includes('/api/v1/me/tours') && r.request().method() === 'DELETE');
     await page.getByTestId('help-tours-reset').click();
+    expect((await forgotten).ok()).toBe(true);
     await page.goto('/app/customers');
     await expect(host).toBeVisible({ timeout: 15_000 });
     await expect(host).toHaveAttribute('data-tour-key', 'app');                           // the tour of the application comes first again
+    const appSkipped = page.waitForResponse((r) => r.url().includes('/api/v1/me/tours/app') && r.request().method() === 'PUT');
     await page.getByTestId('tour-skip').click();
     await expect(host).toHaveCount(0);
+    expect((await appSkipped).ok()).toBe(true);
 
     // A cashier gets the same tour without the areas they do not have, and nothing is counted as missing for them.
     await page.goto('/app/staff');

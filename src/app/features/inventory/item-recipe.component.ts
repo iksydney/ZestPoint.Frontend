@@ -22,11 +22,10 @@ type OptionRow = SaveProductRequest['modifiers'][number];
  * recipes also need the plan to include recipe depletion. The server checks both again.
  */
 @Component({
-  selector: 'zp-item-recipe',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-item-recipe',
+    imports: [DecimalPipe, FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="space-y-4" data-testid="recipe-tab">
       @if (!productId()) {
         <p class="text-sm text-ink/80" data-testid="recipe-needs-price">Only an item that is sold can have a recipe or options. Give it a Retail price on the Details tab, set its type to "Stock item (sold as is)", and save.</p>

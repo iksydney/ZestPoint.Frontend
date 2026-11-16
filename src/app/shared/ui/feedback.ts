@@ -160,11 +160,10 @@ export class DialogComponent {
 
 /** Renders the pending ConfirmService request as a dialog. Mounted once, in the application shell. */
 @Component({
-  selector: 'zp-confirm-host',
-  standalone: true,
-  imports: [DialogComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-confirm-host',
+    imports: [DialogComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <zp-dialog [open]="!!confirm.request()" [title]="confirm.request()?.title ?? ''" (closed)="confirm.answer(false)">
       <p class="text-sm text-ink/90">{{ confirm.request()?.message }}</p>
       <div class="mt-4 flex justify-end gap-2">

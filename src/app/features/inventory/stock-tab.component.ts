@@ -22,11 +22,10 @@ const UNIT_LABEL: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Eac
 
 /** Stock levels, item set-up, adjustments, goods received, transfers and batch/expiry view for the active branch. */
 @Component({
-  selector: 'zp-stock-tab',
-  standalone: true,
-  imports: [CurrencyPipe, DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent, StockCardComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-stock-tab',
+    imports: [CurrencyPipe, DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent, StockCardComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-center gap-2">
       <input class="app-input max-w-xs" type="search" placeholder="Search items" aria-label="Search items" data-testid="stock-search" [ngModel]="search()" (ngModelChange)="search.set($event); load()" />
       <label class="flex items-center gap-2 text-sm"><input type="checkbox" data-testid="low-only" [checked]="lowOnly()" (change)="lowOnly.set(!lowOnly()); load()" /> Low stock only</label>

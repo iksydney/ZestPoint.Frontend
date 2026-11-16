@@ -93,11 +93,10 @@ interface Draft {
  * on the server.
  */
 @Component({
-  selector: 'zp-register',
-  standalone: true,
-  imports: [FormsModule, RouterLink, SearchSelectComponent, BrandMarkComponent, ThemeToggleComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-register',
+    imports: [FormsModule, RouterLink, SearchSelectComponent, BrandMarkComponent, ThemeToggleComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <main class="mx-auto min-h-screen max-w-5xl px-4 py-8 text-ink">
       <header class="mb-6 flex items-center justify-between">
         <a routerLink="/" class="app-focus flex items-center gap-2 rounded-lg" aria-label="ZestPoint home">

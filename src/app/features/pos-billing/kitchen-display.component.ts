@@ -17,11 +17,10 @@ const STATION_KEY = 'zp.kds.station';
  * ticket made. Every action goes through the API, which checks who may do it.
  */
 @Component({
-  selector: 'zp-kitchen-display',
-  standalone: true,
-  imports: [RouterLink, BranchPickerComponent, KitchenTicketComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-kitchen-display',
+    imports: [RouterLink, BranchPickerComponent, KitchenTicketComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="flex flex-col gap-4" data-testid="kitchen">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">

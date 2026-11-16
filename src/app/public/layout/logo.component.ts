@@ -3,11 +3,10 @@ import { RouterLink } from '@angular/router';
 
 /** Text + glyph logo. Swap the SVG for the official ZestNovaForge/ZestPoint mark when available. */
 @Component({
-  selector: 'zp-logo',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
-  template: `
+    selector: 'zp-logo',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [RouterLink],
+    template: `
     <a routerLink="/" aria-label="ZestPoint home" class="inline-flex items-center gap-2.5">
       <span aria-hidden="true" class="grid h-9 w-9 place-items-center rounded-xl bg-brand-gradient shadow-glow-sm">
         <svg viewBox="0 0 24 24" class="h-5 w-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">

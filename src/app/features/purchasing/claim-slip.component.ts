@@ -5,11 +5,10 @@ import { ZpIconComponent } from '../../shared/ui/zp-icon.component';
 
 /** A backorder / discrepancy claim slip, ready to print and send to the supplier. Printing is the browser's print dialog. */
 @Component({
-  selector: 'zp-claim-slip',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, ZpIconComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-claim-slip',
+    imports: [DatePipe, DecimalPipe, ZpIconComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (slip(); as c) {
       <div class="space-y-3 text-sm" data-testid="claim-slip">
         <header class="flex flex-wrap items-start justify-between gap-2 border-b border-ink/15 pb-2">

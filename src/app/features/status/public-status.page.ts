@@ -13,11 +13,10 @@ import { StatusApi } from '../../core/services/status.services';
  * Colour is never the only signal: every state has a symbol and a word beside it, and every strip has a text summary.
  */
 @Component({
-  selector: 'zp-public-status',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, NgTemplateOutlet, RouterLink],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-public-status',
+    imports: [DatePipe, DecimalPipe, NgTemplateOutlet, RouterLink],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <main class="min-h-screen bg-slate-100 px-4 py-8 text-slate-900" data-testid="public-status">
       <div class="mx-auto max-w-3xl space-y-5">
         <header class="flex flex-wrap items-baseline justify-between gap-2">

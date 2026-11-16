@@ -18,11 +18,10 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
  * locked for non-payment, because that is exactly when a company needs to write to us. Only the public part of a thread is shown here.
  */
 @Component({
-  selector: 'zp-support',
-  standalone: true,
-  imports: [DatePipe, FormsModule, DialogComponent, StatusBadgeComponent, TenantTimePipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-support',
+    imports: [DatePipe, FormsModule, DialogComponent, StatusBadgeComponent, TenantTimePipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="text-2xl font-bold">Support</h1>

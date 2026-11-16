@@ -22,11 +22,10 @@ const TONE = { None: 'success', Warning: 'warning', Investigate: 'warning', Esca
  * one; changing the book stock is a separate, explicit "book correction".
  */
 @Component({
-  selector: 'zp-audits-tab',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-audits-tab',
+    imports: [DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert">{{ error() }}</p> }
 
     @if (!current()) {

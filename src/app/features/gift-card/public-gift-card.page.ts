@@ -11,11 +11,10 @@ import { GiftCardsApi } from '../../core/services/gift-cards.service';
  * bought it or where. It is rate-limited by the server, so codes cannot be searched for. The code is sent to be checked and is not kept anywhere.
  */
 @Component({
-  selector: 'zp-public-gift-card',
-  standalone: true,
-  imports: [CurrencyPipe, DatePipe, FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-public-gift-card',
+    imports: [CurrencyPipe, DatePipe, FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <main class="min-h-screen bg-slate-100 px-4 py-8 text-slate-900" data-testid="public-gift-card">
       <div class="mx-auto max-w-sm space-y-4">
         <h1 class="text-center text-xl font-bold">Check your gift card</h1>

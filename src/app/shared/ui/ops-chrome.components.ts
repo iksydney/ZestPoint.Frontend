@@ -30,11 +30,10 @@ export class BranchPickerComponent {
  * the server refused (with its reason) so nothing is lost silently.
  */
 @Component({
-  selector: 'zp-sync-status',
-  standalone: true,
-  imports: [DialogComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-sync-status',
+    imports: [DialogComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="flex items-center gap-2 text-sm" data-testid="sync-status">
       <span class="app-badge" [class]="sync.online() ? 'app-badge-success' : 'app-badge-warning'" [attr.data-state]="sync.online() ? 'online' : 'offline'">
         {{ sync.online() ? 'Online' : 'Offline' }}

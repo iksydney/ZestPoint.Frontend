@@ -19,11 +19,10 @@ type Tone = 'success' | 'warning' | 'danger' | 'primary';
  * deactivation. Every control is also gated by the API; the buttons hidden here are a convenience, never the protection.
  */
 @Component({
-  selector: 'zp-staff-list',
-  standalone: true,
-  imports: [DatePipe, FormsModule, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-staff-list',
+    imports: [DatePipe, FormsModule, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-end gap-2">
       <div class="min-w-[12rem] flex-1">
         <label class="app-label" for="f-search">Search</label>

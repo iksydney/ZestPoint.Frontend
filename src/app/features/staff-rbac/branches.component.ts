@@ -11,11 +11,10 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
 /** Settings -> Branches and outlets. Staff access is granted per branch, so branches exist before staff are assigned. */
 @Component({
-  selector: 'zp-branches',
-  standalone: true,
-  imports: [FormsModule, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-branches',
+    imports: [FormsModule, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-4 flex items-center justify-between gap-2">
       <div><h1 class="text-2xl font-bold">Branches &amp; outlets</h1><p class="mt-1 text-sm text-ink/80">Each branch can have its own staff access and stock.</p></div>
       @if (canManage()) { <button type="button" class="btn-primary" (click)="openNew()" data-testid="add-branch">Add branch</button> }

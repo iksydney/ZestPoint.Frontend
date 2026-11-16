@@ -27,11 +27,10 @@ const FIELDS: readonly FieldSpec[] = [
  * It works only inside this company; there is no cross-company reach here.
  */
 @Component({
-  selector: 'zp-global-maintenance',
-  standalone: true,
-  imports: [EntitledActionDirective, FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-global-maintenance',
+    imports: [EntitledActionDirective, FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <h1 class="text-2xl font-bold">Global Stock Maintenance</h1>
     <p class="mt-1 max-w-3xl text-sm text-ink/80">Change one property for many stock items at once. Preview first: nothing is saved until you apply, and a change that any item cannot take is not applied to any.</p>
     @if (readOnly()) { <p class="sys-alert sys-alert-warning my-3" role="status">Read-only: your subscription limits this screen.</p> }

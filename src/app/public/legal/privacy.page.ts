@@ -4,11 +4,10 @@ import { LegalLayoutComponent } from './legal-layout.component';
 import { PRIVACY_SECTIONS } from './privacy.data';
 
 @Component({
-  selector: 'zp-privacy-page',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LegalLayoutComponent],
-  template: `
+    selector: 'zp-privacy-page',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [LegalLayoutComponent],
+    template: `
     <zp-legal-layout title="Privacy Policy" [sections]="sections">
       <p>
         This policy explains how {{ site.parent }} handles personal data on the ZestPoint website and platform, and how we meet the

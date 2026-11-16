@@ -8,11 +8,10 @@ type Status = 'idle' | 'loading' | 'success' | 'error';
 
 /** Reusable newsletter subscription widget: validation, loading, error and success states. */
 @Component({
-  selector: 'zp-newsletter-box',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, LucideAngularModule],
-  template: `
+    selector: 'zp-newsletter-box',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [FormsModule, LucideAngularModule],
+    template: `
     <section class="section" aria-labelledby="newsletter-heading">
       <div class="container-page">
         <div class="relative overflow-hidden rounded-3xl bg-navy px-6 py-12 text-center sm:px-12">

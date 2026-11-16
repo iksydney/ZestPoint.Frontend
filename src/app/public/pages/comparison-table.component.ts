@@ -12,11 +12,10 @@ interface Row {
 }
 
 @Component({
-  selector: 'zp-comparison-table',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet, LucideAngularModule],
-  template: `
+    selector: 'zp-comparison-table',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [NgTemplateOutlet, LucideAngularModule],
+    template: `
     <section class="section bg-white dark:bg-navy/40" aria-labelledby="compare-heading">
       <div class="container-page">
         <div class="mx-auto max-w-2xl text-center">

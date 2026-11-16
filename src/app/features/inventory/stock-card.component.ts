@@ -50,11 +50,10 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
  * server leaves the values as they were. Everything on the card is checked again by the server.
  */
 @Component({
-  selector: 'zp-stock-card',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule, RouterLink, TenantTimePipe, ItemRecipeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-stock-card',
+    imports: [DecimalPipe, FormsModule, RouterLink, TenantTimePipe, ItemRecipeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="fixed inset-0 z-50 grid place-items-start overflow-auto bg-black/60 p-2 sm:p-4 print:static print:bg-transparent print:p-0" (mousedown)="onBackdrop($event)">
       <div class="app-card mx-auto w-full max-w-6xl shadow-2xl print:max-w-none print:border-0 print:shadow-none" role="dialog" aria-modal="true" [attr.aria-label]="title()" data-testid="stock-card">
         <div class="mb-3 flex items-start justify-between gap-3">

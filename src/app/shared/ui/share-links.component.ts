@@ -11,11 +11,10 @@ interface NdefWriter { write(message: { records: { recordType: string; data: str
  * outside service from here: the QR code is drawn on the device and the messages open the person's own apps.
  */
 @Component({
-  selector: 'zp-share-links',
-  standalone: true,
-  imports: [FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-share-links',
+    imports: [FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="space-y-3 text-sm" data-testid="share-links">
       <div>
         <label class="app-label" for="sl-phone">Their phone (optional, for WhatsApp and SMS)</label>

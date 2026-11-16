@@ -28,11 +28,10 @@ interface Edit { counted: string; explanation: string }
  * through the stock ledger, after somebody other than the counter approves it. The second tab is the variance report.
  */
 @Component({
-  selector: 'zp-stock-take',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule, TenantTimePipe, DialogComponent, StatusBadgeComponent, BranchPickerComponent, SearchSelectComponent, ReportViewComponent, CameraScannerComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-stock-take',
+    imports: [DecimalPipe, FormsModule, TenantTimePipe, DialogComponent, StatusBadgeComponent, BranchPickerComponent, SearchSelectComponent, ReportViewComponent, CameraScannerComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Stock Take Report</h1>
       <zp-branch-picker />

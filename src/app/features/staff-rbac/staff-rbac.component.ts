@@ -9,11 +9,10 @@ type Tab = 'staff' | 'roles' | 'activity';
 
 /** Staff &amp; roles: people, role/permission editor and the audit trail. Tabs a person may not use are simply not offered. */
 @Component({
-  selector: 'zp-staff-rbac',
-  standalone: true,
-  imports: [StaffListComponent, RolesEditorComponent, AuditLogComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-staff-rbac',
+    imports: [StaffListComponent, RolesEditorComponent, AuditLogComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <h1 class="text-2xl font-bold">Staff &amp; roles</h1>
     <p class="mb-4 mt-1 text-sm text-ink/80">Invite your team, give each person the access their job needs, and review what changed.</p>
 

@@ -77,11 +77,10 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
  * All buttons are UX only; the API re-checks permission, branch and subscription on every call.
  */
 @Component({
-  selector: 'zp-pos-billing',
-  standalone: true,
-  imports: [CurrencyPipe, DatePipe, DecimalPipe, FormsModule, DialogComponent, GiftCardIssuedComponent, TableRequestsComponent, StatusBadgeComponent, BranchPickerComponent, SyncStatusComponent, VoidAuthoriserComponent, ReceiptViewComponent, ReceiptShareComponent, CameraScannerComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-pos-billing',
+    imports: [CurrencyPipe, DatePipe, DecimalPipe, FormsModule, DialogComponent, GiftCardIssuedComponent, TableRequestsComponent, StatusBadgeComponent, BranchPickerComponent, SyncStatusComponent, VoidAuthoriserComponent, ReceiptViewComponent, ReceiptShareComponent, CameraScannerComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Point of sale</h1>
       <div class="flex flex-wrap items-center gap-4"><zp-branch-picker /><zp-sync-status /></div>

@@ -28,11 +28,10 @@ const utc = (value: string): number => Date.parse(value.endsWith('Z') || /[+-]\d
  * server decides who may (only the person who took a ticket works on it).
  */
 @Component({
-  selector: 'zp-kitchen-ticket',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule, DialogComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-kitchen-ticket',
+    imports: [DecimalPipe, FormsModule, DialogComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (order(); as o) {
       <article class="flex h-full flex-col rounded-xl border-4 bg-panel p-3 text-ink shadow" [class]="frame()" [attr.data-age]="age()" [attr.data-testid]="'kitchen-ticket-' + place()" [attr.data-status]="o.status">
         <header class="flex items-start justify-between gap-2">

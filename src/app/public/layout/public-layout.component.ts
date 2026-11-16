@@ -6,11 +6,10 @@ import { PublicHeaderComponent } from './header.component';
 
 /** Shell for every public marketing route: header, routed page, footer, and the public light/dark theme. */
 @Component({
-  selector: 'zp-public-layout',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, PublicHeaderComponent, PublicFooterComponent],
-  template: `
+    selector: 'zp-public-layout',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [RouterOutlet, PublicHeaderComponent, PublicFooterComponent],
+    template: `
     <div class="zp-public">
       <zp-public-header />
       <main id="main" class="outline-none"><router-outlet /></main>

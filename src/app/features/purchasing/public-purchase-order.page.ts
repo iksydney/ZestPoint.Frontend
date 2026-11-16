@@ -12,11 +12,10 @@ import { PoPrintSheetComponent } from './po-print-sheet.component';
  * address is the only key: it opens this one order, read-only, as it would be printed. Nothing else of the business is reachable.
  */
 @Component({
-  selector: 'zp-public-purchase-order',
-  standalone: true,
-  imports: [PoPrintSheetComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-public-purchase-order',
+    imports: [PoPrintSheetComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <main class="min-h-screen bg-slate-100 px-2 py-6 text-slate-900 print:bg-white print:p-0" data-testid="public-po">
       <div class="mx-auto max-w-4xl space-y-3">
         @if (order(); as o) {

@@ -11,11 +11,10 @@ import { ToastService } from '../../shared/ui/feedback';
 
 /** One company's customer record: the stage and owner ZestPoint keeps, tags, the next follow-up, and the private contact log. */
 @Component({
-  selector: 'zp-platform-customer',
-  standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-platform-customer',
+    imports: [DatePipe, FormsModule, RouterLink],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <a routerLink="/platform/customers" class="text-sm underline">&larr; All customers</a>
     @if (error()) { <p class="sys-alert sys-alert-danger my-3" role="alert" data-testid="customer-error">{{ error() }}</p> }
     @if (profile(); as p) {

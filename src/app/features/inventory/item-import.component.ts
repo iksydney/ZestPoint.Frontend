@@ -63,11 +63,10 @@ export function parseCsv(text: string): string[][] {
  * that matches an item already here refuses the file. The server does the checking and the importing; this only reads the file.
  */
 @Component({
-  selector: 'zp-item-import',
-  standalone: true,
-  imports: [FormsModule, DialogComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-item-import',
+    imports: [FormsModule, DialogComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <zp-dialog [open]="true" title="Add many items from a file" [wide]="true" (closed)="closed.emit()">
       <div class="space-y-4" data-testid="import-dialog">
         <ol class="ml-5 list-decimal space-y-3 text-sm">

@@ -9,11 +9,10 @@ import { PlatformApi } from '../../core/services/subscription.services';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
 @Component({
-  selector: 'zp-platform-overview',
-  standalone: true,
-  imports: [CurrencyPipe, DatePipe, KeyValuePipe, RouterLink, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-platform-overview',
+    imports: [CurrencyPipe, DatePipe, KeyValuePipe, RouterLink, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <h1 class="text-2xl font-bold">Overview</h1>
     @if (error()) { <p class="sys-alert sys-alert-danger my-3" role="alert">{{ error() }}</p> }
     @if (o(); as v) {

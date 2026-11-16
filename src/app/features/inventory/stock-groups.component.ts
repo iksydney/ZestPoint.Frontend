@@ -19,11 +19,10 @@ const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description:
  * products, stock items, sales or sub-groups can only be deactivated, or its members reassigned; it is never deleted from under history.
  */
 @Component({
-  selector: 'zp-stock-groups',
-  standalone: true,
-  imports: [EntitledActionDirective, FormsModule, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-stock-groups',
+    imports: [EntitledActionDirective, FormsModule, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Stock Group Maintenance</h1>
       <div class="flex items-center gap-3">

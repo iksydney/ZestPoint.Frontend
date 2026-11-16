@@ -12,11 +12,10 @@ type Tab = 'stock' | 'purchasing' | 'audits' | 'insights';
 
 /** Inventory console for the active branch. Tabs appear only for what the person's role and the company's plan allow. */
 @Component({
-  selector: 'zp-inventory',
-  standalone: true,
-  imports: [BranchPickerComponent, SyncStatusComponent, StockTabComponent, PurchasingTabComponent, AuditsTabComponent, InsightsTabComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-inventory',
+    imports: [BranchPickerComponent, SyncStatusComponent, StockTabComponent, PurchasingTabComponent, AuditsTabComponent, InsightsTabComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Inventory</h1>
       <div class="flex flex-wrap items-center gap-4"><zp-branch-picker /><zp-sync-status /></div>

@@ -10,11 +10,10 @@ import { TenantTimePipe } from '../../core/pipes/tenant-time.pipe';
  * People who cannot manage billing see the message without the buttons, plus who to ask.
  */
 @Component({
-  selector: 'zp-account-banner',
-  standalone: true,
-  imports: [RouterLink, TenantTimePipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-account-banner',
+    imports: [RouterLink, TenantTimePipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (banner(); as b) {
       <section class="sys-alert flex flex-wrap items-start justify-between gap-3" [class]="level()" [attr.role]="b.level === 'Critical' ? 'alert' : 'status'" data-testid="account-banner" [attr.data-code]="b.code">
         <div class="min-w-0 flex-1">

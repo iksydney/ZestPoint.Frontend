@@ -17,11 +17,10 @@ const blank = (): SaveCustomerRequest => ({ name: '', phone: '', email: null, ad
  * spent at the till as money off a bill (the customer's own code, or a supervisor's PIN, allows it).
  */
 @Component({
-  selector: 'zp-customers',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-customers',
+    imports: [DatePipe, DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Customers</h1>
       <button type="button" class="btn-primary" data-testid="customer-new" [disabled]="readOnly()" (click)="openEdit(null)">New customer</button>
