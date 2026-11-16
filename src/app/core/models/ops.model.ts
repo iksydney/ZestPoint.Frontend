@@ -428,6 +428,9 @@ export interface OrderDto {
   hasPendingVoids: boolean;
   /** Bar man method: a supervisor or administrator allowed payment on this bill before the bar confirmed it. */
   paymentUnlocked?: boolean;
+  /** A waiter asked a cashier to take payment on this bill (the phone app's "Ask for payment"): when, and who. Null when nobody has. The website does not show it yet. */
+  paymentRequestedAtUtc?: string | null;
+  paymentRequestedByName?: string | null;
   rowVersion: string;
 }
 
