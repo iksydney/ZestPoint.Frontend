@@ -62,6 +62,11 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
           <div class="app-card space-y-2 text-sm">
             <p><span class="text-ink/60">Status</span> <zp-status-badge [tone]="tone(d.ticket.status)"><span data-testid="ticket-status">{{ label(d.ticket.status) }}</span></zp-status-badge></p>
             <p><span class="text-ink/60">Priority</span> <span data-testid="ticket-priority-value">{{ d.ticket.priority }}</span></p>
+            <p data-testid="ticket-due"><span class="text-ink/60">Reply due</span>
+              @if (d.ticket.respondByUtc) {
+                {{ d.ticket.respondByUtc | date: 'medium' }}
+                @if (d.ticket.late) { <zp-status-badge tone="danger">Late</zp-status-badge> } @else if (d.ticket.answeredOnTime === true) { <zp-status-badge tone="success">Answered on time</zp-status-badge> } @else if (d.ticket.answeredOnTime === false) { <zp-status-badge tone="warning">Answered late</zp-status-badge> }
+              } @else { None promised }</p>
             <p><span class="text-ink/60">Assigned to</span> <span data-testid="ticket-assigned">{{ d.ticket.assignedToName ?? 'Nobody' }}</span></p>
             <p class="text-xs text-ink/60">Opened {{ d.ticket.createdAtUtc | date: 'medium' }}@if (d.firstResponseAtUtc) { <br />First reply {{ d.firstResponseAtUtc | date: 'medium' }} }</p>
           </div>

@@ -17,6 +17,7 @@ import { APP_TOUR } from '../../core/tour/tours';
 import { BarDockComponent } from '../pos-billing/bar-dock.component';
 import { BrandMarkComponent } from '../../shared/ui/brand-mark.component';
 import { AccountBannerComponent } from '../../shared/ui/account-banner.component';
+import { StatusBannerComponent } from '../../shared/ui/status-banner.component';
 import { CommandPaletteComponent } from '../../shared/ui/command-palette.component';
 import { ConfirmHostComponent, ToastHostComponent, ToastService } from '../../shared/ui/feedback';
 import { NavSidebarComponent } from '../../shared/ui/nav-sidebar.component';
@@ -32,7 +33,7 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
 @Component({
   selector: 'zp-app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, BarDockComponent, CommandPaletteComponent, TourHostComponent, LockScreenComponent, ItemSavedPromptComponent, ShiftPromptComponent, NoticesBellComponent],
+  imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, StatusBannerComponent, BarDockComponent, CommandPaletteComponent, TourHostComponent, LockScreenComponent, ItemSavedPromptComponent, ShiftPromptComponent, NoticesBellComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="grid min-h-screen grid-cols-[minmax(0,1fr)] bg-canvas text-ink md:grid-cols-[17rem_minmax(0,1fr)] print:block" [attr.inert]="lock.locked() || shiftPrompt.mustStart() ? '' : null">
@@ -117,6 +118,7 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
             </ol>
           </nav>
         }
+        <zp-status-banner class="block px-4 sm:px-6 print:hidden" />
         <zp-account-banner class="block px-4 pt-3 sm:px-6 print:hidden" />
         <!-- Room at the bottom so the floating bar button never covers the last control of a screen. -->
         <!-- Anything wider than the screen (a big table) scrolls inside this area; the page itself never scrolls sideways, even on the smallest phone. -->

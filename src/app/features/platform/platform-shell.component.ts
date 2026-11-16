@@ -20,6 +20,7 @@ import { ConfirmHostComponent, ToastHostComponent } from '../../shared/ui/feedba
             <a routerLink="/platform/tenants" routerLinkActive="bg-primary/10" class="btn-ghost text-sm" data-testid="nav-tenants">Companies</a>
             <a routerLink="/platform/plans" routerLinkActive="bg-primary/10" class="btn-ghost text-sm" data-testid="nav-plans">Plans</a>
             @if (platform.can(perms.TICKETS_VIEW)) { <a routerLink="/platform/support" routerLinkActive="bg-primary/10" class="btn-ghost text-sm" data-testid="nav-support">Support</a> }
+            @if (platform.can(perms.TICKETS_VIEW)) { <a routerLink="/platform/status" routerLinkActive="bg-primary/10" class="btn-ghost text-sm" data-testid="nav-status">Status</a> }
             @if (platform.can(perms.CRM_VIEW)) { <a routerLink="/platform/customers" routerLinkActive="bg-primary/10" class="btn-ghost text-sm" data-testid="nav-customers">Customers</a> }
             @if (platform.can(perms.USERS_VIEW)) { <a routerLink="/platform/users" routerLinkActive="bg-primary/10" class="btn-ghost text-sm" data-testid="nav-users">People</a> }
             @if (platform.can(perms.OPERATORS_MANAGE)) { <a routerLink="/platform/operators" routerLinkActive="bg-primary/10" class="btn-ghost text-sm" data-testid="nav-operators">Operators</a> }

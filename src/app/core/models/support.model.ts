@@ -35,7 +35,8 @@ export const PLATFORM_PERMISSIONS = {
   USERS_VIEW: 'platform.users.view',
   USERS_MANAGE: 'platform.users.manage',
   BILLING_MANAGE: 'platform.billing.manage',
-  OPERATORS_MANAGE: 'platform.operators.manage'
+  OPERATORS_MANAGE: 'platform.operators.manage',
+  STATUS_MANAGE: 'platform.status.manage'
 } as const;
 
 export interface CreateTicketRequest { subject: string; category: TicketCategory; priority: TicketPriority; body: string; idempotencyKey?: string | null }
@@ -67,6 +68,12 @@ export interface TicketListItemDto {
   companySlug: string | null;
   assignedToAdminId: string | null;
   assignedToName: string | null;
+  /** When the company's plan promises a first reply by (inside its support hours). Null: the plan makes no promise. Stays as a record once answered. */
+  respondByUtc: string | null;
+  /** No reply yet and past the promised time. */
+  late: boolean;
+  /** Once answered: was the first reply inside the promised time. Null while unanswered or when nothing was promised. */
+  answeredOnTime: boolean | null;
 }
 
 export interface TicketDetailDto {
@@ -81,6 +88,42 @@ export interface TicketDetailDto {
 
 export interface AssignTicketRequestDto { adminId: string | null }
 export interface PlatformTicketReplyRequest { body: string; internal: boolean; setStatus?: TicketStatus | null; idempotencyKey?: string | null }
+
+/** The named contact a company's plan gives it. */
+export interface SupportContactDto { name: string; email: string | null; phone: string | null }
+
+/** What a company's plan promises about support (the company's Support screen shows it). */
+export interface SupportPromiseDto {
+  planName: string;
+  /** Minutes to a first reply, counted inside the support hours. Null: no promise. */
+  normalMinutes: number | null;
+  urgentMinutes: number | null;
+  /** The hours the minutes are counted in, in words. */
+  hours: string;
+  hasNamedContact: boolean;
+  contact: SupportContactDto | null;
+}
+
+export interface ResponseReportRowDto {
+  plan: string;
+  operator: string;
+  tickets: number;
+  answeredOnTime: number;
+  answeredLate: number;
+  /** No answer yet and already past the time promised. */
+  stillLate: number;
+  averageFirstResponseMinutes: number | null;
+}
+
+export interface ResponseReportDto {
+  month: string;
+  rows: ResponseReportRowDto[];
+  tickets: number;
+  answeredOnTime: number;
+  answeredLate: number;
+  stillLate: number;
+  withoutPromise: number;
+}
 
 export interface SupportSummaryDto { open: number; awaitingCustomer: number; unassigned: number; urgent: number; myOpen: number; emailConfigured: boolean }
 

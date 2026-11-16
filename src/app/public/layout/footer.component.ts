@@ -76,6 +76,7 @@ export class PublicFooterComponent {
       links: [
         { href: '/contact', label: 'Contact & demo' },
         { href: `mailto:${SITE.supportEmail}`, label: 'Support' },
+        { href: '/status', label: 'System status' },
         { href: PORTAL_LOGIN_URL, label: 'Login' }
       ]
     },

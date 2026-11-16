@@ -13,8 +13,14 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
 const MODULES = Object.values(FEATURES) as string[];
 
+const DAYS = [{ bit: 1, label: 'Mon' }, { bit: 2, label: 'Tue' }, { bit: 4, label: 'Wed' }, { bit: 8, label: 'Thu' }, { bit: 16, label: 'Fri' }, { bit: 32, label: 'Sat' }, { bit: 64, label: 'Sun' }] as const;
+const clock = (m: number): string => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+const FROM_TIMES = Array.from({ length: 48 }, (_, i) => i * 30);        // 00:00 to 23:30
+const TO_TIMES = Array.from({ length: 48 }, (_, i) => (i + 1) * 30);    // 00:30 to 24:00
+
 const blank = (): SavePlanRequest => ({
   code: '', name: '', description: '', priceMinor: 0, currencyCode: 'USD', interval: 'Monthly', maxBranches: null, maxStaff: null, maxMonthlyOrders: null, monthlyMessageAllowance: null,
+  supportFirstResponseNormalMinutes: null, supportFirstResponseUrgentMinutes: null, supportDays: 127, supportFromMinute: 0, supportToMinute: 1440, namedContact: false,
   trialDays: 14, warningDays: 3, graceDays: 7, restrictionPolicy: 'LockedExceptBilling', isActive: true, isPublic: true, sortOrder: 10, features: [], rules: [], rowVersion: null
 });
 
@@ -27,12 +33,13 @@ const blank = (): SavePlanRequest => ({
   template: `
     <div class="mb-4 flex items-center justify-between"><h1 class="text-2xl font-bold">Plans</h1>@if (platform.can(perms.BILLING_MANAGE)) { <button type="button" class="btn-primary" data-testid="new-plan" (click)="openPlan(null)">New plan</button> }</div>
     @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert">{{ error() }}</p> }
-    <div class="app-card overflow-x-auto p-0"><table class="app-table" data-testid="plans-table"><thead><tr><th>Plan</th><th class="text-right">Price</th><th>Limits (branches / staff / orders / paid messages)</th><th>Timing</th><th>Modules</th><th></th></tr></thead>
+    <div class="app-card overflow-x-auto p-0"><table class="app-table" data-testid="plans-table"><thead><tr><th>Plan</th><th class="text-right">Price</th><th>Limits (branches / staff / orders / paid messages)</th><th>Timing</th><th>Support promise</th><th>Modules</th><th></th></tr></thead>
       <tbody>@for (p of plans(); track p.id) {
         <tr [attr.data-testid]="'plan-row-' + p.code"><td class="font-medium">{{ p.name }}<span class="block text-xs font-normal text-ink/60">{{ p.code }}</span> @if (!p.isActive) { <zp-status-badge tone="danger">Inactive</zp-status-badge> }@if (!p.isPublic) { <zp-status-badge tone="warning">Hidden</zp-status-badge> }</td>
           <td class="text-right">{{ p.priceMinor / 100 | currency: p.currencyCode }}<span class="block text-xs text-ink/60">per {{ p.interval === 'Yearly' ? 'year' : 'month' }}</span></td>
           <td class="text-sm">{{ p.maxBranches ?? '&infin;' }} / {{ p.maxStaff ?? '&infin;' }} / {{ p.maxMonthlyOrders ?? '&infin;' }} / {{ p.monthlyMessageAllowance || 'none' }}</td>
           <td class="text-sm">trial {{ p.trialDays }}d, remind {{ p.warningDays }}d, grace {{ p.graceDays }}d<span class="block text-xs text-ink/60">{{ p.restrictionPolicy === 'PerModule' ? 'per-module restriction' : 'locked except billing' }}</span></td>
+          <td class="text-sm" [attr.data-testid]="'plan-support-' + p.code">{{ promiseText(p) }}</td>
           <td class="text-sm">{{ p.features.length }} of {{ allModules.length }}</td>
           <td class="text-right">@if (platform.can(perms.BILLING_MANAGE)) { <button type="button" class="btn-outline px-2 py-1 text-sm" [attr.data-testid]="'edit-plan-' + p.code" (click)="openPlan(p)">Edit</button> }</td></tr> }</tbody></table></div>
 
@@ -56,6 +63,19 @@ const blank = (): SavePlanRequest => ({
           <label class="flex items-center gap-2 text-sm"><input type="checkbox" [checked]="f().isActive" (change)="patch({ isActive: !f().isActive })" /> Active</label>
           <label class="flex items-center gap-2 text-sm"><input type="checkbox" [checked]="f().isPublic" (change)="patch({ isPublic: !f().isPublic })" /> Shown to customers</label>
         </div>
+        <fieldset class="rounded-lg border border-ink/15 p-3" data-testid="plan-support"><legend class="px-1 text-sm font-semibold">Support promise</legend>
+          <p class="mb-2 text-xs text-ink/70">The minutes to a first reply are counted only inside these days and hours, in support's own time zone. Leave both times blank to promise nothing. A normal-ticket time also covers urgent tickets unless an urgent time is given.</p>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div><label class="app-label" for="p-sn">First reply, normal ticket (minutes)</label><input id="p-sn" type="number" min="1" class="app-input" data-testid="plan-support-normal" [ngModel]="f().supportFirstResponseNormalMinutes" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ supportFirstResponseNormalMinutes: $event ? +$event : null })" /></div>
+            <div><label class="app-label" for="p-su">First reply, urgent ticket (minutes)</label><input id="p-su" type="number" min="1" class="app-input" data-testid="plan-support-urgent" [ngModel]="f().supportFirstResponseUrgentMinutes" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ supportFirstResponseUrgentMinutes: $event ? +$event : null })" /></div>
+            <div class="sm:col-span-2"><span class="app-label">Support days</span><div class="flex flex-wrap gap-x-4 gap-y-1">@for (d of days; track d.bit) { <label class="flex items-center gap-1.5 text-sm"><input type="checkbox" [attr.data-testid]="'plan-support-day-' + d.bit" [checked]="hasDay(d.bit)" (change)="toggleDay(d.bit)" /> {{ d.label }}</label> }</div></div>
+            <div><label class="app-label" for="p-sf">Support opens</label><select id="p-sf" class="app-input" data-testid="plan-support-from" [ngModel]="f().supportFromMinute" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ supportFromMinute: +$event })">@for (t of fromTimes; track t) { <option [value]="t">{{ clock(t) }}</option> }</select></div>
+            <div><label class="app-label" for="p-st">Support closes</label><select id="p-st" class="app-input" data-testid="plan-support-to" [ngModel]="f().supportToMinute" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ supportToMinute: +$event })">@for (t of toTimes; track t) { <option [value]="t">{{ clock(t) }}</option> }</select></div>
+            <label class="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" data-testid="plan-support-named" [checked]="f().namedContact" (change)="patch({ namedContact: !f().namedContact })" /> A named contact at ZestPoint (the owner on the company's customer record)</label>
+          </div>
+          @if (fe()['supportToMinute']) { <p class="app-error mt-2" role="alert">{{ fe()['supportToMinute'] }}</p> }
+          @if (fe()['supportDays']) { <p class="app-error mt-2" role="alert">{{ fe()['supportDays'] }}</p> }
+        </fieldset>
         <fieldset class="rounded-lg border border-ink/15 p-3"><legend class="px-1 text-sm font-semibold">Modules in this plan</legend>
           <div class="space-y-2">
             @for (m of allModules; track m) {
@@ -110,6 +130,10 @@ export class PlatformPlansComponent implements OnInit {
   private readonly toast = inject(ToastService);
 
   protected readonly allModules = MODULES;
+  protected readonly days = DAYS;
+  protected readonly fromTimes = FROM_TIMES;
+  protected readonly toTimes = TO_TIMES;
+  protected readonly clock = clock;
   protected readonly plans = signal<readonly PlanDto[]>([]);
   protected readonly open = signal(false);
   protected readonly editingId = signal<string | null>(null);
@@ -150,6 +174,19 @@ export class PlatformPlansComponent implements OnInit {
   }
 
   protected patch(p: Partial<SavePlanRequest>): void { this.f.update((v) => ({ ...v, ...p })); }
+  protected hasDay(bit: number): boolean { return (this.f().supportDays & bit) !== 0; }
+  protected toggleDay(bit: number): void { this.f.update((v) => ({ ...v, supportDays: v.supportDays ^ bit })); }
+
+  /** The promise in a line for the list: normal and urgent minutes, the days and hours, a named contact. */
+  protected promiseText(p: PlanDto): string {
+    const n = p.supportFirstResponseNormalMinutes;
+    const u = p.supportFirstResponseUrgentMinutes;
+    if (!n && !u) return 'none';
+    const hours = p.supportDays === 127 && p.supportFromMinute === 0 && p.supportToMinute === 1440
+      ? 'round the clock'
+      : `${DAYS.filter((d) => (p.supportDays & d.bit) !== 0).map((d) => d.label).join(' ')} ${clock(p.supportFromMinute)} to ${clock(p.supportToMinute)}`;
+    return `${n ?? u} / ${u ?? n} min, ${hours}${p.namedContact ? ', named contact' : ''}`;
+  }
   protected has(key: string): boolean { return this.f().features.some((x) => x.featureKey === key); }
   protected modeOf(key: string): ModeName { return this.f().features.find((x) => x.featureKey === key)?.modeWhenRestricted ?? 'None'; }
 

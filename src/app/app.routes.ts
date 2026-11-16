@@ -209,6 +209,10 @@ export const routes: Routes = [
       { path: 'plans', title: 'Plans', loadComponent: () => import('./features/platform/platform-plans.component').then((m) => m.PlatformPlansComponent) },
       { path: 'support', title: 'Support tickets', canActivate: [platformPermissionGuard], data: { platformPermission: PLATFORM_PERMISSIONS.TICKETS_VIEW },
         loadComponent: () => import('./features/platform/platform-support.component').then((m) => m.PlatformSupportComponent) },
+      { path: 'support/report', title: 'Reply times', canActivate: [platformPermissionGuard], data: { platformPermission: PLATFORM_PERMISSIONS.TICKETS_MANAGE },
+        loadComponent: () => import('./features/platform/platform-response-report.component').then((m) => m.PlatformResponseReportComponent) },
+      { path: 'status', title: 'Status page', canActivate: [platformPermissionGuard], data: { platformPermission: PLATFORM_PERMISSIONS.TICKETS_VIEW },
+        loadComponent: () => import('./features/platform/platform-status.component').then((m) => m.PlatformStatusComponent) },
       { path: 'support/:id', title: 'Ticket', canActivate: [platformPermissionGuard], data: { platformPermission: PLATFORM_PERMISSIONS.TICKETS_VIEW },
         loadComponent: () => import('./features/platform/platform-ticket.component').then((m) => m.PlatformTicketComponent) },
       { path: 'customers', title: 'Customers', canActivate: [platformPermissionGuard], data: { platformPermission: PLATFORM_PERMISSIONS.CRM_VIEW },
@@ -230,6 +234,8 @@ export const routes: Routes = [
   // A customer at a table, opened from the QR code on it, without signing in: the table's code is the only key.
   { path: 't/:code', title: 'Order from your table', loadComponent: () => import('./features/table-order/public-table.page').then((m) => m.PublicTablePageComponent) },
   // The holder of a gift card checking what is left, without signing in: the code is the only key.
+  { path: 'status', title: 'ZestPoint status', loadComponent: () => import('./features/status/public-status.page').then((m) => m.PublicStatusPageComponent) },
+
   { path: 'gift-card', title: 'Check your gift card', loadComponent: () => import('./features/gift-card/public-gift-card.page').then((m) => m.PublicGiftCardPageComponent) },
   // A purchase order, opened by its supplier from the link they were sent, without signing in.
   { path: 'po/:token', title: 'Purchase order', loadComponent: () => import('./features/purchasing/public-purchase-order.page').then((m) => m.PublicPurchaseOrderPageComponent) },

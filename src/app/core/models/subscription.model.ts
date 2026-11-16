@@ -41,6 +41,14 @@ export interface PlanDto {
   maxMonthlyOrders: number | null;
   /** Paid messages (SMS and WhatsApp) a month. Null or 0: none included, so they go by e-mail. Unlike the limits above, null is not unlimited. */
   monthlyMessageAllowance: number | null;
+  /** The support promise: minutes to a first reply (null: none promised), counted inside the support hours (days are bits, Monday = 1 ... Sunday = 64; minutes from midnight in support's time zone). */
+  supportFirstResponseNormalMinutes: number | null;
+  supportFirstResponseUrgentMinutes: number | null;
+  supportDays: number;
+  supportFromMinute: number;
+  supportToMinute: number;
+  /** The plan gives the company a named contact at ZestPoint (the owner on its customer record). */
+  namedContact: boolean;
   trialDays: number;
   warningDays: number;
   graceDays: number;
@@ -66,6 +74,12 @@ export interface SavePlanRequest {
   maxMonthlyOrders: number | null;
   /** Paid messages (SMS and WhatsApp) a month. Null or 0: none included, so they go by e-mail. Unlike the limits above, null is not unlimited. */
   monthlyMessageAllowance: number | null;
+  supportFirstResponseNormalMinutes: number | null;
+  supportFirstResponseUrgentMinutes: number | null;
+  supportDays: number;
+  supportFromMinute: number;
+  supportToMinute: number;
+  namedContact: boolean;
   trialDays: number;
   warningDays: number;
   graceDays: number;

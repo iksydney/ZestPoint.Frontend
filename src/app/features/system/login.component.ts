@@ -92,6 +92,7 @@ type Mode = 'password' | 'pin';
         </form>
 
         <p class="mt-4 text-center text-sm text-ink/80">New to ZestPoint? <a routerLink="/register" class="font-semibold text-ink underline">Register your business</a></p>
+        <p class="mt-2 text-center text-sm text-ink/80">Trouble signing in? <a routerLink="/status" class="font-semibold text-ink underline" data-testid="login-status-link">Check the system status</a></p>
       </div>
     </main>
   `

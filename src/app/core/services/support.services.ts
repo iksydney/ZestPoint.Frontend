@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { ApiEnvelope } from '../models/api.model';
 import {
   AssignTicketRequestDto, CreateOperatorRequest, CreateTicketRequest, CrmListItemDto, CrmNoteKind, CrmProfileDto, CrmStage, PagedResult, PlatformOperatorDto, PlatformTicketReplyRequest,
-  PlatformUserAction, PlatformUserActionResultDto, PlatformUserListItemDto, MembershipStatus, SaveCrmProfileRequest, SupportSummaryDto, TicketDetailDto, TicketListItemDto, TicketPriority,
+  PlatformUserAction, PlatformUserActionResultDto, PlatformUserListItemDto, MembershipStatus, ResponseReportDto, SaveCrmProfileRequest, SupportPromiseDto, SupportSummaryDto, TicketDetailDto, TicketListItemDto, TicketPriority,
   TicketReplyRequest, TicketStatus, UpdateOperatorRequest
 } from '../models/support.model';
 import { unwrap } from './api.util';
@@ -39,6 +39,11 @@ export class SupportApi {
   close(id: string): Observable<TicketDetailDto> {
     return this.http.post<ApiEnvelope<TicketDetailDto>>(`/api/v1/support/tickets/${id}/close`, {}).pipe(unwrap());
   }
+
+  /** What the company's plan promises about support, and its named contact when the plan has one. */
+  promise(): Observable<SupportPromiseDto> {
+    return this.http.get<ApiEnvelope<SupportPromiseDto>>('/api/v1/support/promise').pipe(unwrap());
+  }
 }
 
 /** The operator side: tickets, customer records, people across companies and the operators themselves. */
@@ -48,6 +53,11 @@ export class PlatformSupportApi {
 
   summary(): Observable<SupportSummaryDto> {
     return this.http.get<ApiEnvelope<SupportSummaryDto>>('/api/v1/platform/support/summary').pipe(unwrap());
+  }
+
+  /** How many first replies were on time, late or still late, for each plan and operator, in a month (yyyy-MM; the current month when blank). */
+  responseReport(month?: string): Observable<ResponseReportDto> {
+    return this.http.get<ApiEnvelope<ResponseReportDto>>('/api/v1/platform/support/response-report', { params: q({ month }) }).pipe(unwrap());
   }
 
   assignees(): Observable<PlatformOperatorDto[]> {

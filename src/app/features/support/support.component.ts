@@ -3,8 +3,9 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
+import { TenantTimePipe } from '../../core/pipes/tenant-time.pipe';
 import {
-  CATEGORY_LABEL, STATUS_LABEL, TICKET_CATEGORIES, TicketCategory, TicketDetailDto, TicketListItemDto, TicketPriority, TicketStatus
+  CATEGORY_LABEL, STATUS_LABEL, SupportPromiseDto, TICKET_CATEGORIES, TicketCategory, TicketDetailDto, TicketListItemDto, TicketPriority, TicketStatus
 } from '../../core/models/support.model';
 import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
@@ -19,7 +20,7 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 @Component({
   selector: 'zp-support',
   standalone: true,
-  imports: [DatePipe, FormsModule, DialogComponent, StatusBadgeComponent],
+  imports: [DatePipe, FormsModule, DialogComponent, StatusBadgeComponent, TenantTimePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -29,6 +30,20 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
       </div>
       @if (canCreate()) { <button type="button" class="btn-primary" data-testid="new-ticket" (click)="openNew()">New request</button> }
     </div>
+
+    @if (promise(); as p) {
+      <section class="app-card my-3 space-y-1 text-sm" data-testid="support-promise" aria-label="What your plan promises">
+        <h2 class="font-semibold">What your {{ p.planName }} plan promises</h2>
+        @if (p.normalMinutes) {
+          <p data-testid="promise-times">We aim to reply to a normal request within {{ minutes(p.normalMinutes) }}@if (p.urgentMinutes && p.urgentMinutes !== p.normalMinutes) { , and to an urgent one within {{ minutes(p.urgentMinutes) }} }. The time is counted only in our support hours: {{ p.hours }}.</p>
+        } @else if (p.urgentMinutes) {
+          <p data-testid="promise-times">We aim to reply to an urgent request within {{ minutes(p.urgentMinutes) }}, counted in our support hours: {{ p.hours }}. Other requests are answered as soon as we can.</p>
+        } @else { <p data-testid="promise-none">Your plan does not promise a reply time. We answer as soon as we can.</p> }
+        @if (p.contact; as c) {
+          <p data-testid="promise-contact">Your contact at ZestPoint: <span class="font-semibold">{{ c.name }}</span>@if (c.email) { , <a class="underline" [href]="'mailto:' + c.email">{{ c.email }}</a> }@if (c.phone) { , {{ c.phone }} }.</p>
+        } @else if (p.hasNamedContact) { <p data-testid="promise-contact-pending">Your plan includes a named contact at ZestPoint, but one has not been assigned yet. Mention it in a request and we will sort it out.</p> }
+      </section>
+    }
 
     <div class="my-3 flex flex-wrap items-end gap-3">
       <div><label class="app-label" for="sup-status">Show</label>
@@ -60,6 +75,9 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
               <p class="text-xs text-ink/60">{{ categoryLabel(d.ticket.category) }} &middot; {{ d.ticket.priority }} priority &middot; opened by {{ d.ticket.requesterName }}</p></div>
             <zp-status-badge [tone]="tone(d.ticket.status)"><span data-testid="thread-status">{{ label(d.ticket.status) }}</span></zp-status-badge>
           </header>
+          @if (d.ticket.respondByUtc && d.ticket.answeredOnTime === null && d.ticket.status !== 'Closed' && d.ticket.status !== 'Resolved') {
+            <p class="mt-1 text-sm" data-testid="thread-due">@if (d.ticket.late) { We have not replied yet within the time we aimed for. We are sorry. } @else { We aim to reply by {{ d.ticket.respondByUtc | tenantTime: 'datetime' }}. }</p>
+          }
           <ol class="mt-3 space-y-3">
             @for (m of d.messages; track m.id) {
               <li class="rounded-lg border p-3" [class]="m.authorKind === 'Customer' ? 'border-ink/15 bg-panel' : m.authorKind === 'Operator' ? 'border-primary/40 bg-primary/5' : 'border-ink/10 bg-canvas text-ink/70'">
@@ -115,6 +133,7 @@ export class SupportComponent implements OnInit {
   protected readonly categories = TICKET_CATEGORIES;
   protected readonly items = signal<readonly TicketListItemDto[]>([]);
   protected readonly detail = signal<TicketDetailDto | null>(null);
+  protected readonly promise = signal<SupportPromiseDto | null>(null);
   protected readonly openId = computed(() => this.detail()?.ticket.id ?? null);
   protected readonly filter = signal<TicketStatus | ''>('');
   protected readonly loading = signal(false);
@@ -132,6 +151,17 @@ export class SupportComponent implements OnInit {
 
   ngOnInit(): void {
     void this.load();
+    // The plan's promise is a nicety: if it cannot be read the screen simply works without it.
+    void firstValueFrom(this.api.promise()).then((p) => this.promise.set(p), () => { /* no panel */ });
+  }
+
+  /** 240 as "4 hours", 90 as "1 hour 30 minutes", 45 as "45 minutes". */
+  protected minutes(n: number): string {
+    const h = Math.floor(n / 60);
+    const m = n % 60;
+    const hours = h > 0 ? `${h} ${h === 1 ? 'hour' : 'hours'}` : '';
+    const mins = m > 0 ? `${m} ${m === 1 ? 'minute' : 'minutes'}` : '';
+    return [hours, mins].filter(Boolean).join(' ');
   }
 
   protected label(s: TicketStatus): string { return STATUS_LABEL[s]; }
