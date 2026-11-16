@@ -66,6 +66,12 @@ import { ConfirmService, ToastService } from '../../shared/ui/feedback';
           <p class="text-xs text-ink/70">Points are only a way to pay if your plan includes Loyalty and gift cards. Points cannot be spent while a till is offline.</p>
         </section>
 
+        <section class="app-card space-y-3" data-testid="giftcard-section"><h2 class="font-semibold">Gift cards</h2>
+          <p class="text-sm text-ink/80">Gift cards are sold at the till and spent at any branch, in one go or in parts. The money for a card is owed to its holder until it is spent. Say how long a card lasts from the day it is sold.</p>
+          <div class="max-w-xs"><label class="app-label" for="s-gcm">A card lasts (months)</label><input id="s-gcm" type="number" min="0" max="120" step="1" class="app-input" data-testid="giftcard-months" [ngModel]="v.giftCardExpiryMonths ?? 0" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ giftCardExpiryMonths: +$event })" />
+            <p class="mt-1 text-xs text-ink/70">0 means a card never expires. A card that has expired is kept on record and reported, never deleted. Cards already sold keep the date they were sold with.</p></div>
+        </section>
+
         <section class="app-card space-y-3" data-testid="layby-section"><h2 class="font-semibold">Layby</h2>
           <p class="text-sm text-ink/80">A customer reserves goods, pays in parts and collects when everything is paid. These rules apply to laybys started from now on.</p>
           <div class="grid gap-3 sm:grid-cols-3">

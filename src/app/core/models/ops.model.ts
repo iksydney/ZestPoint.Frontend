@@ -2,6 +2,7 @@
  * Point-of-sale, catalogue and inventory contracts. These MIRROR the backend view models (ZestPoint.Data/ViewModel/PosModels.cs,
  * CatalogModels.cs, InventoryModels.cs); change both together (constitution Article 4). Enums travel as their names.
  */
+import type { IssuedGiftCardDto, OrderGiftCardDto } from './gift-card.model';
 import { PagedResult } from './staff.model';
 
 export type { PagedResult };
@@ -9,7 +10,7 @@ export type { PagedResult };
 export type OrderKind = 'Tab' | 'Table' | 'WalkUp' | 'Takeaway';
 export type OrderStatus = 'Open' | 'PartiallyPaid' | 'Paid' | 'Voided' | 'Merged' | 'Refunded';
 export type LineStatus = 'Active' | 'Voided';
-export type PaymentMethod = 'Cash' | 'Card' | 'Transfer' | 'Other' | 'Points';
+export type PaymentMethod = 'Cash' | 'Card' | 'Transfer' | 'Other' | 'Points' | 'GiftCard';
 export type PaymentStatus = 'Pending' | 'Succeeded' | 'Failed' | 'Reversed';
 export type VoidRequestStatus = 'Pending' | 'Approved' | 'Rejected';
 export type StockUnit = 'Milliliter' | 'Gram' | 'Each';
@@ -42,6 +43,8 @@ export interface CompanySettingsDto {
   /** The least that can be spent at once, in points, and the most of a bill (percent) that points may pay for. */
   minRedeemPoints?: number;
   maxRedeemPercent?: number;
+  /** How many months a gift card lasts from the day it is sold. 0: it never expires. */
+  giftCardExpiryMonths?: number;
   adjustmentApprovalAboveValue: number | null;
   expiryWarningDays: number;
   allowCashPayments: boolean;
@@ -392,6 +395,11 @@ export interface OrderDto {
   pointsEarned?: number;
   /** Points the customer has spent as money off this bill (less any given back on refunds). */
   pointsSpent?: number;
+  /** A gift card sale: what the card is worth (in the total, never in the subtotal). Such a bill holds the card and nothing else. */
+  giftCardAmount?: number;
+  giftCard?: OrderGiftCardDto | null;
+  /** Only on the response that issued a card: the code is in here, once. Never kept on the device. */
+  issuedGiftCards?: IssuedGiftCardDto[] | null;
   notes: string | null;
   ownerMembershipId: string;
   ownerName: string | null;
@@ -507,6 +515,8 @@ export interface PayRequest {
   /** Points only: the customer's own four-digit code, or (for a customer with no code) a supervisor's credentials. */
   customerCode?: string | null;
   authorizer?: VoidAuthorizer | null;
+  /** Gift card only: the card's code, typed or scanned. Sent to be checked, kept nowhere. */
+  giftCardCode?: string | null;
   idempotencyKey: string;
   rowVersion: string | null;
 }

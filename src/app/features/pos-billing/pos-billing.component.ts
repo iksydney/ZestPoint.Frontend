@@ -1,9 +1,12 @@
-import { CurrencyPipe, DecimalPipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { CustomerDto, CustomersApi, LaybysApi } from '../../core/services/customer.services';
+import { GiftCardBalanceDto, IssuedGiftCardDto } from '../../core/models/gift-card.model';
+import { GiftCardsApi } from '../../core/services/gift-cards.service';
+import { GiftCardIssuedComponent } from '../customers/gift-card-issued.component';
 import { BarLineState, OrderKind, OrderLineDto, PaymentMethod, ProductDto, ReceiptDto, SellingUnitDto, VoidAuthorizer, VoidRequestDto, TableDto } from '../../core/models/ops.model';
 import { lineKey, splitEvenly } from '../../core/offline/order-calc';
 import { toApiError } from '../../core/services/api.util';
@@ -63,7 +66,7 @@ interface PayPart { readonly method: PaymentMethod; readonly amount: number; rea
 
 const cents = (value: number): number => Math.round(value * 100) / 100;
 
-type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 'pay' | 'void' | 'discount' | 'split' | 'merge' | 'transfer' | 'receipt' | 'approvals' | 'tip' | null;
+type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 'pay' | 'void' | 'discount' | 'split' | 'merge' | 'transfer' | 'receipt' | 'approvals' | 'tip' | 'giftsale' | 'giftissued' | null;
 
 /**
  * Three-panel point of sale: open bills | catalogue | the bill being built. Works offline for everything except card/transfer
@@ -73,7 +76,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
 @Component({
   selector: 'zp-pos-billing',
   standalone: true,
-  imports: [CurrencyPipe, DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent, BranchPickerComponent, SyncStatusComponent, VoidAuthoriserComponent, ReceiptViewComponent, ReceiptShareComponent],
+  imports: [CurrencyPipe, DatePipe, DecimalPipe, FormsModule, DialogComponent, GiftCardIssuedComponent, StatusBadgeComponent, BranchPickerComponent, SyncStatusComponent, VoidAuthoriserComponent, ReceiptViewComponent, ReceiptShareComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -92,6 +95,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
         <div class="flex items-center justify-between">
           <h2 class="font-semibold">Open bills</h2>
           @if (canCreate()) { <button type="button" class="btn-primary px-3 py-1.5 text-sm" data-testid="new-bill" [disabled]="readOnly()" (click)="openNew()">New</button> }
+          @if (giftCardsOn() && canCreate()) { <button type="button" class="btn-outline px-3 py-1.5 text-sm" data-testid="sell-gift-card" [disabled]="readOnly() || !online()" [attr.title]="online() ? null : 'Gift cards need a connection'" (click)="openGiftSale()">Gift card</button> }
         </div>
         <ul class="space-y-1.5" data-testid="bill-list">
           @for (b of store.bills(); track b.id) {
@@ -132,7 +136,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4" data-testid="product-grid">
           @for (p of visibleProducts(); track p.id) {
             <button type="button" class="app-focus touch-target flex flex-col items-start gap-1 rounded-xl border border-ink/15 bg-panel p-3 text-left transition hover:border-primary/60 disabled:opacity-40"
-                    [attr.data-testid]="'product-' + p.name" [disabled]="!store.current() || readOnly() || !canEdit()" (click)="pick(p)">
+                    [attr.data-testid]="'product-' + p.name" [disabled]="!store.current() || readOnly() || !canEdit() || giftSale()" (click)="pick(p)">
               <span class="text-sm font-semibold leading-tight">{{ p.name }}</span>
               <span class="flex w-full items-end justify-between">
                 <span class="font-bold">{{ p.price | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</span>
@@ -158,6 +162,11 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
               @if (o.consignmentSaleId) { <p class="mt-1 text-xs text-ink/70" data-testid="bill-consignment">Consignment goods sold by an agent, at the agreed prices. Take payment; nothing else can be changed.</p> }
               @if (!mine()) { <p class="sys-alert sys-alert-info mt-1 text-sm" role="status" data-testid="bill-not-mine">Opened by {{ o.ownerName ?? 'someone else' }}. You can look at it; only they, a supervisor or a manager can change it or take payment. They can hand it over to you with Move / hand over.</p> }
               @if (laybyError()) { <p class="app-error" role="alert" data-testid="layby-error">{{ laybyError() }}</p> }
+              @if (o.giftCardAmount) {
+                <p class="mt-1 text-sm" data-testid="bill-gift">Gift card{{ o.giftCard?.recipientName ? ' for ' + o.giftCard?.recipientName : '' }}: <strong>{{ o.giftCardAmount | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</strong>{{ o.giftCard?.last4 ? ', card ends ' + o.giftCard?.last4 : '' }}. This bill holds the card and nothing else; the card is made when it is paid in full.
+                  @if (o.status === 'Paid' && o.giftCard?.status === 'Pending') { <button type="button" class="btn-outline ml-1 px-2 py-0 text-sm" data-testid="gift-issue" [disabled]="giftBusy()" (click)="issueGiftCard()">Issue the card</button> }</p>
+                @if (giftError()) { <p class="app-error" role="alert">{{ giftError() }}</p> }
+              }
               <p class="mt-1 text-sm" data-testid="bill-customer">
                 @if (o.customer; as c) { <span class="font-medium">{{ c.name }}</span> <span class="text-ink/70">{{ c.pointsBalance }} points@if (o.pointsEarned) { , {{ o.pointsEarned }} from this bill } @else if (o.pointsOnBill) { , {{ o.pointsOnBill }} more when paid }@if (o.pointsSpent) { , {{ o.pointsSpent }} used on this bill }</span> }
                 @if (canLayby() && !readOnly() && o.customer && !o.layby && o.status === 'Open' && o.amountPaid === 0) { <button type="button" class="btn-outline ml-1 px-2 py-0 text-sm" data-testid="bill-layby-btn" [disabled]="laybyBusy()" (click)="startLayby()">Layby</button> }
@@ -433,6 +442,8 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
               <p class="mt-1 text-sm" data-testid="pay-change">Change: {{ change() | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</p></div>
           } @else if (payMethod() === 'Points') {
             <!-- the points box below says what is needed -->
+          } @else if (payMethod() === 'GiftCard') {
+            <!-- the gift card box below says what is needed -->
           } @else {
             @if (store.settings()?.paymentProviderIsDemo) {
               <!-- Only when the API runs with the development stub (the automated tests). A business never sees this. -->
@@ -485,17 +496,59 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
             </section>
           }
 
+          @if (usesGiftCard()) {
+            <section class="space-y-3 rounded-lg border border-ink/15 p-3" data-testid="gift-panel" aria-label="Paying with a gift card">
+              <div class="max-w-md"><label class="app-label" for="gift-code">The gift card's code</label>
+                <div class="flex gap-2">
+                  <input id="gift-code" class="app-input font-mono uppercase tracking-wider" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="XXXX-XXXX-XXXX-XXXX" data-1p-ignore data-lpignore="true"
+                         data-testid="gift-code" [ngModel]="giftCode()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="giftCodeTyped($event)" />
+                  <button type="button" class="btn-outline" data-testid="gift-check" [disabled]="giftChecking() || !giftCodeComplete() || !online()" (click)="checkGiftCard()">{{ giftChecking() ? 'Checking...' : 'Check' }}</button>
+                </div>
+                <p class="mt-1 text-xs text-ink/70">Type the code, or scan its QR code with a scanner that types what it reads.</p></div>
+              @if (giftBalance(); as b) {
+                <p class="text-sm" data-testid="gift-balance">Card {{ b.number }} (ends {{ b.last4 }}) has <strong>{{ b.balance | currency: b.currencyCode : 'symbol-narrow' : '1.2-2' }}</strong> left@if (b.expiresAtUtc) { , valid until {{ b.expiresAtUtc | date: 'mediumDate' }} }.
+                  @if (b.state !== 'Active') { <span class="app-error" data-testid="gift-state"> This card is {{ b.state === 'Used' ? 'used up' : b.state.toLowerCase() }}.</span> }</p>
+              }
+              @if (giftCheckError()) { <p class="app-error" role="alert" data-testid="gift-check-error">{{ giftCheckError() }}</p> }
+              <p class="text-sm" data-testid="gift-using">Taking {{ giftAmount() | currency: store.currency() : 'symbol-narrow' : '1.2-2' }} from the card.</p>
+              @if (giftShort()) { <p class="app-error" role="alert" data-testid="gift-short">That is more than is left on the card.</p> }
+              @if (giftTipBlocked()) { <p class="app-error" role="alert" data-testid="gift-tip-note">A tip cannot be paid with a gift card. Take the tip in cash or by card.</p> }
+              @if (!online()) { <p class="sys-alert sys-alert-warning" role="status">You are offline. A gift card can only be spent with a connection, because its balance has to be checked; take cash or wait until you are back online.</p> }
+            </section>
+          }
+
           @if (payError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="pay-error">{{ payError() }}</p> }
           <div class="flex justify-end gap-2">
             <button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button>
             @if (parts().length) {
               <button type="button" class="btn-primary touch-target" data-testid="pay-confirm" [disabled]="paying() || !splitReady()" (click)="submitSplitPay()">{{ paying() ? 'Processing...' : 'Confirm ' + parts().length + ' payments' }}</button>
             } @else {
-              <button type="button" class="btn-primary touch-target" data-testid="pay-confirm" [disabled]="paying() || payAmount() <= 0 || (payMethod() !== 'Cash' && !online()) || !pointsReady()" (click)="submitPay()">{{ paying() ? 'Processing...' : 'Confirm payment' }}</button>
+              <button type="button" class="btn-primary touch-target" data-testid="pay-confirm" [disabled]="paying() || payAmount() <= 0 || (payMethod() !== 'Cash' && !online()) || !pointsReady() || !giftReady()" (click)="submitPay()">{{ paying() ? 'Processing...' : 'Confirm payment' }}</button>
             }
           </div>
         </div>
       }
+    </zp-dialog>
+
+    <!-- Sell a gift card: a bill of its own, paid like any bill; the card and its code come when it is paid in full -->
+    <zp-dialog [open]="dialog() === 'giftsale'" title="Sell a gift card" (closed)="dialog.set(null)">
+      <form class="space-y-3" (submit)="$event.preventDefault(); startGiftSale()" data-testid="gift-sale-form">
+        <p class="text-sm text-ink/80">The card goes on a bill of its own, which you take payment for as usual. When it is paid in full the card is made and its code is shown once, to print for the customer. The money is owed to whoever holds the card until it is spent: it is not a sale.</p>
+        <div><label class="app-label" for="gift-amount">What is the card worth?</label><input id="gift-amount" type="number" min="0" step="0.01" class="app-input" data-testid="gift-amount" [ngModel]="giftAmountTyped()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="giftAmountTyped.set(+$event)" /></div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div><label class="app-label" for="gift-name">Given to (optional)</label><input id="gift-name" class="app-input" maxlength="120" data-testid="gift-name" [ngModel]="giftName()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="giftName.set($event)" /></div>
+          <div><label class="app-label" for="gift-email">Their e-mail (optional)</label><input id="gift-email" type="email" class="app-input" maxlength="200" data-testid="gift-email" [ngModel]="giftEmail()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="giftEmail.set($event)" /></div>
+        </div>
+        <div><label class="app-label" for="gift-phone">Their phone (optional)</label><input id="gift-phone" class="app-input" maxlength="40" data-testid="gift-phone" [ngModel]="giftPhone()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="giftPhone.set($event)" />
+          <p class="mt-1 text-xs text-ink/70">With an e-mail address the code is also sent to them when the card is issued. A phone number is kept with the card; sending by SMS or WhatsApp is not set up yet.</p></div>
+        @if (giftError()) { <p class="app-error" role="alert" data-testid="gift-error">{{ giftError() }}</p> }
+        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary touch-target" data-testid="gift-start" [disabled]="giftBusy() || giftAmountTyped() <= 0 || !online()">{{ giftBusy() ? 'Opening the bill...' : 'Take payment' }}</button></div>
+      </form>
+    </zp-dialog>
+
+    <!-- The card that was just issued: the code, once -->
+    <zp-dialog [open]="dialog() === 'giftissued'" title="Gift card issued" (closed)="closeGiftIssued()">
+      @if (giftIssued(); as card) { <zp-gift-card-issued [card]="card" [companyName]="companyName()" (done)="closeGiftIssued()" /> }
     </zp-dialog>
 
     <!-- Void -->
@@ -728,6 +781,20 @@ export class PosBillingComponent implements OnInit {
   protected readonly payError = signal<string | null>(null);
   protected readonly shares = signal<readonly number[]>([]);
 
+  // Gift cards: sold on a bill of their own, spent with the card's code. The code is typed for this payment only and is never kept.
+  protected readonly giftApi = inject(GiftCardsApi);
+  protected readonly giftAmountTyped = signal(0);
+  protected readonly giftName = signal('');
+  protected readonly giftEmail = signal('');
+  protected readonly giftPhone = signal('');
+  protected readonly giftBusy = signal(false);
+  protected readonly giftError = signal<string | null>(null);
+  protected readonly giftIssued = signal<IssuedGiftCardDto | null>(null);
+  protected readonly giftCode = signal('');
+  protected readonly giftBalance = signal<GiftCardBalanceDto | null>(null);
+  protected readonly giftChecking = signal(false);
+  protected readonly giftCheckError = signal<string | null>(null);
+
   // Loyalty points as a way to pay: the customer's own code, or a supervisor, allows each spending. Kept only while the box is open.
   protected readonly pointsCode = signal('');
   protected readonly pointsAuth = signal<VoidAuthorizer | null>(null);
@@ -839,7 +906,19 @@ export class PosBillingComponent implements OnInit {
   protected readonly splitLeft = computed(() => cents(this.toAllocate() - this.parts().reduce((sum, p) => sum + p.amount, 0)));
   protected readonly splitNeedsOnline = computed(() => this.parts().some((p) => p.method !== 'Cash'));
   protected readonly splitReady = computed(() => this.parts().length >= 2 && this.splitLeft() === 0 && this.parts().every((p) => p.amount > 0 && (p.method !== 'Cash' || p.tendered >= p.amount))
-    && (!this.splitNeedsOnline() || this.online()) && this.pointsReady());
+    && (!this.splitNeedsOnline() || this.online()) && this.pointsReady() && this.giftReady());
+
+  // ---- gift cards ----
+  protected readonly giftCardsOn = computed(() => this.auth.accessModeFor(FEATURES.LOYALTY_GIFT_CARDS) === 'full');
+  protected readonly companyName = computed(() => this.auth.branding()?.companyName ?? '');
+  /** The bill sells a gift card: it holds the card and nothing else, and it is paid through the server, which makes the card when it is paid in full. */
+  protected readonly giftSale = computed(() => (this.store.current()?.giftCardAmount ?? 0) > 0);
+  protected readonly usesGiftCard = computed(() => (this.parts().length ? this.parts().some((p) => p.method === 'GiftCard') : this.payMethod() === 'GiftCard'));
+  protected readonly giftCodeComplete = computed(() => this.giftCode().replace(/[^A-Za-z0-9]/g, '').length === 16);
+  protected readonly giftAmount = computed(() => cents(this.parts().length ? this.parts().filter((p) => p.method === 'GiftCard').reduce((sum, p) => sum + p.amount, 0) : this.payMethod() === 'GiftCard' ? this.payAmount() : 0));
+  protected readonly giftShort = computed(() => { const b = this.giftBalance(); return b !== null && this.giftAmount() > b.balance; });
+  protected readonly giftTipBlocked = computed(() => this.payTip() > 0 && (this.parts().length ? this.parts()[0]?.method === 'GiftCard' : this.payMethod() === 'GiftCard'));
+  protected readonly giftReady = computed(() => !this.usesGiftCard() || (this.giftCodeComplete() && this.giftAmount() > 0 && !this.giftShort() && !this.giftTipBlocked()));
 
   // ---- paying with points ----
   protected readonly pointValue = computed(() => this.store.settings()?.pointValue ?? 0);
@@ -868,7 +947,8 @@ export class PosBillingComponent implements OnInit {
       { method: 'Cash', label: 'Cash', on: s?.allowCashPayments ?? true },
       { method: 'Card', label: 'Card', on: s?.allowCardPayments ?? true },
       { method: 'Transfer', label: 'Transfer', on: s?.allowTransferPayments ?? true },
-      { method: 'Points', label: 'Points', on: this.pointsAvailable() }
+      { method: 'Points', label: 'Points', on: this.pointsAvailable() && !this.giftSale() },
+      { method: 'GiftCard', label: 'Gift card', on: this.giftCardsOn() && !this.giftSale() }
     ];
     return all.filter((m) => m.on);
   });
@@ -1098,7 +1178,85 @@ export class PosBillingComponent implements OnInit {
     this.shares.set([]);
     this.parts.set([]);
     this.resetPoints();
+    this.resetGift();
     this.dialog.set('pay');
+  }
+
+  /** A card's code and what was found out about it are gone as soon as the box opens afresh or the payment is done. */
+  private resetGift(): void {
+    this.giftCode.set('');
+    this.giftBalance.set(null);
+    this.giftCheckError.set(null);
+  }
+
+  protected giftCodeTyped(text: string): void {
+    this.giftCode.set(text);
+    this.giftBalance.set(null);
+    this.giftCheckError.set(null);
+  }
+
+  protected async checkGiftCard(): Promise<void> {
+    if (this.giftChecking() || !this.giftCodeComplete()) return;
+    this.giftChecking.set(true);
+    this.giftCheckError.set(null);
+    this.giftBalance.set(null);
+    try { this.giftBalance.set(await firstValueFrom(this.giftApi.balance(this.giftCode()))); }
+    catch (err) { const e = toApiError(err); this.giftCheckError.set(e.status === 404 ? 'That code is not right. Check it and try again.' : e.message); }
+    finally { this.giftChecking.set(false); }
+  }
+
+  /** Opens the bill for a gift card, then takes payment for it like any bill. Needs a connection: the server makes the card. */
+  protected openGiftSale(): void {
+    this.giftAmountTyped.set(0);
+    this.giftName.set('');
+    this.giftEmail.set('');
+    this.giftPhone.set('');
+    this.giftError.set(null);
+    this.dialog.set('giftsale');
+  }
+
+  protected async startGiftSale(): Promise<void> {
+    const branchId = this.branches.activeId();
+    if (this.giftBusy() || !branchId || this.giftAmountTyped() <= 0) return;
+    this.giftBusy.set(true);
+    this.giftError.set(null);
+    try {
+      const server = await firstValueFrom(this.giftApi.startSale({
+        orderId: crypto.randomUUID(), branchId, amount: this.giftAmountTyped(),
+        recipientName: this.giftName().trim() || null, recipientEmail: this.giftEmail().trim() || null, recipientPhone: this.giftPhone().trim() || null
+      }));
+      await this.store.openServerBill(server);
+      this.dialog.set(null);
+      await this.openPay();
+    } catch (err) { this.giftError.set(toApiError(err).message); }
+    finally { this.giftBusy.set(false); }
+  }
+
+  /** For a gift card bill that was paid but whose card was not made with the payment: makes it now and shows the code once. */
+  protected async issueGiftCard(): Promise<void> {
+    const o = this.store.current();
+    if (!o || this.giftBusy()) return;
+    this.giftBusy.set(true);
+    this.giftError.set(null);
+    try {
+      const server = await firstValueFrom(this.giftApi.issue(o.id));
+      await this.store.reload(o.id);
+      this.showIssued(server.issuedGiftCards);
+    } catch (err) { this.giftError.set(toApiError(err).message); }
+    finally { this.giftBusy.set(false); }
+  }
+
+  private showIssued(cards: readonly IssuedGiftCardDto[] | null | undefined): void {
+    const card = cards?.[0];
+    if (!card) { this.dialog.set(null); return; }
+    this.giftIssued.set(card);
+    this.dialog.set('giftissued');
+  }
+
+  /** Nothing of the code stays on the screen once the box is closed. */
+  protected closeGiftIssued(): void {
+    this.giftIssued.set(null);
+    this.dialog.set(null);
   }
 
   /** Nothing typed for a points payment is kept once the box opens afresh or the payment is done. */
@@ -1211,26 +1369,40 @@ export class PosBillingComponent implements OnInit {
     this.payError.set(null);
     const count = this.parts().length;
     let done = 0;
+    let issued: readonly IssuedGiftCardDto[] | null | undefined = null;
     try {
       while (this.parts().length > 0) {
         const part = this.parts()[0]!;
         const tip = this.payTip();   // the tip goes with the first part; after that it is part of the balance
-        if (part.method === 'Cash') await this.store.payCash(part.amount, part.tendered, tip);
-        else await this.store.payOnline({ method: part.method, amount: part.amount, tip, token: part.reference.trim() || null, ...(part.method === 'Points' ? this.pointsConsent() : {}) });
+        if (part.method === 'Cash' && !this.giftSale()) await this.store.payCash(part.amount, part.tendered, tip);
+        else {
+          const server = await this.store.payOnline({
+            method: part.method, amount: part.amount, tip, token: part.reference.trim() || null, cashTendered: part.method === 'Cash' ? part.tendered : null,
+            ...(part.method === 'Points' ? this.pointsConsent() : {}), ...(part.method === 'GiftCard' ? { giftCardCode: this.giftCode() } : {})
+          });
+          if (server.issuedGiftCards?.length) issued = server.issuedGiftCards;
+        }
         done++;
         this.payTip.set(0);
         this.parts.update((list) => list.slice(1));
       }
-      this.dialog.set(null);
       this.resetPoints();
+      this.resetGift();
       this.toast.success(`${count} payments recorded.`);
+      this.showIssued(issued);
     } catch (err) {
       this.refusedPoints();
+      this.refusedGift();
       const why = err instanceof Error && !('status' in err) ? err.message : toApiError(err).message;
       this.payError.set(done > 0 ? `${done} of ${count} payments were recorded. The next one was not: ${why} What is listed below is still to pay.` : why);
     } finally {
       this.paying.set(false);
     }
+  }
+
+  /** A refused gift card payment leaves no code sitting in the box: it is typed again. */
+  private refusedGift(): void {
+    if (this.usesGiftCard()) this.giftCode.set('');
   }
 
   /** A refused points payment leaves no code or PIN sitting in the boxes: they are typed again. */
@@ -1246,17 +1418,25 @@ export class PosBillingComponent implements OnInit {
     this.paying.set(true);
     this.payError.set(null);
     try {
-      if (this.payMethod() === 'Cash') {
+      let issued: readonly IssuedGiftCardDto[] | null | undefined = null;
+      if (this.payMethod() === 'Cash' && !this.giftSale()) {
         if (this.tendered() < this.payAmount()) throw new Error('The cash handed over is less than the payment.');
         await this.store.payCash(this.payAmount(), this.tendered(), this.payTip());
       } else {
-        await this.store.payOnline({ method: this.payMethod(), amount: this.payAmount(), tip: this.payTip(), token: this.token().trim() || null, ...(this.payMethod() === 'Points' ? this.pointsConsent() : {}) });
+        if (this.payMethod() === 'Cash' && this.tendered() < this.payAmount()) throw new Error('The cash handed over is less than the payment.');
+        const server = await this.store.payOnline({
+          method: this.payMethod(), amount: this.payAmount(), tip: this.payTip(), token: this.token().trim() || null, cashTendered: this.payMethod() === 'Cash' ? this.tendered() : null,
+          ...(this.payMethod() === 'Points' ? this.pointsConsent() : {}), ...(this.payMethod() === 'GiftCard' ? { giftCardCode: this.giftCode() } : {})
+        });
+        issued = server.issuedGiftCards;
       }
-      this.dialog.set(null);
       this.resetPoints();
+      this.resetGift();
       this.toast.success('Payment recorded.');
+      if (issued?.length) this.showIssued(issued); else this.dialog.set(null);
     } catch (err) {
       this.refusedPoints();
+      this.refusedGift();
       this.payError.set(err instanceof Error && !('status' in err) ? err.message : toApiError(err).message);
     } finally {
       this.paying.set(false);

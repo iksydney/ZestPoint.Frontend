@@ -5,7 +5,7 @@ import { newContext, pick, registerViaUi, startShiftWhenAsked } from './helpers'
 /** The menu as the owner of a new company sees it: working screens by area, in order, each area's reports behind one Reports entry. */
 const AREAS: [string, string[], number][] = [
   ['sell', ['Point of Sale', 'Start / End of Day', 'My Sales', 'Tips'], 10],   // + Daily Summary (2026-11-15);   // + My Sales (2026-11-15);   // + Tips, and the Tips Report and Payments History
-  ['customers', ['Customers', 'Laybys', 'Sales Back Orders'], 3],
+  ['customers', ['Customers', 'Laybys', 'Sales Back Orders'], 4],
   ['stock', ['Stock Overview', 'Items', 'Stock Groups', 'Adjustments', 'Bulk Changes', 'Bin Locations', 'Labels', 'Consignment Out'], 17],
   ['purchasing', ['Purchase Orders', 'Goods Receiving', 'Suppliers', 'Supplier Payments'], 12],
   ['finance', ['Chart of Accounts'], 3],
@@ -134,7 +134,7 @@ test.describe('Navigation', () => {
         reports++;
       }
     }
-    expect(reports).toBe(48);   // + Loyalty Points Report (2026-11-16);   // + Loss Prevention (2026-11-15);   // + Daily Summary (2026-11-15);   // + Head Office Overview and Branch Comparison (2026-11-15)
+    expect(reports).toBe(49);   // + Gift Cards (2026-11-16);   // + Loyalty Points Report (2026-11-16);   // + Loss Prevention (2026-11-15);   // + Daily Summary (2026-11-15);   // + Head Office Overview and Branch Comparison (2026-11-15)
   });
 
   test('search (Ctrl+K) reaches any screen or report, by its old name too, and the keyboard moves through the menu', async ({ page }) => {

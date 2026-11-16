@@ -25,7 +25,8 @@ export interface OpenBill {
   pendingSync: boolean;
 }
 
-const fromServer = (o: OrderDto): LocalOrder => ({ ...o, pendingSync: false, numberPending: false });
+// A gift card's code is in the one answer that issued it and is never stored on the device.
+const fromServer = (o: OrderDto): LocalOrder => ({ ...o, issuedGiftCards: null, pendingSync: false, numberPending: false });
 
 /**
  * Offline-first POS state. Every sale-floor change (open a bill, add or change items, send, discount, tip, take cash, request a
@@ -158,6 +159,12 @@ export class PosStore {
 
   close(): void {
     this._current.set(null);
+  }
+
+  /** A bill the server made (a gift card sale): it is kept like any bill and made the current one. */
+  async openServerBill(server: OrderDto): Promise<void> {
+    await this.adopt(server);
+    await this.open(server.id);
   }
 
   async create(kind: OrderKind, label: string | null, tableLabel: string | null): Promise<void> {
@@ -337,11 +344,11 @@ export class PosStore {
   // ---- Server-only actions ----------------------------------------------------------------------------
 
   /** Card / transfer: needs the network and a bill the server already knows. Throws an ApiError with a plain message otherwise. */
-  async payOnline(input: { method: PaymentMethod; amount: number; tip: number; token: string | null; customerCode?: string | null; authorizer?: VoidAuthorizer | null }): Promise<OrderDto> {
+  async payOnline(input: { method: PaymentMethod; amount: number; tip: number; token: string | null; customerCode?: string | null; authorizer?: VoidAuthorizer | null; giftCardCode?: string | null; cashTendered?: number | null }): Promise<OrderDto> {
     const o = this.requireEditable();
     await this.ensureSynced(o.id, 'Card, transfer and points payments');
     const body: PayRequest = {
-      method: input.method, amount: input.amount, tip: input.tip, cashTendered: null, token: input.token, customerCode: input.customerCode ?? null, authorizer: input.authorizer ?? null, idempotencyKey: `pay-${crypto.randomUUID()}`, rowVersion: null
+      method: input.method, amount: input.amount, tip: input.tip, cashTendered: input.cashTendered ?? null, token: input.token, customerCode: input.customerCode ?? null, authorizer: input.authorizer ?? null, giftCardCode: input.giftCardCode ?? null, idempotencyKey: `pay-${crypto.randomUUID()}`, rowVersion: null
     };
     try {
       const server = await firstValueFrom(this.ordersApi.pay(o.id, body));

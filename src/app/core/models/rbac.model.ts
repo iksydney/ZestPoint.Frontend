@@ -14,6 +14,7 @@ export const SCREEN_PERMISSIONS = {
   POS_VOID_REQUEST: 'pos.void.request',
   POS_VOID_APPROVE: 'pos.void.approve',
   POS_POINTS_AUTHORISE: 'pos.points.authorise',
+  GIFT_CARDS_MANAGE: 'giftcards.manage',
   POS_REFUND_PROCESS: 'pos.refund.process',
   POS_DAY_VIEW: 'pos.day.view',
   POS_DAY_OPEN: 'pos.day.open',

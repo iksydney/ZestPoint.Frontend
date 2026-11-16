@@ -47,7 +47,7 @@ export function receiptRows(r: ReceiptDto): ReceiptRow[] {
   rows.push({ kind: 'pair', left: `${r.taxName} ${r.taxRatePercent}%${r.taxInclusive ? ' (incl.)' : ''}`, right: m(r.tax) });
   if (r.tip > 0) rows.push({ kind: 'pair', left: 'Tip', right: m(r.tip) });
   rows.push({ kind: 'total', left: 'TOTAL', right: m(r.total), testId: 'receipt-total' });
-  for (const p of r.payments) rows.push({ kind: 'pair', left: `${p.method}${p.isDemo ? ' (DEMO)' : ''}`, right: m(p.amount) });
+  for (const p of r.payments) rows.push({ kind: 'pair', left: `${p.method === 'GiftCard' ? 'Gift card' : p.method}${p.isDemo ? ' (DEMO)' : ''}`, right: m(p.amount) });
   if (r.change > 0) rows.push({ kind: 'pair', left: 'Change', right: m(r.change) });
   if (r.loyaltyCustomer) rows.push({ kind: 'note', left: `${r.loyaltyCustomer}: ${r.pointsEarned ?? 0} points from this bill${r.pointsSpent ? `, ${r.pointsSpent} used` : ''}, ${r.pointsBalance ?? 0} in all`, testId: 'receipt-loyalty' });
   if (r.isDemoPayment) rows.push({ kind: 'title', left: 'DEMONSTRATION PAYMENT: NO REAL MONEY MOVED' });
