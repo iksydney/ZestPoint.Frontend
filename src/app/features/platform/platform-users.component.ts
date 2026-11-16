@@ -20,11 +20,10 @@ const ACTIONS: Readonly<Record<PlatformUserAction, { label: string; help: string
 
 /** Find any person in any company and look after their account. Credentials are never shown; every action needs a reason and is recorded in the company's activity log. */
 @Component({
-  selector: 'zp-platform-users',
-  standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-platform-users',
+    imports: [DatePipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <h1 class="text-2xl font-bold">People</h1>
     <p class="text-sm text-ink/70">Everyone with an account in any company. Actions here are written to that company's activity log with your name and reason.</p>
     <div class="my-3 flex flex-wrap items-end gap-3">

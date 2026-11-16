@@ -28,11 +28,10 @@ const PAGE_SIZES = [25, 50, 100, 200] as const;
  * Filters live in the URL, so a refresh, the back button and drill-downs keep them.
  */
 @Component({
-  selector: 'zp-report-view',
-  standalone: true,
-  imports: [NgTemplateOutlet, RouterLink, TenantTimePipe, StatusBadgeComponent, SearchSelectComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-report-view',
+    imports: [NgTemplateOutlet, RouterLink, TenantTimePipe, StatusBadgeComponent, SearchSelectComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-start justify-between gap-3">
       <div>
         <h1 class="text-2xl font-bold" data-testid="report-title">{{ title() }}</h1>

@@ -12,11 +12,10 @@ import { NavService } from '../../core/navigation/nav.service';
  * before, so this page grants nothing.
  */
 @Component({
-  selector: 'zp-report-hub',
-  standalone: true,
-  imports: [RouterLink],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-report-hub',
+    imports: [RouterLink],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (section(); as s) {
       <div class="mb-4" [attr.data-testid]="(setup ? 'setup-' : 'hub-') + s.area.key">
         <h1 class="text-2xl font-bold tracking-tight">{{ s.area.label }} {{ setup ? 'set-up' : 'reports' }}</h1>

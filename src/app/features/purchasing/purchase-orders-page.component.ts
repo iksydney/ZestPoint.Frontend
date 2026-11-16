@@ -19,11 +19,10 @@ import { ZpIconComponent } from '../../shared/ui/zp-icon.component';
  * into the order workstation. The document opens in the workstation, where it is raised, priced, posted and followed.
  */
 @Component({
-  selector: 'zp-purchase-orders-page',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, BranchPickerComponent, SyncStatusComponent, StatusBadgeComponent, ZpIconComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-purchase-orders-page',
+    imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, BranchPickerComponent, SyncStatusComponent, StatusBadgeComponent, ZpIconComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="flex flex-col gap-4 font-jakarta" data-testid="po-list">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div><h1 class="font-syne text-2xl font-bold">Purchasing / Purchase Orders</h1><p class="text-sm text-ink/70">Orders, goods without an order, returns to suppliers and transfers between branches.</p></div>

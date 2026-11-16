@@ -19,11 +19,10 @@ import { VoidAuthoriserComponent } from '../pos-billing/void-authoriser.componen
  * customer gets back what they paid less the company's fee, and the goods are free to sell again.
  */
 @Component({
-  selector: 'zp-laybys',
-  standalone: true,
-  imports: [CurrencyPipe, DatePipe, FormsModule, DialogComponent, StatusBadgeComponent, VoidAuthoriserComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-laybys',
+    imports: [CurrencyPipe, DatePipe, FormsModule, DialogComponent, StatusBadgeComponent, VoidAuthoriserComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Laybys</h1>
       <p class="text-sm text-ink/70">To start one: at the till, put a customer on the bill and press <strong>Layby</strong>.</p>

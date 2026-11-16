@@ -13,11 +13,10 @@ export interface SelectOption<T extends string = string> {
  * Escape to close. Options may be grouped. The selected value is shown in the input when closed.
  */
 @Component({
-  selector: 'zp-search-select',
-  standalone: true,
-  imports: [FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-search-select',
+    imports: [FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="relative">
       <label class="app-label" [attr.for]="id">{{ label() }}</label>
       <input

@@ -23,11 +23,10 @@ const yesterday = (): string => { const d = new Date(Date.now() - 86_400_000); r
  * all of it and refuses a recipient with no way to reach them.
  */
 @Component({
-  selector: 'zp-daily-summary-setup',
-  standalone: true,
-  imports: [FormsModule, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-daily-summary-setup',
+    imports: [FormsModule, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3">
       <h1 class="text-2xl font-bold" data-testid="dss-title">Daily Summary set-up</h1>
       <p class="mt-1 max-w-3xl text-sm text-ink/80">Each morning the summary of the day before is built, kept, and sent to the people below.</p>

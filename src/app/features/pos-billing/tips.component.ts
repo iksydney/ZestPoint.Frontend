@@ -41,11 +41,10 @@ const today = (): string => { const d = new Date(); return `${d.getFullYear()}-$
  * held, and a wrong entry is reversed with a reason, never deleted. The server checks all of it again.
  */
 @Component({
-  selector: 'zp-tips',
-  standalone: true,
-  imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, DialogComponent, BranchPickerComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-tips',
+    imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, DialogComponent, BranchPickerComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <div><h1 class="text-2xl font-bold">Tips</h1><p class="mt-1 text-sm text-ink/80">What customers gave in tips, who it belongs to, and every payout or donation out of it.</p></div>
       <div class="flex flex-wrap items-center gap-2"><zp-branch-picker />

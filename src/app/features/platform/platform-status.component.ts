@@ -17,11 +17,10 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
  * support can look; posting needs a support lead or an administrator. Every post and update is recorded in ZestPoint's own audit log with who made it.
  */
 @Component({
-  selector: 'zp-platform-status',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-platform-status',
+    imports: [DatePipe, DecimalPipe, FormsModule, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="flex flex-wrap items-center justify-between gap-2">
       <h1 class="text-2xl font-bold">Status page</h1>
       <a href="/status" target="_blank" rel="noopener" class="btn-outline text-sm" data-testid="open-public-status">Open the public page</a>

@@ -14,11 +14,10 @@ const blank = (): SaveSupplierRequest => ({ name: '', contactName: null, email: 
 
 /** Add / Modify Suppliers. Payment terms drive the "overdue" figures in the aged-suppliers report. Suppliers are deactivated, never deleted. */
 @Component({
-  selector: 'zp-suppliers',
-  standalone: true,
-  imports: [EntitledActionDirective, FormsModule, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-suppliers',
+    imports: [EntitledActionDirective, FormsModule, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Add / Modify Suppliers</h1>
       <button type="button" class="btn-primary" data-testid="supplier-new" zpAction="inventory.purchase.manage" [disabled]="readOnly()" (click)="openEdit(null)">Add supplier</button>

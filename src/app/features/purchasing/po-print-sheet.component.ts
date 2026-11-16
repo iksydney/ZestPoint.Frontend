@@ -7,11 +7,10 @@ const UNIT: Record<string, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each'
 
 /** The printable purchase document (order, return or transfer). Hidden on screen; shown only when the browser prints. Black on white on purpose. */
 @Component({
-  selector: 'zp-po-print-sheet',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-po-print-sheet',
+    imports: [DatePipe, DecimalPipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (doc(); as d) {
       <section class="bg-white p-6 font-jakarta text-sm text-black print:block" [class.hidden]="!screen()" data-testid="po-print-sheet">
         <header class="flex items-start justify-between border-b border-black pb-3">

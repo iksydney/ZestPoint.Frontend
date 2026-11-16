@@ -21,11 +21,10 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
  * opening float, cash payments taken under this shift, cash refunds and the cash moved in and out. A supervisor reviews a variance.
  */
 @Component({
-  selector: 'zp-day-management',
-  standalone: true,
-  imports: [CurrencyPipe, FormsModule, TenantTimePipe, StatusBadgeComponent, DialogComponent, BranchPickerComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-day-management',
+    imports: [CurrencyPipe, FormsModule, TenantTimePipe, StatusBadgeComponent, DialogComponent, BranchPickerComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="no-print mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Start / End of Day</h1>
       <zp-branch-picker />

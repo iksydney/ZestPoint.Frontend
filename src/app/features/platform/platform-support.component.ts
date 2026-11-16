@@ -11,11 +11,10 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
 /** The support queue across every company: filter, find, and open a ticket. */
 @Component({
-  selector: 'zp-platform-support',
-  standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-platform-support',
+    imports: [DatePipe, FormsModule, RouterLink, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="flex flex-wrap items-center justify-between gap-2"><h1 class="text-2xl font-bold">Support tickets</h1>
       @if (platform.can(perms.TICKETS_MANAGE)) { <a routerLink="/platform/support/report" class="btn-outline text-sm" data-testid="open-response-report">Reply times</a> }</div>
     @if (summary(); as s) {

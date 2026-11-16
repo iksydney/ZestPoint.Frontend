@@ -18,11 +18,10 @@ interface Plan {
 }
 
 @Component({
-  selector: 'zp-pricing-preview',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule],
-  template: `
+    selector: 'zp-pricing-preview',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [RouterLink, LucideAngularModule],
+    template: `
     <section class="section" aria-labelledby="pricing-heading">
       <div class="container-page">
         <div class="mx-auto max-w-2xl text-center">

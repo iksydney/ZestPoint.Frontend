@@ -26,11 +26,10 @@ const blank = (): SavePlanRequest => ({
 
 /** Plans are configuration, not code: price, interval, modules, limits, reminder/grace timing and the restriction policy. Saving updates every company on the plan. */
 @Component({
-  selector: 'zp-platform-plans',
-  standalone: true,
-  imports: [CurrencyPipe, FormsModule, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-platform-plans',
+    imports: [CurrencyPipe, FormsModule, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-4 flex items-center justify-between"><h1 class="text-2xl font-bold">Plans</h1>@if (platform.can(perms.BILLING_MANAGE)) { <button type="button" class="btn-primary" data-testid="new-plan" (click)="openPlan(null)">New plan</button> }</div>
     @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert">{{ error() }}</p> }
     <div class="app-card overflow-x-auto p-0"><table class="app-table" data-testid="plans-table"><thead><tr><th>Plan</th><th class="text-right">Price</th><th>Limits (branches / staff / orders / paid messages)</th><th>Timing</th><th>Support promise</th><th>Modules</th><th></th></tr></thead>

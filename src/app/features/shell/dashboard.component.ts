@@ -26,11 +26,10 @@ interface DashboardSummary {
  * server for people who may not see it; setup progress comes from the company's real onboarding state. Nothing here is sample data.
  */
 @Component({
-  selector: 'zp-dashboard',
-  standalone: true,
-  imports: [RouterLink, CurrencyPipe, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-dashboard',
+    imports: [RouterLink, CurrencyPipe, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <h1 class="text-2xl font-bold">Welcome, {{ firstName() }}</h1>
     <p class="mt-1 text-ink/80">{{ auth.tenant()?.name }}</p>
     @if (error()) { <p class="sys-alert sys-alert-danger mt-3" role="alert">{{ error() }}</p> }

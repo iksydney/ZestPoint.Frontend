@@ -22,11 +22,10 @@ const SIZES: readonly { readonly key: string; readonly label: string; readonly w
  * who may see selling prices; an item with nothing valid to encode is flagged instead of getting an invented code.
  */
 @Component({
-  selector: 'zp-labels',
-  standalone: true,
-  imports: [FormsModule, SearchSelectComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-labels',
+    imports: [FormsModule, SearchSelectComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="no-print">
       <h1 class="text-2xl font-bold">Stock Labels Printing</h1>
       <p class="mt-1 max-w-3xl text-sm text-ink/80">Pick the items and how many labels each needs, preview them, then print from your browser. Labels use the item's barcode, or its SKU when it has no barcode.</p>
@@ -78,7 +77,7 @@ const SIZES: readonly { readonly key: string; readonly label: string; readonly w
       </section>
     }
   `,
-  styles: [`@media print { @page { margin: 6mm; } .label { break-inside: avoid; } }`]
+    styles: [`@media print { @page { margin: 6mm; } .label { break-inside: avoid; } }`]
 })
 export class LabelsComponent implements OnInit {
   private readonly inventory = inject(InventoryApi);

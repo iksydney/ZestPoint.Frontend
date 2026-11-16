@@ -8,11 +8,10 @@ interface Pillar {
 }
 
 @Component({
-  selector: 'zp-feature-grid',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule],
-  template: `
+    selector: 'zp-feature-grid',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [LucideAngularModule],
+    template: `
     <section class="section" aria-labelledby="pillars-heading">
       <div class="container-page">
         <div class="mx-auto max-w-2xl text-center">

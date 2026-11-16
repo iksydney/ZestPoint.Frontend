@@ -18,11 +18,10 @@ type Method = 'Cash' | 'Card' | 'Transfer' | 'Other';
  * Payments are never edited or deleted: a mistake is corrected by a reversing entry that stays linked to the original.
  */
 @Component({
-  selector: 'zp-supplier-payments',
-  standalone: true,
-  imports: [CurrencyPipe, FormsModule, TenantTimePipe, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-supplier-payments',
+    imports: [CurrencyPipe, FormsModule, TenantTimePipe, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <h1 class="text-2xl font-bold">Payments to Suppliers</h1>
     <p class="mt-1 max-w-3xl text-sm text-ink/80">Record money paid to suppliers and see what is still owed. This covers the whole company.</p>
     @if (readOnly()) { <p class="sys-alert sys-alert-warning my-3" role="status">Read-only: your subscription limits this screen.</p> }

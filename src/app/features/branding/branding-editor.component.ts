@@ -58,11 +58,10 @@ type ColorKey = 'primaryColor' | 'secondaryColor' | 'backgroundColor' | 'surface
  * users and devices see, and only then does the app-wide ThemeService re-theme.
  */
 @Component({
-  selector: 'zp-branding-editor',
-  standalone: true,
-  imports: [FormsModule, ColorFieldComponent, BrandPreviewComponent, BrandMarkComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-branding-editor',
+    imports: [FormsModule, ColorFieldComponent, BrandPreviewComponent, BrandMarkComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (loading()) {
       <p class="p-6 text-ink/80" role="status">Loading your brand settings...</p>
     } @else {

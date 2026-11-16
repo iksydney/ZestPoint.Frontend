@@ -12,11 +12,10 @@ interface Module {
 }
 
 @Component({
-  selector: 'zp-features-page',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule],
-  template: `
+    selector: 'zp-features-page',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [RouterLink, LucideAngularModule],
+    template: `
     <section class="container-page pb-8 pt-16 text-center sm:pt-24">
       <p class="eyebrow">Platform</p>
       <h1 class="mx-auto mt-3 max-w-3xl text-4xl font-bold sm:text-5xl">Five modules. One platform for every shift, from the bar to the checkout lane.</h1>

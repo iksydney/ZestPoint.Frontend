@@ -13,11 +13,10 @@ import { PublicThemeService } from '../../public/public-theme.service';
  * asks for it once and prompts for a new PIN; otherwise choose a password (and/or PIN). Either way the person ends up signed in.
  */
 @Component({
-  selector: 'zp-accept-invite',
-  standalone: true,
-  imports: [FormsModule, RouterLink, ThemeToggleComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-accept-invite',
+    imports: [FormsModule, RouterLink, ThemeToggleComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <main class="relative grid min-h-screen place-items-center p-4 text-ink">
       <div class="absolute right-4 top-4"><zp-theme-toggle /></div>
       <div class="w-full max-w-sm">

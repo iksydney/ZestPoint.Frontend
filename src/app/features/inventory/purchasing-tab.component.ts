@@ -16,11 +16,10 @@ interface PoLine { inventoryItemId: string; quantity: number; unitCost: number }
 
 /** Suppliers, purchase orders (draft, submit, approve, receive) and explainable reorder suggestions. Nothing is sent or paid automatically. */
 @Component({
-  selector: 'zp-purchasing-tab',
-  standalone: true,
-  imports: [CurrencyPipe, DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-purchasing-tab',
+    imports: [CurrencyPipe, DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert">{{ error() }}</p> }
 
     <section class="app-card mb-4">

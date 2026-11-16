@@ -25,11 +25,10 @@ const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'ea
  * through a receipt, an adjustment or a stock take so it is audited. Costs have their own permission, separate from editing the item.
  */
 @Component({
-  selector: 'zp-item-maintenance',
-  standalone: true,
-  imports: [EntitledActionDirective, DecimalPipe, FormsModule, RouterLink, StatusBadgeComponent, BranchPickerComponent, StockCardComponent, ItemImportComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-item-maintenance',
+    imports: [EntitledActionDirective, DecimalPipe, FormsModule, RouterLink, StatusBadgeComponent, BranchPickerComponent, StockCardComponent, ItemImportComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Add / Modify Stock</h1>
       <div class="flex items-center gap-4"><zp-branch-picker />@if (!readOnly()) { <button type="button" class="btn-outline" data-testid="item-import" zpAction="inventory.items.manage" (click)="importOpen.set(true)">Add many from a file</button> }

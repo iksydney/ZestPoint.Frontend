@@ -18,11 +18,10 @@ const PAGE = 25;
  * shown once, when it is issued.
  */
 @Component({
-  selector: 'zp-gift-cards',
-  standalone: true,
-  imports: [CurrencyPipe, DatePipe, FormsModule, DialogComponent, StatusBadgeComponent, GiftCardIssuedComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-gift-cards',
+    imports: [CurrencyPipe, DatePipe, FormsModule, DialogComponent, StatusBadgeComponent, GiftCardIssuedComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3">
       <h1 class="text-2xl font-bold" data-testid="gc-title">Gift Cards</h1>
       <p class="mt-1 max-w-3xl text-sm text-ink/80">Cards are sold at the till and spent at any branch. The money for a card is owed to whoever holds it until it is spent, so a card sold is not a sale: spending it is. A card's code is shown only when it is issued; here you see its last four characters.</p>

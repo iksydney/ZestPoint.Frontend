@@ -11,11 +11,10 @@ import { VoidAuthorizer } from '../../core/models/ops.model';
  * unlocked till into an authorisation.
  */
 @Component({
-  selector: 'zp-void-authoriser',
-  standalone: true,
-  imports: [FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-void-authoriser',
+    imports: [FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <fieldset class="space-y-2 rounded-lg border border-ink/15 p-3" data-testid="void-authoriser">
       <legend class="app-label px-1">Who authorises this?</legend>
       <p class="text-xs text-ink/70">A supervisor or an administrator enters their own details. This does not sign them in on this device.</p>

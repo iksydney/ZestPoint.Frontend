@@ -18,11 +18,10 @@ import { ReportViewComponent } from '../reports/report-view.component';
  * (supervisors and above) also gets a staff picker. The server decides both: this screen only asks.
  */
 @Component({
-  selector: 'zp-my-sales',
-  standalone: true,
-  imports: [ReportViewComponent, DialogComponent, ReceiptViewComponent, ReceiptShareComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-my-sales',
+    imports: [ReportViewComponent, DialogComponent, ReceiptViewComponent, ReceiptShareComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div data-testid="my-sales">
       <zp-report-view [definition]="definition()" title="My Sales" [description]="description()" [rowActions]="actions" />
     </div>

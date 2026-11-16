@@ -14,11 +14,10 @@ const STATUS_LABEL: Record<BarOrderStatus, string> = {
  * API, and the server decides whether the person may.
  */
 @Component({
-  selector: 'zp-bar-order-card',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-bar-order-card',
+    imports: [DecimalPipe, FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (order(); as o) {
       <article class="rounded-xl border bg-panel p-3 text-ink" [class]="o.needsAttention && side() === 'mine' ? 'border-primary' : 'border-ink/15'" [attr.data-testid]="'bar-order-' + place()" [attr.data-status]="o.status">
         <header class="flex items-start justify-between gap-2">

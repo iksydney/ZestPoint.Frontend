@@ -22,11 +22,10 @@ const AREAS: readonly [string, string][] = [
  * range and free text found in the action, the person's name, the record's id or the details (a bill number, an amount, a reason).
  */
 @Component({
-  selector: 'zp-audit-log',
-  standalone: true,
-  imports: [DatePipe, FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-audit-log',
+    imports: [DatePipe, FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <form class="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" aria-label="Filter the activity log" (submit)="$event.preventDefault()" data-testid="audit-filters">
       <div>
         <label class="app-label" for="a-action">Kind of activity</label>

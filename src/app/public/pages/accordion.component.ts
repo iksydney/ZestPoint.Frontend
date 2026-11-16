@@ -10,11 +10,10 @@ let nextId = 0;
 
 /** Single-open accordion following the WAI-ARIA disclosure pattern. */
 @Component({
-  selector: 'zp-accordion',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucideAngularModule],
-  template: `
+    selector: 'zp-accordion',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [LucideAngularModule],
+    template: `
     <div class="divide-y divide-line-light rounded-2xl border border-line-light bg-white dark:divide-line-dark dark:border-line-dark dark:bg-navy-900/60">
       @for (item of items(); track item.question; let i = $index) {
         <div>

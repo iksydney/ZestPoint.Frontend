@@ -24,11 +24,10 @@ interface BinForm { id: string | null; code: string; name: string; isHighSecurit
  * "unassigned" remainder. High-security bins hold goods that need a second person's confirmation when they arrive.
  */
 @Component({
-  selector: 'zp-bins',
-  standalone: true,
-  imports: [EntitledActionDirective, DecimalPipe, FormsModule, BranchPickerComponent, DialogComponent, ZpIconComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-bins',
+    imports: [EntitledActionDirective, DecimalPipe, FormsModule, BranchPickerComponent, DialogComponent, ZpIconComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="flex flex-col gap-4 font-jakarta" data-testid="bins">
       <div class="flex flex-wrap items-center justify-between gap-3"><div><h1 class="font-syne text-2xl font-bold">Bin Locations</h1><p class="text-sm text-ink/70">Where things sit in the store. Receiving asks which bin each delivery goes into, and sales draw from ordinary bins before the secure ones.</p></div><zp-branch-picker /></div>
       @if (error()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="bins-error">{{ error() }}</p> }

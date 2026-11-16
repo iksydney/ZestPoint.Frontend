@@ -5,11 +5,10 @@ import { BrandingEditorComponent } from './branding-editor.component';
 
 /** Settings -> Branding & Appearance. Anyone with settings.branding.view may look; only managers can change it. */
 @Component({
-  selector: 'zp-branding-settings',
-  standalone: true,
-  imports: [BrandingEditorComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-branding-settings',
+    imports: [BrandingEditorComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <h1 class="text-2xl font-bold">Branding &amp; Appearance</h1>
     <p class="mb-4 mt-1 text-ink/80">Changes appear in the preview straight away. Other people see them only after you save and apply.</p>
     @if (canManage()) {

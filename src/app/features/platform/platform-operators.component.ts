@@ -11,11 +11,10 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
 /** The people who run ZestPoint: add operators, set their role, switch them off. Administrators only. */
 @Component({
-  selector: 'zp-platform-operators',
-  standalone: true,
-  imports: [DatePipe, FormsModule, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-platform-operators',
+    imports: [DatePipe, FormsModule, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div><h1 class="text-2xl font-bold">Operators</h1>
         <p class="text-sm text-ink/70">Support agents answer tickets and log notes. Support leads also assign, change status, manage people and customer records. Administrators also run billing and operators.</p></div>

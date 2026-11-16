@@ -18,11 +18,10 @@ const STEP_LABELS: Record<OnboardingStep, { title: string; blurb: string }> = {
  * so leaving and coming back resumes exactly here, from any device.
  */
 @Component({
-  selector: 'zp-onboarding',
-  standalone: true,
-  imports: [RouterLink, BrandMarkComponent, BrandingEditorComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-onboarding',
+    imports: [RouterLink, BrandMarkComponent, BrandingEditorComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="min-h-screen bg-canvas text-ink">
       <header class="border-b border-ink/10 bg-panel">
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">

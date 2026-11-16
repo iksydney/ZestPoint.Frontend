@@ -16,11 +16,10 @@ import { TenantTimePipe } from '../../core/pipes/tenant-time.pipe';
  * reports' own (same formulas); the server decides which branches a person may read and refuses the rest.
  */
 @Component({
-  selector: 'zp-daily-summary',
-  standalone: true,
-  imports: [CurrencyPipe, DatePipe, DecimalPipe, RouterLink, TenantTimePipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-daily-summary',
+    imports: [CurrencyPipe, DatePipe, DecimalPipe, RouterLink, TenantTimePipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-start justify-between gap-3">
       <div>
         <h1 class="text-2xl font-bold" data-testid="sum-title">Daily Summary</h1>

@@ -11,11 +11,10 @@ import { ZpIconComponent } from '../../shared/ui/zp-icon.component';
 
 /** Goods receiving: what is expected at the dock, and receipts waiting for a second person. */
 @Component({
-  selector: 'zp-receiving-queue',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, RouterLink, BranchPickerComponent, ZpIconComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-receiving-queue',
+    imports: [DatePipe, DecimalPipe, RouterLink, BranchPickerComponent, ZpIconComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="flex flex-col gap-4 font-jakarta" data-testid="receiving-queue">
       <div class="flex flex-wrap items-center justify-between gap-3"><div><h1 class="font-syne text-2xl font-bold">Goods receiving</h1><p class="text-sm text-ink/70">Check deliveries against their orders, put them in bins, and give the second key to receipts held for a high-security bin.</p></div><zp-branch-picker /></div>
       @if (error()) { <p class="sys-alert sys-alert-danger" role="alert">{{ error() }}</p> }

@@ -18,11 +18,10 @@ const blank = (): SaveLedgerAccountRequest => ({ code: '', name: '', type: 'Inco
  * screen (or any ledger report) brings it up to date first.
  */
 @Component({
-  selector: 'zp-ledger-accounts',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-ledger-accounts',
+    imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Chart of Accounts</h1>
       <div class="flex flex-wrap items-center gap-3">

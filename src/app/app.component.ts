@@ -7,10 +7,9 @@ import { ThemeService } from './core/services/theme.service';
 import { InstallService } from './core/services/install.service';
 
 @Component({
-  selector: 'zp-root',
-  standalone: true,
-  imports: [RouterOutlet, BusyIndicatorComponent],
-  template: `<router-outlet /><zp-busy-indicator />`
+    selector: 'zp-root',
+    imports: [RouterOutlet, BusyIndicatorComponent],
+    template: `<router-outlet /><zp-busy-indicator />`
 })
 export class AppComponent {
   private readonly auth = inject(AuthService);

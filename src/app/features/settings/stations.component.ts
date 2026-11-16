@@ -18,11 +18,10 @@ interface StationForm { id: string | null; name: string; holdsPayment: boolean; 
  * refuses to change how a station works while it has open tickets.
  */
 @Component({
-  selector: 'zp-stations',
-  standalone: true,
-  imports: [FormsModule, DialogComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-stations',
+    imports: [FormsModule, DialogComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="flex flex-col gap-4" data-testid="stations">
       <div>
         <h1 class="text-2xl font-bold">Preparation stations</h1>

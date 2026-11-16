@@ -66,11 +66,10 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
  * Typography and layout follow the Obsidian Reserve design; colours come from the venue's theme.
  */
 @Component({
-  selector: 'zp-po-workstation',
-  standalone: true,
-  imports: [EntitledActionDirective, DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, SupplierLookupComponent, SupplierFormComponent, PoPrintSheetComponent, StockCardComponent, ShareLinksComponent, CameraScannerComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-po-workstation',
+    imports: [EntitledActionDirective, DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, SupplierLookupComponent, SupplierFormComponent, PoPrintSheetComponent, StockCardComponent, ShareLinksComponent, CameraScannerComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="no-print flex flex-col gap-4 font-jakarta" data-testid="po-workstation">
       @if (error()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="po-error">{{ error() }}</p> }
       @if (loading()) { <p class="py-8 text-center text-ink/70">Loading...</p> }

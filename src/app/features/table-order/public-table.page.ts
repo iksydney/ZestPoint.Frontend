@@ -15,11 +15,10 @@ interface BasketLine { key: string; productId: string; name: string; unitPrice: 
  * and quantities: the server prices everything, and shows no stock, no other tables and no staff. Paying is done with staff, as always.
  */
 @Component({
-  selector: 'zp-public-table',
-  standalone: true,
-  imports: [CurrencyPipe, FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-public-table',
+    imports: [CurrencyPipe, FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <main class="min-h-screen pb-28" data-testid="public-table" [style.background]="menu()?.backgroundColor || '#f8fafc'" [style.color]="menu()?.textColor || '#0f172a'">
       @if (menu(); as m) {
         <header class="px-4 py-4 text-center" [style.background]="m.primaryColor || '#0f172a'" [style.color]="m.onPrimaryColor || '#ffffff'">

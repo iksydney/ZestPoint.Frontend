@@ -69,11 +69,10 @@ interface DraftLine { item: InventoryItemDto; quantity: number; unitPrice: numbe
  * the shelf. Nothing is sold on credit.
  */
 @Component({
-  selector: 'zp-consignments',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-consignments',
+    imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Consignment Out</h1>
       <div class="flex flex-wrap gap-2">

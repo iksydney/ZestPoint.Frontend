@@ -19,11 +19,10 @@ type Action = 'plan' | 'extend' | 'reconcile' | 'restrict' | null;
  * company's ledger and audit log.
  */
 @Component({
-  selector: 'zp-platform-tenant-detail',
-  standalone: true,
-  imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent, AccessTreeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-platform-tenant-detail',
+    imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent, AccessTreeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <a routerLink="/platform/tenants" class="text-sm underline">&larr; Companies</a>
     @if (error()) { <p class="sys-alert sys-alert-danger my-3" role="alert" data-testid="platform-detail-error">{{ error() }}</p> }
 

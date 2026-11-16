@@ -18,11 +18,10 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
  * has enough, "Put on a bill" opens a new bill for the customer with the item on it, to be paid at the till like any sale.
  */
 @Component({
-  selector: 'zp-sales-back-orders',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-sales-back-orders',
+    imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Sales Back Orders</h1>
       <button type="button" class="btn-primary" data-testid="bo-new" [disabled]="readOnly() || !branchId()" (click)="openNew()">New back order</button>

@@ -10,11 +10,10 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
 /** ZestPoint's own customer list: stage, owner, tags and follow-ups. Companies never see this. */
 @Component({
-  selector: 'zp-platform-customers',
-  standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-platform-customers',
+    imports: [DatePipe, FormsModule, RouterLink, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <h1 class="text-2xl font-bold">Customers</h1>
     <p class="text-sm text-ink/70">A company with no saved record shows the stage its subscription implies; saving a record fixes the stage.</p>
     <div class="my-3 flex flex-wrap items-end gap-3">

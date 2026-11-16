@@ -16,11 +16,10 @@ import { DialogComponent, ToastService } from '../../shared/ui/feedback';
  * Accepting puts the items on the bill as lines still to send, in the accepter's name; nothing reaches a kitchen or the bar until they press Send as usual.
  */
 @Component({
-  selector: 'zp-table-requests',
-  standalone: true,
-  imports: [CurrencyPipe, FormsModule, DialogComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-table-requests',
+    imports: [CurrencyPipe, FormsModule, DialogComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (on()) {
       <button type="button" class="btn-outline px-3 py-1.5 text-sm" data-testid="table-requests-btn" [class.ring-2]="requests().length > 0" (click)="show()">
         Table requests@if (requests().length) { <span class="app-badge app-badge-warning ml-1" data-testid="table-requests-count">{{ requests().length }}</span> }

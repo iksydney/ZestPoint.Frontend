@@ -12,11 +12,10 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
 /** One ticket for an operator: the whole thread (internal notes marked), a reply box, and the controls their role allows. */
 @Component({
-  selector: 'zp-platform-ticket',
-  standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-platform-ticket',
+    imports: [DatePipe, FormsModule, RouterLink, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <a routerLink="/platform/support" class="text-sm underline">&larr; All tickets</a>
     @if (error()) { <p class="sys-alert sys-alert-danger my-3" role="alert" data-testid="ticket-error">{{ error() }}</p> }
     @if (detail(); as d) {

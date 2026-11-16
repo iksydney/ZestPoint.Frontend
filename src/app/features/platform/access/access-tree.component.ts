@@ -31,11 +31,10 @@ const addDays = (d: Date, n: number): Date => new Date(d.getTime() + n * 86_400_
  * Read-only for operators who lack the billing right; the server enforces that again on every call.
  */
 @Component({
-  selector: 'zp-access-tree',
-  standalone: true,
-  imports: [DatePipe, NgTemplateOutlet, FormsModule, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-access-tree',
+    imports: [DatePipe, NgTemplateOutlet, FormsModule, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <section class="app-card mb-4" data-testid="access-tree" aria-labelledby="access-heading">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div><h2 id="access-heading" class="font-semibold">Access</h2>
@@ -202,7 +201,7 @@ const addDays = (d: Date, n: number): Date => new Date(d.getTime() + n * 86_400_
       </form>
     </zp-dialog>
   `,
-  styles: [`:host { display: block; }`]
+    styles: [`:host { display: block; }`]
 })
 export class AccessTreeComponent implements OnInit {
   private readonly api = inject(PlatformApi);

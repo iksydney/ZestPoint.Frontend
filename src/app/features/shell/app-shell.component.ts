@@ -32,11 +32,10 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
  * The data-tour attributes here are what the tour of the application points at (core/tour/tours.ts).
  */
 @Component({
-  selector: 'zp-app-shell',
-  standalone: true,
-  imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, StatusBannerComponent, InstallHintComponent, BarDockComponent, CommandPaletteComponent, TourHostComponent, LockScreenComponent, ItemSavedPromptComponent, ShiftPromptComponent, NoticesBellComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-app-shell',
+    imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, StatusBannerComponent, InstallHintComponent, BarDockComponent, CommandPaletteComponent, TourHostComponent, LockScreenComponent, ItemSavedPromptComponent, ShiftPromptComponent, NoticesBellComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="grid min-h-screen grid-cols-[minmax(0,1fr)] bg-canvas text-ink md:grid-cols-[17rem_minmax(0,1fr)] print:block" [attr.inert]="lock.locked() || shiftPrompt.mustStart() ? '' : null">
       <div class="hidden md:block print:hidden">
         <zp-nav-sidebar class="block h-screen md:sticky md:top-0" [currentUrl]="url()" [name]="branding()?.shortName ?? 'ZestPoint'" [initials]="branding()?.initialsFallback ?? 'ZP'" [logoUrl]="branding()?.logoUrl ?? null" (search)="openSearch()" />
@@ -136,7 +135,7 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
     <zp-shift-prompt />
     <zp-lock-screen />
   `,
-  styles: [`
+    styles: [`
     .help-item { display: flex; width: 100%; flex-direction: column; gap: .125rem; border-radius: .5rem; padding: .5rem .625rem; text-align: left; font-size: .875rem; color: rgb(var(--ink-rgb)); min-height: 2.75rem; }
     .help-item:hover, .help-item:focus-visible { background: rgb(var(--ink-rgb) / .08); outline: none; }
   `]

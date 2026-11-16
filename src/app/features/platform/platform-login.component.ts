@@ -7,11 +7,10 @@ import { PlatformAuthService } from '../../core/services/subscription.services';
 
 /** Sign-in for the people who run ZestPoint itself. It is not a company login: operators have no company, venue or staff code. */
 @Component({
-  selector: 'zp-platform-login',
-  standalone: true,
-  imports: [FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-platform-login',
+    imports: [FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <main class="grid min-h-screen place-items-center bg-canvas p-6 text-ink">
       <form class="app-card w-full max-w-sm space-y-4" (submit)="$event.preventDefault(); submit()" aria-label="Platform sign in">
         <div><h1 class="text-xl font-bold">ZestPoint platform</h1><p class="text-sm text-ink/80">For ZestPoint operators only. Company staff sign in from the normal sign-in page.</p></div>

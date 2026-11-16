@@ -13,11 +13,10 @@ import { IdleLockService } from '../../core/services/idle-lock.service';
  * and with only what their role allows, and nothing of the first person's screen is shown to them.
  */
 @Component({
-  selector: 'zp-lock-screen',
-  standalone: true,
-  imports: [FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-lock-screen',
+    imports: [FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (lock.warning(); as left) {
       <div class="fixed bottom-4 left-1/2 z-[95] w-[min(24rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border-2 border-primary bg-panel p-3 text-ink shadow-2xl print:hidden" role="alert" data-testid="idle-warning">
         <p class="text-sm font-semibold">Still there? The screen locks in {{ left }} seconds.</p>

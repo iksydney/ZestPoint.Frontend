@@ -30,11 +30,10 @@ interface NdefWriter { write(message: { records: { recordType: string; data: str
  * Nothing is sent to any outside service from here: the QR code is drawn on the device and messages open the person's own apps.
  */
 @Component({
-  selector: 'zp-receipt-share',
-  standalone: true,
-  imports: [FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-receipt-share',
+    imports: [FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="space-y-3 text-sm" data-testid="receipt-share">
       <div class="flex flex-wrap gap-2">
         @if (showPrint()) { <button type="button" class="btn-primary" data-testid="reprint" (click)="print.emit()">Print</button> }

@@ -17,11 +17,10 @@ const OPEN_KEY = 'zp.nav.areas';
  * The data-tour attributes are what the guided tour points at (core/tour/tours.ts): renaming one means updating the tour.
  */
 @Component({
-  selector: 'zp-nav-sidebar',
-  standalone: true,
-  imports: [RouterLink, BrandMarkComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-nav-sidebar',
+    imports: [RouterLink, BrandMarkComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <nav class="zp-nav flex h-full flex-col border-r border-ink/10 bg-panel text-ink" aria-label="Main" data-testid="main-nav" data-tour="nav" (keydown)="onKey($event)">
       <div class="flex items-center gap-2.5 px-4 pb-3 pt-4">
         <zp-brand-mark [logoUrl]="logoUrl()" [initials]="initials()" [name]="name()" [size]="34" />
@@ -75,7 +74,7 @@ const OPEN_KEY = 'zp.nav.areas';
       </div>
     </nav>
   `,
-  styles: [`
+    styles: [`
     .nav-icon { width: 1.125rem; height: 1.125rem; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
     .nav-search { display: flex; width: 100%; align-items: center; gap: .625rem; min-height: 2.5rem; border-radius: .625rem; border: 1px solid rgb(var(--ink-rgb) / .14); background: rgb(var(--ink-rgb) / .04);
       padding: .5rem .625rem; font-size: .875rem; color: rgb(var(--ink-rgb) / .7); transition: background-color .12s, border-color .12s; }

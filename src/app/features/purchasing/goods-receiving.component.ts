@@ -40,11 +40,10 @@ type Filter = 'all' | 'pending' | 'shortage';
  * person, signed in on their own device, confirms them. The same screen releases goods to a supplier on a return and receives a branch transfer.
  */
 @Component({
-  selector: 'zp-goods-receiving',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, ClaimSlipComponent, PhotoThumbComponent, CameraScannerComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-goods-receiving',
+    imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, ClaimSlipComponent, PhotoThumbComponent, CameraScannerComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="no-print flex flex-col gap-4 font-jakarta" data-testid="receiving">
       @if (error()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="rcv-error">{{ error() }}</p> }
       @if (loading()) { <p class="py-8 text-center text-ink/70">Loading...</p> }

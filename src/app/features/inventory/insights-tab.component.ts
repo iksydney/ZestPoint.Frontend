@@ -15,11 +15,10 @@ const TONE = { None: 'success', Warning: 'warning', Investigate: 'warning', Esca
 
 /** Usage and days-of-stock forecasts for everyone with inventory access; pour-variance analytics for those with the weigh-audit module. */
 @Component({
-  selector: 'zp-insights-tab',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-insights-tab',
+    imports: [DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert">{{ error() }}</p> }
 
     <h2 class="mb-2 text-lg font-semibold">Usage and stock cover (last 14 days)</h2>

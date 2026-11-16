@@ -9,11 +9,10 @@ import { BrandMarkComponent } from './brand-mark.component';
  * screen readers once ("Loading") and never blocks the screen.
  */
 @Component({
-  selector: 'zp-busy-indicator',
-  standalone: true,
-  imports: [BrandMarkComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-busy-indicator',
+    imports: [BrandMarkComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (loading.busy()) {
       <div class="busy-bar print:hidden" aria-hidden="true"></div>
       <div class="busy-mark print:hidden" role="status" aria-live="polite" data-testid="busy-indicator">
@@ -22,7 +21,7 @@ import { BrandMarkComponent } from './brand-mark.component';
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .busy-bar { position: fixed; left: 0; top: 0; z-index: 110; height: 3px; width: 40%; border-radius: 0 3px 3px 0; background: rgb(var(--primary-rgb, 37 99 235)); animation: busy-slide 1.1s ease-in-out infinite; pointer-events: none; }
     .busy-mark { position: fixed; right: .75rem; bottom: .75rem; z-index: 110; display: flex; align-items: center; gap: .5rem; padding: .375rem .625rem .375rem .375rem; border-radius: 999px;
       border: 1px solid rgb(var(--ink-rgb, 15 23 42) / .15); background: rgb(var(--panel-rgb, 255 255 255)); color: rgb(var(--ink-rgb, 15 23 42)); box-shadow: 0 8px 24px -8px rgb(0 0 0 / .35); pointer-events: none; }

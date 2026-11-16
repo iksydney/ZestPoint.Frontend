@@ -19,11 +19,10 @@ const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'ea
  * person their decision here (they must not be the one who received it). The note can be printed as a goods received note.
  */
 @Component({
-  selector: 'zp-goods-receipt-view',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, ClaimSlipComponent, PhotoThumbComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-goods-receipt-view',
+    imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, ClaimSlipComponent, PhotoThumbComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert" data-testid="grn-error">{{ error() }}</p> }
     @if (receipt(); as g) {
       <div class="no-print flex flex-col gap-4 font-jakarta" data-testid="grn">

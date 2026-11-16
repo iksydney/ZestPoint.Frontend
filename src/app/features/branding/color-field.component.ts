@@ -7,11 +7,10 @@ import { isHex, normalizeHex } from '../../core/theme/color';
  * rest of the editor (and the live preview) never sees a half-typed colour.
  */
 @Component({
-  selector: 'zp-color-field',
-  standalone: true,
-  imports: [FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-color-field',
+    imports: [FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div>
       <label class="app-label" [attr.for]="id">{{ label() }}@if (optional()) { <span class="font-normal text-ink/60"> (optional)</span> }</label>
       <div class="flex items-center gap-2">

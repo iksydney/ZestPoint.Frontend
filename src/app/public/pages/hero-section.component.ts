@@ -54,11 +54,10 @@ const SCENES: Record<Mode, Scene> = {
 };
 
 @Component({
-  selector: 'zp-hero-section',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule],
-  template: `
+    selector: 'zp-hero-section',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [RouterLink, LucideAngularModule],
+    template: `
     <section class="relative overflow-hidden">
       <div aria-hidden="true" class="absolute inset-0 bg-grid-light bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)] dark:bg-grid-dark"></div>
       <div aria-hidden="true" class="absolute -top-40 left-1/2 h-96 w-[48rem] -translate-x-1/2 animate-pulse-glow rounded-full bg-brand/20 blur-3xl dark:bg-brand/30"></div>

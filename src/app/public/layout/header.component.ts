@@ -9,11 +9,10 @@ import { LogoComponent } from './logo.component';
 import { ThemeToggleComponent } from './theme-toggle.component';
 
 @Component({
-  selector: 'zp-public-header',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, RouterLinkActive, LucideAngularModule, LogoComponent, ThemeToggleComponent],
-  template: `
+    selector: 'zp-public-header',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [RouterLink, RouterLinkActive, LucideAngularModule, LogoComponent, ThemeToggleComponent],
+    template: `
     <header class="sticky top-0 z-50 border-b border-line-light bg-surface-light/85 backdrop-blur-md dark:border-line-dark dark:bg-surface-dark/85">
       <a href="#main" (click)="skipToContent($event)" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:rounded focus:bg-brand focus:px-3 focus:py-2 focus:text-white">
         Skip to content

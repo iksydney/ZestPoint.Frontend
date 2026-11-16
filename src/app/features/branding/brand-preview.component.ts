@@ -30,11 +30,10 @@ export function invertSurfaces(t: ThemeInput, currentIsDark: boolean): ThemeInpu
  * variables are scoped to this element, nothing outside the preview is affected.
  */
 @Component({
-  selector: 'zp-brand-preview',
-  standalone: true,
-  imports: [CurrencyPipe, BrandMarkComponent, ProductTileComponent, ReceiptComponent, SidebarComponent, StatCardComponent, StatusBadgeComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-brand-preview',
+    imports: [CurrencyPipe, BrandMarkComponent, ProductTileComponent, ReceiptComponent, SidebarComponent, StatCardComponent, StatusBadgeComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="space-y-3" data-testid="brand-preview">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <p class="text-xs font-semibold uppercase tracking-wide text-ink/70">Live preview</p>

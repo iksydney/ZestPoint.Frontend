@@ -17,11 +17,10 @@ interface Group { readonly key: string; readonly supplierId: string; readonly br
  * a draft still has to be submitted and then approved by somebody else in Purchasing before anything is committed.
  */
 @Component({
-  selector: 'zp-reorder',
-  standalone: true,
-  imports: [RouterLink, ReportViewComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-reorder',
+    imports: [RouterLink, ReportViewComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <zp-report-view [definition]="definition" title="Stock Re-Order Report" description="What to order, how much, and why." (selection)="selected.set($event)" />
 
     @if (canOrder() && !readOnly()) {

@@ -16,11 +16,10 @@ import { TenantTimePipe } from '../../core/pipes/tenant-time.pipe';
  *  - "Remember to end your shift": once a shift has run six hours, and each hour after "Still working".
  */
 @Component({
-  selector: 'zp-shift-prompt',
-  standalone: true,
-  imports: [FormsModule, TenantTimePipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-shift-prompt',
+    imports: [FormsModule, TenantTimePipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (prompt.mustStart()) {
       <div class="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-black/60 p-3 print:hidden" role="dialog" aria-modal="true" aria-labelledby="shift-box-title" data-testid="shift-box">
         <form class="app-card w-full max-w-md space-y-3 shadow-2xl" (submit)="$event.preventDefault(); start()">

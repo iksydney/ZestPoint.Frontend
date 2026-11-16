@@ -6,11 +6,10 @@ import { ConfirmHostComponent, ToastHostComponent } from '../../shared/ui/feedba
 
 /** Frame for the platform interface: companies, plans, support, customers, people and operators. Deliberately plain and unthemed: it is not any company's brand. */
 @Component({
-  selector: 'zp-platform-shell',
-  standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastHostComponent, ConfirmHostComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'zp-platform-shell',
+    imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastHostComponent, ConfirmHostComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="min-h-screen bg-canvas text-ink">
       <header class="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 bg-panel px-4 py-2">
         <div class="flex flex-wrap items-center gap-4">
