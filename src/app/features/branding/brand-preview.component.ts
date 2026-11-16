@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { ThemeInput, themeVariables } from '../../core/theme/theme-tokens';
-import { BrandMarkComponent } from '../../shared/ui/brand-mark.component';
 import {
   NavItem, ProductTileComponent, ReceiptComponent, ReceiptLine, SidebarComponent, StatCardComponent, StatusBadgeComponent
 } from '../../shared/ui/ui-kit.components';
@@ -31,7 +30,7 @@ export function invertSurfaces(t: ThemeInput, currentIsDark: boolean): ThemeInpu
  */
 @Component({
     selector: 'zp-brand-preview',
-    imports: [CurrencyPipe, BrandMarkComponent, ProductTileComponent, ReceiptComponent, SidebarComponent, StatCardComponent, StatusBadgeComponent],
+    imports: [CurrencyPipe, ProductTileComponent, ReceiptComponent, SidebarComponent, StatCardComponent, StatusBadgeComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="space-y-3" data-testid="brand-preview">
