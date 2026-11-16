@@ -8,7 +8,10 @@ import { FEATURES } from '../../core/models/rbac.model';
 import { toApiError, unwrap } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { BranchContextService } from '../../core/services/branch-context.service';
+import { printTableStickers, tableLink, tableQr } from '../../core/receipt/table-qr';
+import { TableOrdersApi } from '../../core/services/table-ordering.service';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { DomSanitizer } from '@angular/platform-browser';
 import { BranchPickerComponent } from '../../shared/ui/ops-chrome.components';
 
 interface TableForm { id: string | null; name: string; area: string; seats: number; isActive: boolean; sortOrder: number }
@@ -37,6 +40,7 @@ interface TableForm { id: string | null; name: string; area: string; seats: numb
         <div class="flex flex-wrap items-center justify-between gap-2 bg-ink/5 px-4 py-2">
           <h2 class="text-lg font-semibold">{{ branches.active()?.name ?? 'This branch' }}: {{ activeCount() }} in use</h2>
           <div class="flex flex-wrap gap-2">
+            <button type="button" class="btn-outline" data-testid="table-qr-all" [disabled]="!branches.activeId() || activeCount() === 0 || busy()" (click)="printAll()">Print all QR codes</button>
             <button type="button" class="btn-outline" data-testid="table-many" [disabled]="readOnly() || !branches.activeId()" (click)="openMany()">Add several</button>
             <button type="button" class="btn-primary" data-testid="table-new" [disabled]="readOnly() || !branches.activeId()" (click)="open(null)">Add a table</button>
           </div>
@@ -51,7 +55,7 @@ interface TableForm { id: string | null; name: string; area: string; seats: numb
                   <td class="font-semibold">{{ t.name }}</td><td>{{ t.area }}</td><td class="text-right">{{ t.seats || '' }}</td>
                   <td>@if (t.openBills) { <span class="app-badge app-badge-warning">{{ t.openBills }} bill{{ t.openBills === 1 ? '' : 's' }} open</span> } @else { <span class="text-ink/60">Free</span> }</td>
                   <td>{{ t.isActive ? 'In use' : 'Switched off' }}</td>
-                  <td class="text-right"><button type="button" class="btn-ghost text-sm" [attr.data-testid]="'table-edit-' + t.name" [disabled]="readOnly()" (click)="open(t)">Edit</button></td>
+                  <td class="text-right"><button type="button" class="btn-ghost text-sm" [attr.data-testid]="'table-qr-' + t.name" [disabled]="!t.isActive" (click)="showQr(t)">QR code</button> <button type="button" class="btn-ghost text-sm" [attr.data-testid]="'table-edit-' + t.name" [disabled]="readOnly()" (click)="open(t)">Edit</button></td>
                 </tr>
               } @empty {
                 <tr><td colspan="6" class="py-8 text-center text-ink/70" data-testid="tables-empty">{{ loading() ? 'Loading...' : 'No tables yet. Without a list, staff type the table name when they open a bill.' }}</td></tr>
@@ -76,6 +80,29 @@ interface TableForm { id: string | null; name: string; area: string; seats: numb
           @if (dialogError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="table-error">{{ dialogError() }}</p> }
           <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="form.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="table-save" [disabled]="busy()">{{ busy() ? 'Saving...' : 'Save' }}</button></div>
         </form>
+      }
+    </zp-dialog>
+
+    <!-- The table's sticker -->
+    <zp-dialog [open]="!!qr()" [title]="'QR code for table ' + (qr()?.name ?? '')" (closed)="closeQr()">
+      @if (qr(); as q) {
+        <div class="space-y-3" data-testid="table-qr">
+          <p class="text-sm text-ink/80">Stick this on the table. A customer who scans it sees your menu and can order, call a waiter or ask for the bill, with no app and no sign-in. Anyone with the code can order for this table, so if a sticker is copied or photographed, make a new code: the old sticker stops working.</p>
+          @if (!ordering()) { <p class="sys-alert sys-alert-warning" role="status" data-testid="table-qr-plan">Your plan does not include Table ordering, so the page this opens will say ordering is not available.</p> }
+          <div class="mx-auto h-48 w-48 rounded bg-white p-2" data-testid="table-qr-image" [innerHTML]="qrSvg()" role="img" [attr.aria-label]="'QR code for table ' + q.name"></div>
+          <p class="break-all text-center font-mono text-xs" data-testid="table-qr-link">{{ link() }}</p>
+          @if (dialogError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="table-qr-error">{{ dialogError() }}</p> }
+          <div class="flex flex-wrap justify-end gap-2">
+            @if (confirmNew()) {
+              <span class="self-center text-sm">The old sticker will stop working.</span>
+              <button type="button" class="btn-ghost" (click)="confirmNew.set(false)">Keep this code</button>
+              <button type="button" class="btn-primary" data-testid="table-qr-new-confirm" [disabled]="busy()" (click)="newCode()">Make a new code</button>
+            } @else {
+              <button type="button" class="btn-outline" data-testid="table-qr-new" [disabled]="readOnly()" (click)="confirmNew.set(true)">Make a new code</button>
+              <button type="button" class="btn-primary" data-testid="table-qr-print" (click)="printOne()">Print the sticker</button>
+            }
+          </div>
+        </div>
       }
     </zp-dialog>
 
@@ -113,6 +140,15 @@ export class TablesComponent {
   protected readonly dialogError = signal<string | null>(null);
   protected readonly fieldErrors = signal<Readonly<Record<string, readonly string[]>>>({});
   protected readonly form = signal<TableForm | null>(null);
+
+  private readonly orders = inject(TableOrdersApi);
+  private readonly sanitizer = inject(DomSanitizer);
+  /** The table whose sticker is open: its code is read when the box opens and is gone when it closes. */
+  protected readonly qr = signal<{ id: string; name: string; area: string | null; code: string } | null>(null);
+  protected readonly confirmNew = signal(false);
+  protected readonly ordering = computed(() => this.auth.accessModeFor(FEATURES.TABLE_ORDERING) === 'full');
+  protected readonly link = computed(() => { const q = this.qr(); return q ? tableLink(q.code) : ''; });
+  protected readonly qrSvg = computed(() => { const q = this.qr(); return q ? this.sanitizer.bypassSecurityTrustHtml(tableQr(q.code)) : ''; });
 
   protected readonly many = signal(false);
   protected readonly manyPrefix = signal('Table');
@@ -159,6 +195,55 @@ export class TablesComponent {
     this.fieldErrors.set({});
     this.form.set(t ? { id: t.id, name: t.name, area: t.area ?? '', seats: t.seats, isActive: t.isActive, sortOrder: t.sortOrder }
       : { id: null, name: '', area: '', seats: 4, isActive: true, sortOrder: this.tables().length });
+  }
+
+  protected async showQr(t: TableDto): Promise<void> {
+    this.dialogError.set(null);
+    this.confirmNew.set(false);
+    try {
+      const q = await firstValueFrom(this.orders.qr(t.id));
+      this.qr.set({ id: t.id, name: t.name, area: t.area, code: q.code });
+    } catch (err) { this.error.set(toApiError(err).message); }
+  }
+
+  protected closeQr(): void {
+    this.qr.set(null);
+    this.confirmNew.set(false);
+  }
+
+  protected printOne(): void {
+    const q = this.qr();
+    if (q) printTableStickers(this.auth.branding()?.companyName ?? '', [{ name: q.name, area: q.area, code: q.code }]);
+  }
+
+  /** One sticker per table in use, on a sheet to print. Each code is asked for (and so recorded) once. */
+  protected async printAll(): Promise<void> {
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      const stickers = [];
+      for (const t of this.tables().filter((x) => x.isActive)) {
+        const q = await firstValueFrom(this.orders.qr(t.id));
+        stickers.push({ name: t.name, area: t.area, code: q.code });
+      }
+      printTableStickers(this.auth.branding()?.companyName ?? '', stickers);
+    } catch (err) { this.error.set(toApiError(err).message); }
+    finally { this.busy.set(false); }
+  }
+
+  protected async newCode(): Promise<void> {
+    const q = this.qr();
+    if (!q || this.busy()) return;
+    this.busy.set(true);
+    this.dialogError.set(null);
+    try {
+      await firstValueFrom(this.orders.newCode(q.id));
+      const fresh = await firstValueFrom(this.orders.qr(q.id));
+      this.qr.set({ ...q, code: fresh.code });
+      this.confirmNew.set(false);
+      this.toast.success('The table has a new code. Its old sticker no longer works.');
+    } catch (err) { this.dialogError.set(toApiError(err).message); }
+    finally { this.busy.set(false); }
   }
 
   protected openMany(): void {

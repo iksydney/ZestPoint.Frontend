@@ -33,7 +33,7 @@ const PRICE_LEVELS: readonly { key: PriceKey; label: string; testId: string }[] 
 const blank = (): SaveInventoryItemRequest => ({
   name: '', sku: null, kind: 'FinishedGood', baseUnit: 'Each', containerSize: null, tareGrams: null, densityGPerMl: null, minimumLevel: 0, reorderLevel: 0, targetDaysOfStock: 14,
   averageCost: 0, supplierId: null, tracksBatches: false, tracksSerials: false, groupId: null, barcode: null, description: null, purchaseUnitName: null, purchaseUnitSize: null,
-  reorderQuantity: 0, targetStock: null, listedOnWebStore: false, sellingPrice: null, tradePrice: null, wholesalePrice: null, resellerPrice: null, bundlePrice: null,
+  reorderQuantity: 0, targetStock: null, listedOnWebStore: false, onCustomerMenu: false, sellingPrice: null, tradePrice: null, wholesalePrice: null, resellerPrice: null, bundlePrice: null,
   specialPrice: null, specialFromUtc: null, specialToUtc: null, discountPercent: null, discountFromUtc: null, discountToUtc: null, minimumPrice: null, suggestedRetailPrice: null, lastCost: null, specialCost: null, specialCostFrom: null, specialCostTo: null,
   blockQtyFractions: false, useScale: false, printOnInvoice: true, editQtyOnSales: true, blockDiscount: false, taxExempt: false, pointsValue: 0, salesAccountId: null, purchaseAccountId: null, stationId: null,
   userPrompt: null, notes: null, isActive: true, rowVersion: null
@@ -84,6 +84,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
             <fieldset class="grid content-start gap-x-4 gap-y-1 text-sm sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2"><legend class="app-label">Sale and tracking rules</legend>
               <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-testid="item-inactive" [checked]="!f().isActive" (change)="patch({ isActive: !f().isActive })" /> Inactive</label>
               <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-testid="item-webstore" [checked]="!!f().listedOnWebStore" (change)="patch({ listedOnWebStore: !f().listedOnWebStore })" /> Web store</label>
+              <label class="flex min-h-9 items-center gap-2" title="Customers can order it themselves from the code on their table"><input type="checkbox" data-testid="item-customer-menu" [checked]="!!f().onCustomerMenu" (change)="patch({ onCustomerMenu: !f().onCustomerMenu })" /> On the customer menu</label>
               <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-testid="item-block-fractions" [checked]="!!f().blockQtyFractions" (change)="patch({ blockQtyFractions: !f().blockQtyFractions })" /> Block qty fractions</label>
               <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-testid="item-serials" [checked]="!!f().tracksSerials" (change)="patch({ tracksSerials: !f().tracksSerials })" /> Track serial numbers</label>
               <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-testid="item-expiry" [checked]="f().tracksBatches" (change)="patch({ tracksBatches: !f().tracksBatches })" /> Track expiry date</label>
@@ -611,7 +612,7 @@ export class StockCardComponent implements OnDestroy {
       name: i.name, sku: i.sku, kind: i.kind, baseUnit: i.baseUnit, containerSize: i.containerSize, tareGrams: i.tareGrams, densityGPerMl: i.densityGPerMl, minimumLevel: i.minimumLevel,
       reorderLevel: i.reorderLevel, targetDaysOfStock: i.targetDaysOfStock, averageCost: i.averageCost ?? 0, supplierId: i.supplierId, tracksBatches: i.tracksBatches, tracksSerials: i.tracksSerials,
       groupId: i.groupId, barcode: i.barcode, description: i.description, purchaseUnitName: i.purchaseUnitName, purchaseUnitSize: i.purchaseUnitSize, reorderQuantity: i.reorderQuantity,
-      targetStock: i.targetStock, listedOnWebStore: i.listedOnWebStore, sellingPrice: i.sellingPrice, tradePrice: i.tradePrice ?? null, wholesalePrice: i.wholesalePrice ?? null,
+      targetStock: i.targetStock, listedOnWebStore: i.listedOnWebStore, onCustomerMenu: i.onCustomerMenu ?? false, sellingPrice: i.sellingPrice, tradePrice: i.tradePrice ?? null, wholesalePrice: i.wholesalePrice ?? null,
       resellerPrice: i.resellerPrice ?? null, bundlePrice: i.bundlePrice ?? null, specialPrice: i.specialPrice ?? null, specialFromUtc: i.specialFromUtc ?? null, specialToUtc: i.specialToUtc ?? null, discountPercent: i.discountPercent ?? null, discountFromUtc: i.discountFromUtc ?? null, discountToUtc: i.discountToUtc ?? null,
       minimumPrice: i.minimumPrice ?? null, suggestedRetailPrice: i.suggestedRetailPrice ?? null, lastCost: i.lastPurchaseCost ?? null, specialCost: i.specialCost ?? null,
       specialCostFrom: i.specialCostFrom ?? null, specialCostTo: i.specialCostTo ?? null, blockQtyFractions: !!i.blockQtyFractions, useScale: !!i.useScale, printOnInvoice: i.printOnInvoice !== false,

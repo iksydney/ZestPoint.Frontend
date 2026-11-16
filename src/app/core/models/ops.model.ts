@@ -45,6 +45,8 @@ export interface CompanySettingsDto {
   maxRedeemPercent?: number;
   /** How many months a gift card lasts from the day it is sold. 0: it never expires. */
   giftCardExpiryMonths?: number;
+  /** Ordering from a table's QR code works only while the table has a bill open. */
+  tableOrderingNeedsOpenBill?: boolean;
   adjustmentApprovalAboveValue: number | null;
   expiryWarningDays: number;
   allowCashPayments: boolean;
@@ -369,6 +371,8 @@ export interface TableDto {
   isActive: boolean;
   sortOrder: number;
   openBills: number;
+  /** Orders and calls from the table's QR code that nobody has answered yet. */
+  pendingRequests?: number;
 }
 
 export interface OrderDto {
@@ -572,6 +576,8 @@ export interface InventoryItemDto {
   reorderQuantity: number;
   targetStock: number | null;
   listedOnWebStore: boolean;
+  /** On the menu customers see when they scan the code on their table. */
+  onCustomerMenu?: boolean;
   productId: string | null;
   sellingPrice: number | null;
   tradePrice?: number | null;
@@ -658,6 +664,7 @@ export interface SaveInventoryItemRequest {
   reorderQuantity?: number;
   targetStock?: number | null;
   listedOnWebStore?: boolean;
+  onCustomerMenu?: boolean;
   sellingPrice?: number | null;
   tradePrice?: number | null;
   wholesalePrice?: number | null;

@@ -227,6 +227,8 @@ export const routes: Routes = [
   },
   // A customer's receipt, opened from its web link without signing in.
   { path: 'r/:token', title: 'Your receipt', loadComponent: () => import('./features/receipt/public-receipt.page').then((m) => m.PublicReceiptPageComponent) },
+  // A customer at a table, opened from the QR code on it, without signing in: the table's code is the only key.
+  { path: 't/:code', title: 'Order from your table', loadComponent: () => import('./features/table-order/public-table.page').then((m) => m.PublicTablePageComponent) },
   // The holder of a gift card checking what is left, without signing in: the code is the only key.
   { path: 'gift-card', title: 'Check your gift card', loadComponent: () => import('./features/gift-card/public-gift-card.page').then((m) => m.PublicGiftCardPageComponent) },
   // A purchase order, opened by its supplier from the link they were sent, without signing in.

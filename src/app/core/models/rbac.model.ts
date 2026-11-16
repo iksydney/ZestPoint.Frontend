@@ -132,7 +132,8 @@ export const FEATURES = {
   HEAD_OFFICE: 'head_office',
   MESSAGING: 'messaging',
   LOSS_PREVENTION: 'loss_prevention',
-  LOYALTY_GIFT_CARDS: 'loyalty_giftcards'
+  LOYALTY_GIFT_CARDS: 'loyalty_giftcards',
+  TABLE_ORDERING: 'table_ordering'
 } as const;
 
 export type FeatureCode = (typeof FEATURES)[keyof typeof FEATURES];

@@ -7,6 +7,7 @@ import { CustomerDto, CustomersApi, LaybysApi } from '../../core/services/custom
 import { GiftCardBalanceDto, IssuedGiftCardDto } from '../../core/models/gift-card.model';
 import { GiftCardsApi } from '../../core/services/gift-cards.service';
 import { GiftCardIssuedComponent } from '../customers/gift-card-issued.component';
+import { TableRequestsComponent } from './table-requests.component';
 import { BarLineState, OrderKind, OrderLineDto, PaymentMethod, ProductDto, ReceiptDto, SellingUnitDto, VoidAuthorizer, VoidRequestDto, TableDto } from '../../core/models/ops.model';
 import { lineKey, splitEvenly } from '../../core/offline/order-calc';
 import { toApiError } from '../../core/services/api.util';
@@ -76,7 +77,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
 @Component({
   selector: 'zp-pos-billing',
   standalone: true,
-  imports: [CurrencyPipe, DatePipe, DecimalPipe, FormsModule, DialogComponent, GiftCardIssuedComponent, StatusBadgeComponent, BranchPickerComponent, SyncStatusComponent, VoidAuthoriserComponent, ReceiptViewComponent, ReceiptShareComponent],
+  imports: [CurrencyPipe, DatePipe, DecimalPipe, FormsModule, DialogComponent, GiftCardIssuedComponent, TableRequestsComponent, StatusBadgeComponent, BranchPickerComponent, SyncStatusComponent, VoidAuthoriserComponent, ReceiptViewComponent, ReceiptShareComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -95,6 +96,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
         <div class="flex items-center justify-between">
           <h2 class="font-semibold">Open bills</h2>
           @if (canCreate()) { <button type="button" class="btn-primary px-3 py-1.5 text-sm" data-testid="new-bill" [disabled]="readOnly()" (click)="openNew()">New</button> }
+          @if (canCreate()) { <zp-table-requests [branchId]="branches.activeId()" [online]="online()" [currency]="store.currency()" (billChanged)="tableBillAccepted($event)" /> }
           @if (giftCardsOn() && canCreate()) { <button type="button" class="btn-outline px-3 py-1.5 text-sm" data-testid="sell-gift-card" [disabled]="readOnly() || !online()" [attr.title]="online() ? null : 'Gift cards need a connection'" (click)="openGiftSale()">Gift card</button> }
         </div>
         <ul class="space-y-1.5" data-testid="bill-list">
@@ -1206,6 +1208,12 @@ export class PosBillingComponent implements OnInit {
   }
 
   /** Opens the bill for a gift card, then takes payment for it like any bill. Needs a connection: the server makes the card. */
+  /** Items from a table were put on a bill: it is read again and opened, so the waiter sees them and can send them. */
+  protected async tableBillAccepted(orderId: string): Promise<void> {
+    await this.store.refreshBills();
+    await this.select(orderId);
+  }
+
   protected openGiftSale(): void {
     this.giftAmountTyped.set(0);
     this.giftName.set('');

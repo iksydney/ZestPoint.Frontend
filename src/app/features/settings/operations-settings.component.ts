@@ -66,6 +66,12 @@ import { ConfirmService, ToastService } from '../../shared/ui/feedback';
           <p class="text-xs text-ink/70">Points are only a way to pay if your plan includes Loyalty and gift cards. Points cannot be spent while a till is offline.</p>
         </section>
 
+        <section class="app-card space-y-2" data-testid="table-ordering-section"><h2 class="font-semibold">Ordering from the table</h2>
+          <p class="text-sm text-ink/80">Customers scan the code on their table, see the items you have put on the customer menu (on each item's stock card) and send an order that your staff accept or decline. Nothing reaches the kitchen or the bill without a member of staff.</p>
+          <label class="flex min-h-11 items-start gap-2 text-sm"><input type="checkbox" class="mt-1" data-testid="table-needs-bill" [checked]="!!v.tableOrderingNeedsOpenBill" (change)="patch({ tableOrderingNeedsOpenBill: !v.tableOrderingNeedsOpenBill })" />
+            <span>Only when the table already has a bill open. A code photographed and used from somewhere else then does nothing.</span></label>
+        </section>
+
         <section class="app-card space-y-3" data-testid="giftcard-section"><h2 class="font-semibold">Gift cards</h2>
           <p class="text-sm text-ink/80">Gift cards are sold at the till and spent at any branch, in one go or in parts. The money for a card is owed to its holder until it is spent. Say how long a card lasts from the day it is sold.</p>
           <div class="max-w-xs"><label class="app-label" for="s-gcm">A card lasts (months)</label><input id="s-gcm" type="number" min="0" max="120" step="1" class="app-input" data-testid="giftcard-months" [ngModel]="v.giftCardExpiryMonths ?? 0" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ giftCardExpiryMonths: +$event })" />

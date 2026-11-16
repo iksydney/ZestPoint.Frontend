@@ -372,7 +372,7 @@ function readMuted(): boolean {
  * A short two-note sound made in the browser (no audio file to load, so it also works offline): rising for a new order at the bar,
  * falling for "your order is ready". Browsers only allow sound after the person has touched the page; a refusal is simply silent.
  */
-function chime(falling: boolean): void {
+export function chime(falling: boolean): void {
   try {
     const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctx) return;
