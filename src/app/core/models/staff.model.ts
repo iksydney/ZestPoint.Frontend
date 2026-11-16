@@ -117,6 +117,10 @@ export interface SessionDto {
   readonly userAgent: string | null;
   readonly ipAddress: string | null;
   readonly isCurrent: boolean;
+  /** A session on the phone app: what the person calls the phone, its system (android, ios, windows) and the app's version. Null for a browser. */
+  readonly deviceName: string | null;
+  readonly platform: string | null;
+  readonly appVersion: string | null;
 }
 
 export interface InviteInfoDto {

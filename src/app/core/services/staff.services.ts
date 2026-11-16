@@ -75,6 +75,11 @@ export class StaffApiService {
     return this.http.post<ApiEnvelope<number>>(`/api/v1/staff/${id}/sessions/revoke`, null).pipe(unwrap());
   }
 
+  /** Signs out one session of a person: one phone, or one browser. */
+  revokeSession(id: string, sessionId: string): Observable<boolean> {
+    return this.http.post<ApiEnvelope<boolean>>(`/api/v1/staff/${id}/sessions/${sessionId}/revoke`, null).pipe(unwrap());
+  }
+
   // Invitation acceptance is anonymous.
   invite(venue: string, token: string): Observable<InviteInfoDto> {
     return this.http.get<ApiEnvelope<InviteInfoDto>>('/api/v1/auth/invite', { params: toParams({ venue, token }) }).pipe(unwrap());

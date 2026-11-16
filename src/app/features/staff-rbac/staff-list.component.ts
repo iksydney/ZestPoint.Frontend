@@ -227,7 +227,12 @@ type Tone = 'success' | 'warning' | 'danger' | 'primary';
               <div class="app-card space-y-2">
                 <p class="text-sm font-semibold">Sessions</p>
                 @for (s of sessions(); track s.id) {
-                  <p class="text-xs text-ink/80">{{ s.authMethod }}{{ s.isCurrent ? ' (this device)' : '' }} - last seen {{ s.lastSeenAtUtc ? (s.lastSeenAtUtc | date: 'short') : 'never' }}</p>
+                  <div class="flex flex-wrap items-center justify-between gap-2" [attr.data-testid]="'session-' + s.id">
+                    <p class="min-w-0 text-xs text-ink/80">
+                      @if (s.deviceName) { <span class="font-semibold" data-testid="session-device">{{ s.deviceName }}</span> <span>({{ platformLabel(s.platform) }}{{ s.appVersion ? ', app ' + s.appVersion : '' }})</span> }
+                      @else { {{ s.authMethod }} }{{ s.isCurrent ? ' (this device)' : '' }} - last seen {{ s.lastSeenAtUtc ? (s.lastSeenAtUtc | date: 'short') : 'never' }}</p>
+                    @if (!s.isCurrent) { <button type="button" class="btn-ghost px-2 py-0.5 text-xs" [attr.data-testid]="'session-revoke-' + s.id" (click)="revokeSession(s.id)">Sign out</button> }
+                  </div>
                 } @empty { <p class="text-xs text-ink/70">No active sessions.</p> }
                 <button type="button" class="btn-outline" (click)="revokeSessions()" [disabled]="d.activeSessions === 0" data-testid="revoke-sessions">Sign out everywhere</button>
               </div>
@@ -466,6 +471,22 @@ export class StaffListComponent {
   protected reactivate(): Promise<void> {
     const d = this.detail()!;
     return this.act(() => firstValueFrom(this.api.reactivate(d.id)), 'Reactivated.');
+  }
+
+  protected platformLabel(platform: string | null): string {
+    return platform === 'android' ? 'Android' : platform === 'ios' ? 'iPhone or iPad' : platform === 'windows' ? 'Windows' : (platform ?? 'phone');
+  }
+
+  protected async revokeSession(sessionId: string): Promise<void> {
+    const d = this.detail()!;
+    this.dError.set(null);
+    try {
+      await firstValueFrom(this.api.revokeSession(d.id, sessionId));
+      this.toast.success('Signed out.');
+      await this.openDetail(d.id);
+    } catch (err) {
+      this.dError.set(toApiError(err).message);
+    }
   }
 
   protected async revokeSessions(): Promise<void> {
