@@ -1,6 +1,6 @@
 # ZestPoint Frontend: Architecture
 
-> Repo: `ZestPointDashboard/ZestPoint.Frontend/` (Angular 18). Last reviewed: 2026-10-14 (after Phases 1-7 of `Firstprompt.md` and the POS/Stock/Purchasing navigation of `POSContinuum.md`, section 12).
+> Repo: `ZestPointDashboard/ZestPoint.Frontend/` (Angular 21, moved up from 18 on 2026-11-17: FND-116). Last reviewed: 2026-10-14 (after Phases 1-7 of `Firstprompt.md` and the POS/Stock/Purchasing navigation of `POSContinuum.md`, section 12).
 > Sister repos: **Backend** `../../ZestPoint/architecture.md`, **Mobile** `../../ZestPointMobile/architecture.md`.
 > Shared rules live in `constitution.md`; defects and gaps are logged in `../../findings.md`. Delivery summary and run instructions: `../../ZestPoint/DELIVERY.md`.
 
@@ -17,7 +17,7 @@ The browser only shapes the experience. **Every rule is enforced again by the AP
 
 ## 2. Stack
 
-Angular 18 (standalone components, signals, new control flow, `OnPush`), TypeScript strict + `strictTemplates`, Tailwind CSS 3 with CSS-variable tokens, RxJS for HTTP only, **Dexie (IndexedDB)** for the offline queue, **@microsoft/signalr** for the live bar-order notices (section 12), `lucide-angular` icons, Playwright for end-to-end tests. No unit-test runner is configured (see FND-037).
+Angular 21 (standalone components, signals, new control flow, `OnPush`; TypeScript 5.9; the application builder, with the initial-bundle warning at 625 kB because the framework itself grew by 22 kB between 18 and 21), TypeScript strict + `strictTemplates`, Tailwind CSS 3 with CSS-variable tokens, RxJS for HTTP only, **Dexie (IndexedDB)** for the offline queue, **@microsoft/signalr** for the live bar-order notices (section 12), `lucide-angular` icons, Playwright for end-to-end tests. No unit-test runner is configured (see FND-037).
 
 ## 3. Directory map
 
