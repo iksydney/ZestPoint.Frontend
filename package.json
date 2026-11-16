@@ -11,14 +11,14 @@
     "test": "ng test"
   },
   "dependencies": {
-    "@angular/animations": "^19.2.25",
-    "@angular/common": "^19.2.25",
-    "@angular/compiler": "^19.2.25",
-    "@angular/core": "^19.2.25",
-    "@angular/forms": "^19.2.25",
-    "@angular/platform-browser": "^19.2.25",
-    "@angular/router": "^19.2.25",
-    "@angular/service-worker": "^19.2.25",
+    "@angular/animations": "^20.3.35",
+    "@angular/common": "^20.3.35",
+    "@angular/compiler": "^20.3.35",
+    "@angular/core": "^20.3.35",
+    "@angular/forms": "^20.3.35",
+    "@angular/platform-browser": "^20.3.35",
+    "@angular/router": "^20.3.35",
+    "@angular/service-worker": "^20.3.35",
     "@microsoft/signalr": "8.0.17",
     "barcode-detector": "3.2.3",
     "dexie": "^4.0.8",
@@ -29,13 +29,13 @@
     "zone.js": "~0.15.1"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^19.2.27",
-    "@angular/cli": "^19.2.27",
-    "@angular/compiler-cli": "^19.2.25",
+    "@angular-devkit/build-angular": "^20.3.43",
+    "@angular/cli": "^20.3.43",
+    "@angular/compiler-cli": "^20.3.35",
     "@playwright/test": "^1.64.0",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.41",
     "tailwindcss": "^3.4.10",
-    "typescript": "~5.5.4"
+    "typescript": "~5.9.3"
   }
 }
