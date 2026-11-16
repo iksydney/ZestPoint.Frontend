@@ -16,6 +16,7 @@ import { BranchContextService } from '../../core/services/branch-context.service
 import { PurchasingApi } from '../../core/services/nav-ops.services';
 import { InventoryApi, OperationSettingsApi } from '../../core/services/ops.services';
 import { BinApi, PurchasingWorkstationApi, ReceivingApi } from '../../core/services/purchasing.services';
+import { CameraScannerComponent, type ScanFeedback } from '../../shared/ui/camera-scanner.component';
 import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { ZpIconComponent } from '../../shared/ui/zp-icon.component';
 import { ShareLinksComponent } from '../../shared/ui/share-links.component';
@@ -67,7 +68,7 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
 @Component({
   selector: 'zp-po-workstation',
   standalone: true,
-  imports: [EntitledActionDirective, DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, SupplierLookupComponent, SupplierFormComponent, PoPrintSheetComponent, StockCardComponent, ShareLinksComponent],
+  imports: [EntitledActionDirective, DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, SupplierLookupComponent, SupplierFormComponent, PoPrintSheetComponent, StockCardComponent, ShareLinksComponent, CameraScannerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="no-print flex flex-col gap-4 font-jakarta" data-testid="po-workstation">
@@ -186,6 +187,7 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
               <zp-icon name="scan" [size]="18" class="ml-2 text-primary" />
               <input #scan class="w-full bg-transparent font-data text-xs placeholder:text-ink/50 focus:outline-none" placeholder="Quick scan barcode or SKU, or type an item name" data-testid="po-scan" autocomplete="off" [ngModel]="scanText()" (ngModelChange)="onScanText($event)" (keydown.enter)="scanEnter(); $event.preventDefault()" />
               <span class="po-kbd">F4</span>
+              <button type="button" class="inline-flex items-center gap-1 rounded border border-primary px-2 py-1 font-data text-[11px] font-bold text-primary max-lg:min-h-11" aria-label="Scan with the camera" data-testid="po-scan-camera" (click)="openCamera()">Camera</button>
               <button type="button" class="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 font-data text-[11px] font-bold text-on-primary" data-testid="po-add-sku" [attr.title]="canAddItems() ? 'Create a new stock item and add it to this document' : 'You need the right to edit stock items to create one'" (click)="addSku()"><zp-icon name="plus" [size]="14" /> Add SKU</button>
               @if (matches().length > 0) {
                 <ul class="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-ink/15 bg-panel shadow-xl" data-testid="po-matches">
@@ -195,6 +197,7 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
             </div>
           }
         </div>
+        <zp-camera-scanner [open]="cameraOpen()" title="Scan items to add" [continuous]="true" [feedback]="cameraFeedback()" (scanned)="cameraScanned($event)" (closed)="closeCamera()" />
         @if (scanNote()) { <p class="text-xs text-warning" role="status" data-testid="po-scan-note">{{ scanNote() }}</p> }
         <!-- Add SKU: the stock card for a brand-new item; once saved it goes straight onto this document. -->
         @if (newItemOpen()) { <zp-stock-card [itemId]="null" afterSave="close" [prefill]="newItemPrefill()" (savedItem)="onNewItem($event)" (closed)="newItemOpen.set(false)" /> }
@@ -414,6 +417,8 @@ export class PurchaseOrderWorkstationComponent implements OnInit {
   // Item search.
   protected readonly scanText = signal('');
   protected readonly matches = signal<readonly InventoryItemDto[]>([]);
+  protected readonly cameraOpen = signal(false);
+  protected readonly cameraFeedback = signal<ScanFeedback | null>(null);
   protected readonly scanNote = signal<string | null>(null);
   protected readonly newItemOpen = signal(false);
   protected readonly newItemPrefill = signal<{ name?: string; barcode?: string } | null>(null);
@@ -622,6 +627,19 @@ export class PurchaseOrderWorkstationComponent implements OnInit {
   }
 
   private itemTimer: ReturnType<typeof setTimeout> | null = null;
+
+  protected openCamera(): void { this.cameraFeedback.set(null); this.cameraOpen.set(true); }
+  protected closeCamera(): void { this.cameraOpen.set(false); this.cameraFeedback.set(null); }
+
+  /** A code from the camera does what Enter does in the scan box: adds the item, or says why it could not. Several matches need a choice, which needs the screen. */
+  protected async cameraScanned(code: string): Promise<void> {
+    this.scanText.set(code);
+    this.scanNote.set(null);
+    await this.scanEnter();
+    const note = this.scanNote();
+    this.cameraFeedback.set(note ? { text: note, ok: /increased/.test(note) } : { text: 'Added to the document.', ok: true });
+    if (this.matches().length > 0) this.cameraOpen.set(false);
+  }
 
   protected async scanEnter(): Promise<void> {
     const text = this.scanText().trim();

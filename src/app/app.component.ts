@@ -4,6 +4,7 @@ import { LoadingService } from './core/services/loading.service';
 import { BusyIndicatorComponent } from './shared/ui/busy-indicator.component';
 import { AuthService } from './core/services/auth.service';
 import { ThemeService } from './core/services/theme.service';
+import { InstallService } from './core/services/install.service';
 
 @Component({
   selector: 'zp-root',
@@ -14,6 +15,8 @@ import { ThemeService } from './core/services/theme.service';
 export class AppComponent {
   private readonly auth = inject(AuthService);
   private readonly theme = inject(ThemeService);
+  /** Created now, not when the shell opens: the browser may offer to install before anyone has signed in. */
+  private readonly install = inject(InstallService);
 
   constructor() {
     // Going to a screen that still has to be fetched shows the loading mark too.

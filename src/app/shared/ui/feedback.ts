@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, Injectable, effect, inject, input, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, Injectable, computed, effect, inject, input, output, signal, viewChild } from '@angular/core';
 
 // ---- Toasts ---------------------------------------------------------------------------------
 
@@ -89,8 +89,8 @@ export class ConfirmService {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (open()) {
-      <div class="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" (mousedown)="onBackdrop($event)">
-        <div #panel class="app-card max-h-[90vh] w-full overflow-auto shadow-2xl" [class]="wide() ? 'max-w-3xl' : 'max-w-lg'"
+      <div class="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" [class]="phoneFull() ? 'max-sm:p-0' : ''" (mousedown)="onBackdrop($event)">
+        <div #panel class="app-card max-h-[90vh] w-full overflow-auto shadow-2xl" [class]="panelClass()"
              role="dialog" aria-modal="true" [attr.aria-label]="title()" tabindex="-1" (keydown)="onKey($event)">
           <div class="mb-3 flex items-start justify-between gap-3">
             <h2 class="text-lg font-bold">{{ title() }}</h2>
@@ -106,7 +106,12 @@ export class DialogComponent {
   readonly open = input.required<boolean>();
   readonly title = input.required<string>();
   readonly wide = input(false);
+  /** On a phone the box fills the screen (the pay box, the camera): a card with margins wastes the little room there is. From the `sm` width up it is the usual box. */
+  readonly phoneFull = input(false);
   readonly closed = output<void>();
+
+  protected readonly panelClass = computed(() =>
+    (this.wide() ? 'max-w-3xl' : 'max-w-lg') + (this.phoneFull() ? ' max-sm:h-[100dvh] max-sm:max-h-none max-sm:max-w-none max-sm:rounded-none max-sm:pb-[max(1rem,env(safe-area-inset-bottom))]' : ''));
 
   private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
   private previouslyFocused: HTMLElement | null = null;

@@ -6,6 +6,8 @@ import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { CustomerDto, CustomersApi, LaybysApi } from '../../core/services/customer.services';
 import { GiftCardBalanceDto, IssuedGiftCardDto } from '../../core/models/gift-card.model';
 import { GiftCardsApi } from '../../core/services/gift-cards.service';
+import { CameraScannerComponent, type ScanFeedback } from '../../shared/ui/camera-scanner.component';
+import { TourService } from '../../core/tour/tour.service';
 import { GiftCardIssuedComponent } from '../customers/gift-card-issued.component';
 import { TableRequestsComponent } from './table-requests.component';
 import { BarLineState, OrderKind, OrderLineDto, PaymentMethod, ProductDto, ReceiptDto, SellingUnitDto, VoidAuthorizer, VoidRequestDto, TableDto } from '../../core/models/ops.model';
@@ -77,7 +79,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
 @Component({
   selector: 'zp-pos-billing',
   standalone: true,
-  imports: [CurrencyPipe, DatePipe, DecimalPipe, FormsModule, DialogComponent, GiftCardIssuedComponent, TableRequestsComponent, StatusBadgeComponent, BranchPickerComponent, SyncStatusComponent, VoidAuthoriserComponent, ReceiptViewComponent, ReceiptShareComponent],
+  imports: [CurrencyPipe, DatePipe, DecimalPipe, FormsModule, DialogComponent, GiftCardIssuedComponent, TableRequestsComponent, StatusBadgeComponent, BranchPickerComponent, SyncStatusComponent, VoidAuthoriserComponent, ReceiptViewComponent, ReceiptShareComponent, CameraScannerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -90,18 +92,18 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
     @if (!branches.activeId()) { <p class="sys-alert sys-alert-warning" role="status">You are not assigned to a branch yet. Ask a manager to give you access.</p> }
 
     @if (branches.activeId()) {
-    <div class="grid gap-3 lg:grid-cols-[15rem_minmax(0,1fr)_24rem]">
+    <div class="grid gap-3 max-lg:pb-24 lg:grid-cols-[15rem_minmax(0,1fr)_24rem]">
       <!-- Open bills -->
-      <section class="app-card flex flex-col gap-2" aria-label="Open bills">
+      <section class="app-card flex flex-col gap-2 max-lg:order-1" aria-label="Open bills">
         <div class="flex items-center justify-between">
           <h2 class="font-semibold">Open bills</h2>
           @if (canCreate()) { <button type="button" class="btn-primary px-3 py-1.5 text-sm" data-testid="new-bill" [disabled]="readOnly()" (click)="openNew()">New</button> }
           @if (canCreate()) { <zp-table-requests [branchId]="branches.activeId()" [online]="online()" [currency]="store.currency()" (billChanged)="tableBillAccepted($event)" /> }
           @if (giftCardsOn() && canCreate()) { <button type="button" class="btn-outline px-3 py-1.5 text-sm" data-testid="sell-gift-card" [disabled]="readOnly() || !online()" [attr.title]="online() ? null : 'Gift cards need a connection'" (click)="openGiftSale()">Gift card</button> }
         </div>
-        <ul class="space-y-1.5" data-testid="bill-list">
+        <ul class="space-y-1.5 max-lg:flex max-lg:gap-2 max-lg:space-y-0 max-lg:overflow-x-auto max-lg:pb-1" data-testid="bill-list">
           @for (b of store.bills(); track b.id) {
-            <li>
+            <li class="max-lg:w-44 max-lg:shrink-0">
               <button type="button" class="app-focus w-full rounded-lg border px-3 py-2 text-left" [class]="b.id === store.current()?.id ? 'border-primary bg-primary/10' : 'border-ink/15 hover:border-primary/60'"
                       [attr.data-testid]="'bill-' + (b.label ?? b.id)" (click)="select(b.id)">
                 <span class="flex items-center justify-between gap-2">
@@ -124,10 +126,11 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
       </section>
 
       <!-- Catalogue -->
-      <section class="app-card" aria-label="Catalogue">
+      <section class="app-card max-lg:order-2" aria-label="Catalogue">
         <div class="mb-3 flex flex-wrap gap-2">
           <input class="app-input max-w-xs" type="search" placeholder="Search products" aria-label="Search products" data-testid="product-search" [ngModel]="search()" (ngModelChange)="search.set($event)" />
           <input class="app-input max-w-[11rem]" placeholder="Scan barcode" aria-label="Barcode" data-testid="barcode" [ngModel]="barcode()" (ngModelChange)="barcode.set($event)" (keydown.enter)="scan()" />
+          <button type="button" class="btn-outline px-3 max-lg:min-h-11" aria-label="Scan with the camera" data-testid="scan-camera" [disabled]="!store.current() || readOnly() || !canEdit() || giftSale()" (click)="openCamera()">Camera</button>
         </div>
         <div class="mb-3 flex flex-wrap gap-1.5" role="group" aria-label="Categories">
           <button type="button" class="app-badge cursor-pointer px-3 py-1" [class]="!categoryId() ? 'bg-primary text-on-primary' : 'bg-ink/10'" (click)="categoryId.set(null)">All</button>
@@ -151,7 +154,11 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
       </section>
 
       <!-- The bill -->
-      <section class="app-card flex flex-col" aria-label="Current bill" data-testid="current-bill">
+      <section class="app-card flex flex-col" [class]="billOpen() ? 'max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-40 max-lg:max-h-[88dvh] max-lg:overflow-auto max-lg:rounded-b-none max-lg:shadow-2xl max-lg:pb-[max(1rem,env(safe-area-inset-bottom))]' : 'max-lg:hidden'" aria-label="Current bill" data-testid="current-bill">
+        <div class="sticky top-0 z-10 mb-2 flex items-center justify-between gap-2 border-b border-ink/10 bg-panel pb-2 lg:hidden">
+          <h2 class="font-semibold">Bill</h2>
+          <button type="button" class="btn-ghost min-h-11" data-testid="bill-sheet-close" (click)="billOpen.set(false)">Close</button>
+        </div>
         @if (store.current(); as o) {
           <div class="mb-2 flex items-start justify-between gap-2">
             <div>
@@ -224,10 +231,10 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
                     }
                     @else if (r.locked) { <span class="w-10 text-center" data-testid="line-qty">x{{ r.quantity | number: '1.0-3' }}</span> }
                     @else {
-                      <button type="button" class="btn-outline h-9 w-9 p-0" aria-label="Fewer" [disabled]="r.quantity - 1 < r.sentQty" (click)="setRow(r, r.quantity - 1, null)">-</button>
+                      <button type="button" class="btn-outline h-9 w-9 p-0 max-lg:h-11 max-lg:w-11" aria-label="Fewer" [disabled]="r.quantity - 1 < r.sentQty" (click)="setRow(r, r.quantity - 1, null)">-</button>
                       <input type="number" inputmode="decimal" min="0" step="any" class="app-input h-9 w-20 px-1 py-0 text-center" [attr.aria-label]="'Quantity of ' + r.name" data-testid="line-qty"
                              [value]="r.quantity" (focus)="$any($event.target).select()" (keydown.enter)="$any($event.target).blur()" (change)="setRow(r, $any($event.target).value, $any($event.target))" />
-                      <button type="button" class="btn-outline h-9 w-9 p-0" aria-label="More" (click)="setRow(r, r.quantity + 1, null)">+</button>
+                      <button type="button" class="btn-outline h-9 w-9 p-0 max-lg:h-11 max-lg:w-11" aria-label="More" (click)="setRow(r, r.quantity + 1, null)">+</button>
                     }
                     @if (!r.back) {
                     <span class="ml-auto flex flex-wrap items-center justify-end gap-1">
@@ -253,7 +260,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
 
           @if (error()) { <p class="sys-alert sys-alert-danger mt-2" role="alert" data-testid="pos-error">{{ error() }}</p> }
 
-          <div class="mt-3 grid grid-cols-2 gap-2">
+          <div class="mt-3 grid grid-cols-2 gap-2 max-lg:[&_button]:min-h-12">
             @if (canEdit() && !readOnly() && isOpen()) {
               <button type="button" class="btn-outline" data-testid="send-order" [disabled]="!hasUnsent()" (click)="sendOrder()">Send</button>
               @if (canDiscount()) { <button type="button" class="btn-outline" data-testid="discount" (click)="dialog.set('discount')">Discount</button> }
@@ -277,7 +284,22 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
         }
       </section>
     </div>
+
+    <!-- A phone or tablet held upright: the bill is not squeezed in under the products. One bar at the bottom says what is on it and opens it as a panel. -->
+    @if (billOpen()) { <div class="fixed inset-0 z-30 bg-black/40 lg:hidden print:hidden" aria-hidden="true" data-testid="bill-backdrop" (click)="billOpen.set(false)"></div> }
+    <div class="fixed inset-x-0 bottom-0 z-30 border-t border-ink/15 bg-panel/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur lg:hidden print:hidden" data-testid="bill-bar">
+      @if (store.current(); as o) {
+        <button type="button" class="btn-primary touch-target flex w-full items-center justify-between gap-3 px-4" data-testid="bill-bar-open" [attr.aria-expanded]="billOpen()" (click)="billOpen.set(true)">
+          <span class="min-w-0 truncate text-left">{{ o.label ?? 'Bill' }} &middot; {{ barCount() | number: '1.0-3' }} item(s)</span>
+          <span class="font-bold" data-testid="bill-bar-total">{{ o.total | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</span>
+        </button>
+      } @else if (canCreate()) {
+        <button type="button" class="btn-primary touch-target w-full" data-testid="bill-bar-new" [disabled]="readOnly()" (click)="openNew()">New bill</button>
+      } @else { <p class="py-3 text-center text-sm text-ink/70">Select a bill above.</p> }
+    </div>
     }
+
+    <zp-camera-scanner [open]="cameraOpen()" title="Scan products" [continuous]="true" [feedback]="cameraFeedback()" (scanned)="cameraScanned($event)" (closed)="closeCamera()" />
 
     <!-- New bill -->
     <zp-dialog [open]="dialog() === 'new'" title="New bill" (closed)="dialog.set(null)">
@@ -379,7 +401,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
     </zp-dialog>
 
     <!-- Payment: one payment, or split into parts (each with its own payment type) that must add up to what is due -->
-    <zp-dialog [open]="dialog() === 'pay'" title="Take payment" [wide]="true" (closed)="dialog.set(null)">
+    <zp-dialog [open]="dialog() === 'pay'" title="Take payment" [wide]="true" [phoneFull]="true" (closed)="dialog.set(null)">
       @if (store.current(); as o) {
         <div class="space-y-4">
           <p class="text-lg">Balance due: <strong data-testid="pay-due">{{ o.balance | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</strong>
@@ -683,6 +705,7 @@ export class PosBillingComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly ordersApi = inject(OrdersApi);
   private readonly toast = inject(ToastService);
+  private readonly tour = inject(TourService);
   protected readonly syncAgent = inject(SyncAgentService);
   private readonly bar = inject(BarStore);
 
@@ -691,6 +714,13 @@ export class PosBillingComponent implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly search = signal('');
   protected readonly barcode = signal('');
+  /** The camera as a barcode scanner (it stays open and adds each product it reads). */
+  protected readonly cameraOpen = signal(false);
+  protected readonly cameraFeedback = signal<ScanFeedback | null>(null);
+  /** On a phone or a tablet held upright the bill is a panel that slides up from the bottom bar; wide screens show it beside the products and ignore this. */
+  protected readonly billOpen = signal(false);
+  /** How many items are on the bill, for the bottom bar. */
+  protected readonly barCount = computed(() => q3(this.rows().reduce((n, r) => n + r.quantity, 0)));
   protected readonly categoryId = signal<string | null>(null);
 
   protected readonly form = signal({ kind: 'Tab' as OrderKind, label: '', table: '' });
@@ -967,6 +997,13 @@ export class PosBillingComponent implements OnInit {
   });
 
   constructor() {
+    // A tour step that points into the bill needs the bill on screen: on a phone the panel opens for it (the tour waits a moment for its target).
+    effect(() => {
+      const a = this.tour.active();
+      const target = a?.steps[a.index]?.target ?? '';
+      if (target.includes('current-bill') && window.matchMedia('(max-width: 1023px)').matches) untracked(() => this.billOpen.set(true));
+    }, { allowSignalWrites: true });
+
     // Reload everything when the branch changes.
     effect(() => {
       const id = this.branches.activeId();
@@ -1150,15 +1187,43 @@ export class PosBillingComponent implements OnInit {
   protected async scan(): Promise<void> {
     const code = this.barcode().trim();
     if (!code) return;
-    const hit = this.store.products().find((p) => p.barcode === code);
     this.barcode.set('');
-    if (hit) { this.pick(hit); return; }
+    const result = this.addByCode(code);
+    if (!result.ok) this.toast.error(result.text);
+  }
+
+  /**
+   * Adds what a barcode belongs to and says what happened, for the typing box (a scanner that types) and the camera alike. A product that needs a question first
+   * (a serial number, how it is sold, its options) opens that box: `asked` is true then, and the camera steps aside for it.
+   */
+  private addByCode(code: string): { readonly ok: boolean; readonly text: string; readonly asked: boolean } {
+    const bill = this.store.current();
+    if (!bill || this.readOnly() || !this.canEdit() || this.giftSale()) return { ok: false, text: 'Open or start a bill first.', asked: false };
+    if (bill.layby || bill.consignmentSaleId) return { ok: false, text: 'This bill\'s items are fixed. Start a new bill for anything else.', asked: false };
+    const hit = this.store.products().find((p) => p.barcode === code);
+    if (hit) { this.pick(hit); return { ok: true, text: hit.name, asked: this.dialog() !== null }; }
     // The barcode printed on a case sells that case.
     for (const p of this.store.products()) {
       const unit = p.sellingUnits?.find((u) => u.barcode === code);
-      if (unit) { this.serialChosen = null; this.continuePick(p, unit); return; }
+      if (unit) { this.serialChosen = null; this.continuePick(p, unit); return { ok: true, text: `${p.name} (${unit.name})`, asked: this.dialog() !== null }; }
     }
-    this.toast.error(`No product has the barcode ${code}.`);
+    return { ok: false, text: `No product has the barcode ${code}.`, asked: false };
+  }
+
+  protected openCamera(): void {
+    this.cameraFeedback.set(null);
+    this.cameraOpen.set(true);
+  }
+
+  protected closeCamera(): void {
+    this.cameraOpen.set(false);
+    this.cameraFeedback.set(null);
+  }
+
+  protected cameraScanned(code: string): void {
+    const result = this.addByCode(code);
+    this.cameraFeedback.set({ text: result.text, ok: result.ok });
+    if (result.asked) this.cameraOpen.set(false);
   }
 
   protected async run(action: () => Promise<void>): Promise<void> {

@@ -20,6 +20,7 @@
     "@angular/router": "^18.2.0",
     "@angular/service-worker": "^18.2.0",
     "@microsoft/signalr": "8.0.17",
+    "barcode-detector": "3.2.3",
     "dexie": "^4.0.8",
     "lucide-angular": "^1.0.0",
     "qrcode-generator": "2.0.4",

@@ -29,6 +29,8 @@ async function billWith(page: Page, label: string, item: string) {
   await page.getByTestId('nb-label').fill(label);
   await page.getByTestId('nb-create').click();
   await page.getByTestId(`product-${item}`).click();
+  // On a phone the bill is a panel that slides up from the bar at the bottom (piece 13): open it. On a wide screen it is already there.
+  if (await page.getByTestId('bill-bar').isVisible()) await page.getByTestId('bill-bar-open').click();
   await expect(page.getByTestId(`line-${item}`)).toBeVisible();
 }
 

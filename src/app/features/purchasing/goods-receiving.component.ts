@@ -9,6 +9,7 @@ import { netUnitCost, round2, tareWithinTolerance } from '../../core/purchase-ma
 import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { ReceivingApi } from '../../core/services/purchasing.services';
+import { CameraScannerComponent, type ScanFeedback } from '../../shared/ui/camera-scanner.component';
 import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { ZpIconComponent } from '../../shared/ui/zp-icon.component';
 import { ClaimSlipComponent } from './claim-slip.component';
@@ -41,7 +42,7 @@ type Filter = 'all' | 'pending' | 'shortage';
 @Component({
   selector: 'zp-goods-receiving',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, ClaimSlipComponent, PhotoThumbComponent],
+  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, ClaimSlipComponent, PhotoThumbComponent, CameraScannerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="no-print flex flex-col gap-4 font-jakarta" data-testid="receiving">
@@ -109,6 +110,7 @@ type Filter = 'all' | 'pending' | 'shortage';
                 [disabled]="!m.canReceive" [ngModel]="scanText()" (ngModelChange)="scanText.set($event)" (keydown.enter)="scan(); $event.preventDefault()" />
               <span class="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1"><span class="po-kbd">F4</span><span class="h-2 w-2 rounded-full bg-success"></span></span>
             </div>
+            <button type="button" class="btn-outline px-3 max-lg:min-h-11" aria-label="Scan with the camera" data-testid="rcv-scan-camera" [disabled]="!m.canReceive" (click)="openCamera()">Camera</button>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <div class="flex items-center rounded-lg bg-ink/10 p-1" role="tablist" aria-label="Show lines">
@@ -119,6 +121,7 @@ type Filter = 'all' | 'pending' | 'shortage';
             <button type="button" class="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 font-syne text-lg font-semibold text-on-primary shadow-md transition active:scale-[0.98] disabled:opacity-40" data-testid="rcv-all" [disabled]="!m.canReceive" (click)="receiveAll()"><zp-icon name="doneall" [size]="20" /> Receive all lines (100%)</button>
           </div>
         </section>
+        <zp-camera-scanner [open]="cameraOpen()" title="Scan what arrived" [continuous]="true" [feedback]="cameraFeedback()" (scanned)="cameraScanned($event)" (closed)="closeCamera()" />
         @if (scanNote()) { <p class="text-xs" [class]="scanOk() ? 'text-success' : 'text-warning'" role="status" data-testid="rcv-scan-note">{{ scanNote() }}@if (!scanOk() && lastUnknown()) { <button type="button" class="ml-2 underline" (click)="discrepancyFromScan()">Record it as a wrong item</button> }</p> }
 
         <!-- Verification table -->
@@ -331,6 +334,8 @@ export class GoodsReceivingComponent implements OnInit, OnDestroy {
   protected readonly scanOk = signal(true);
   protected readonly lastScan = signal<string | null>(null);
   protected readonly lastUnknown = signal<string | null>(null);
+  protected readonly cameraOpen = signal(false);
+  protected readonly cameraFeedback = signal<ScanFeedback | null>(null);
 
   protected readonly detailKey = signal<string | null>(null);
   protected readonly discOpen = signal(false);
@@ -465,6 +470,16 @@ export class GoodsReceivingComponent implements OnInit, OnDestroy {
       for (const l of this.manifest()!.lines) if (l.outstanding > 0) next[l.lineId] = { ...(next[l.lineId] ?? this.blank(l, this.manifest()!)), checked, accepted: checked && (next[l.lineId]?.accepted ?? 0) === 0 ? l.outstanding : (next[l.lineId]?.accepted ?? 0) };
       return next;
     });
+  }
+
+  protected openCamera(): void { this.cameraFeedback.set(null); this.cameraOpen.set(true); }
+  protected closeCamera(): void { this.cameraOpen.set(false); this.cameraFeedback.set(null); }
+
+  /** Each code the camera reads counts exactly as if it had been typed in the scan box: one unit, and the same notes. */
+  protected cameraScanned(code: string): void {
+    this.scanText.set(code);
+    this.scan();
+    this.cameraFeedback.set({ text: this.scanNote() ?? code, ok: this.scanOk() });
   }
 
   protected scan(): void {

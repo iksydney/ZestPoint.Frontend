@@ -8,17 +8,23 @@
       "resources": { "files": ["/favicon.ico", "/index.csr.html", "/index.html", "/manifest.webmanifest", "/*.css", "/*.js"] }
     },
     {
+      "name": "fonts",
+      "installMode": "lazy",
+      "updateMode": "lazy",
+      "resources": { "urls": ["https://fonts.googleapis.com/**", "https://fonts.gstatic.com/**"] }
+    },
+    {
+      "name": "barcode-reader",
+      "installMode": "lazy",
+      "updateMode": "lazy",
+      "resources": { "files": ["/zxing/*.wasm"] }
+    },
+    {
       "name": "assets",
       "installMode": "lazy",
       "updateMode": "prefetch",
       "resources": { "files": ["/**/*.(svg|cur|jpg|jpeg|png|webp|avif|gif|otf|ttf|woff|woff2)"] }
     }
   ],
-  "dataGroups": [
-    {
-      "name": "tenant-config",
-      "urls": ["/api/companies/**"],
-      "cacheConfig": { "strategy": "freshness", "maxSize": 10, "maxAge": "1d", "timeout": "3s" }
-    }
-  ]
+  "dataGroups": []
 }

@@ -1,10 +1,24 @@
 {
+  "id": "/app",
   "name": "ZestPoint POS",
   "short_name": "ZestPoint",
+  "description": "Point of sale, stock and reports for bars, hospitality and shops.",
+  "lang": "en",
+  "dir": "ltr",
   "display": "standalone",
-  "orientation": "landscape",
-  "start_url": "/",
-  "background_color": "#0f172a",
-  "theme_color": "#0f766e",
-  "icons": []
+  "orientation": "any",
+  "start_url": "/app",
+  "scope": "/",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "categories": ["business", "productivity", "finance"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Till", "short_name": "Till", "description": "Open the point of sale", "url": "/app/pos", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Stock take", "short_name": "Stock take", "description": "Count stock", "url": "/app/inventory/reports/stock-take", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ]
 }
