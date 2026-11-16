@@ -88,6 +88,7 @@ export const APP_NAV: readonly NavDefinition[] = [
   { key: 'pos.backorders', label: 'Sales Back Orders', route: '/app/pos/back-orders', icon: 'inbox', permission: P.CUSTOMERS_USE, feature: FEATURES.CORE_POS, group: 'pos', kind: 'screen', shortcut: '8', needsBranch: true,
     load: () => import('../../features/customers/sales-back-orders.component').then((m) => m.SalesBackOrdersComponent), description: 'What customers are waiting for; put one on a bill when it can be supplied.' },
   report('pos.report.backorders', 'Sales Back Order Report', 'pos/reports/sales-back-orders', 'pos', REPORTS.salesBackOrders, P.CUSTOMERS_USE, FEATURES.CORE_POS, '9', 'clipboard'),
+  report('pos.report.loyalty', 'Loyalty Points Report', 'pos/reports/loyalty-points', 'pos', REPORTS.loyaltyPoints, P.CUSTOMERS_MANAGE, FEATURES.LOYALTY_GIFT_CARDS, 'p', 'wallet', 'Points customers earned and spent, what is still owed to them, and who accepted points as payment.'),
 
   // ---- Stock -------------------------------------------------------------------------------------
   { key: 'stock.items', label: 'Add / Modify Stock', route: '/app/inventory/items', icon: 'edit', permission: P.INVENTORY_ITEMS_MANAGE, feature: FEATURES.INVENTORY, group: 'stock', kind: 'screen', quickAccess: true,

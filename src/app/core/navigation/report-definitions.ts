@@ -110,6 +110,12 @@ export const REPORTS = {
     status: { label: 'Status', options: opts(['', 'Waiting'], ['Supplied', 'Supplied'], ['Cancelled', 'Cancelled'], ['all', 'All']) }
   },
 
+  /** Loyalty points: by customer (earned, spent, still owed) or by cashier (who took points as payment, and how it was allowed). */
+  loyaltyPoints: {
+    path: 'pos/reports/loyalty-points', period: 'range', branch: true, search: 'Customer name or phone',
+    view: { label: 'Show', default: 'customer', options: opts(['customer', 'By customer'], ['cashier', 'By cashier']) }
+  },
+
   /** Laybys: what each is worth, what is paid and what is still owed. Active ones unless another status is chosen. */
   laybys: {
     path: 'pos/reports/laybys', period: 'none', branch: true, search: 'Customer, phone or layby number',

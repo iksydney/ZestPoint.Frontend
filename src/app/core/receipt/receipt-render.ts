@@ -49,7 +49,7 @@ export function receiptRows(r: ReceiptDto): ReceiptRow[] {
   rows.push({ kind: 'total', left: 'TOTAL', right: m(r.total), testId: 'receipt-total' });
   for (const p of r.payments) rows.push({ kind: 'pair', left: `${p.method}${p.isDemo ? ' (DEMO)' : ''}`, right: m(p.amount) });
   if (r.change > 0) rows.push({ kind: 'pair', left: 'Change', right: m(r.change) });
-  if (r.loyaltyCustomer) rows.push({ kind: 'note', left: `${r.loyaltyCustomer}: ${r.pointsEarned ?? 0} points from this bill, ${r.pointsBalance ?? 0} in all`, testId: 'receipt-loyalty' });
+  if (r.loyaltyCustomer) rows.push({ kind: 'note', left: `${r.loyaltyCustomer}: ${r.pointsEarned ?? 0} points from this bill${r.pointsSpent ? `, ${r.pointsSpent} used` : ''}, ${r.pointsBalance ?? 0} in all`, testId: 'receipt-loyalty' });
   if (r.isDemoPayment) rows.push({ kind: 'title', left: 'DEMONSTRATION PAYMENT: NO REAL MONEY MOVED' });
   if (r.footer) { rows.push({ kind: 'note', left: '' }); centre(r.footer); }
   if (r.printCount > 0) rows.push({ kind: 'center', left: `Reprint ${r.printCount}` });

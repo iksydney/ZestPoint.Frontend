@@ -80,6 +80,7 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
                 <div class="flex justify-between"><dt>Card</dt><dd>{{ s.cash.cardSales | currency: s.currencyCode }}</dd></div>
                 <div class="flex justify-between"><dt>Bank transfer</dt><dd>{{ s.cash.transferSales | currency: s.currencyCode }}</dd></div>
                 @if (s.cash.otherSales > 0) { <div class="flex justify-between"><dt>Other</dt><dd>{{ s.cash.otherSales | currency: s.currencyCode }}</dd></div> }
+                @if (s.cash.pointsSales > 0) { <div class="flex justify-between" data-testid="shift-points"><dt>Paid with loyalty points</dt><dd>{{ s.cash.pointsSales | currency: s.currencyCode }}</dd></div> }
                 <div class="flex justify-between text-ink/70"><dt>Payments taken</dt><dd>{{ s.cash.paymentCount }}</dd></div>
               </dl>
             </div>
@@ -166,6 +167,7 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
             <div class="flex justify-between font-bold"><dt>Difference</dt><dd>{{ v.variance | currency: v.currencyCode }}</dd></div>
           }
           <div class="flex justify-between"><dt>Card / transfer / other</dt><dd>{{ v.cash.cardSales | currency: v.currencyCode }} / {{ v.cash.transferSales | currency: v.currencyCode }} / {{ v.cash.otherSales | currency: v.currencyCode }}</dd></div>
+          @if (v.cash.pointsSales > 0) { <div class="flex justify-between"><dt>Paid with loyalty points</dt><dd>{{ v.cash.pointsSales | currency: v.currencyCode }}</dd></div> }
         </dl>
         @if (v.closingNotes) { <p class="mt-2 text-sm">Notes: {{ v.closingNotes }}</p> }
         @if (v.reviewedByName) { <p class="mt-2 text-sm">Reviewed by {{ v.reviewedByName }} ({{ v.reviewedAtUtc | tenantTime }}): {{ v.reviewNote }}</p> }

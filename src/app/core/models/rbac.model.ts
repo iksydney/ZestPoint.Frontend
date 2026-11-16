@@ -13,6 +13,7 @@ export const SCREEN_PERMISSIONS = {
   POS_TAB_SPLIT: 'pos.tab.split',
   POS_VOID_REQUEST: 'pos.void.request',
   POS_VOID_APPROVE: 'pos.void.approve',
+  POS_POINTS_AUTHORISE: 'pos.points.authorise',
   POS_REFUND_PROCESS: 'pos.refund.process',
   POS_DAY_VIEW: 'pos.day.view',
   POS_DAY_OPEN: 'pos.day.open',
@@ -129,7 +130,8 @@ export const FEATURES = {
   ENTERPRISE_API: 'enterprise_api',
   HEAD_OFFICE: 'head_office',
   MESSAGING: 'messaging',
-  LOSS_PREVENTION: 'loss_prevention'
+  LOSS_PREVENTION: 'loss_prevention',
+  LOYALTY_GIFT_CARDS: 'loyalty_giftcards'
 } as const;
 
 export type FeatureCode = (typeof FEATURES)[keyof typeof FEATURES];

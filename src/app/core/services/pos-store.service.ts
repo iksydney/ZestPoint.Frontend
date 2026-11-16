@@ -337,11 +337,11 @@ export class PosStore {
   // ---- Server-only actions ----------------------------------------------------------------------------
 
   /** Card / transfer: needs the network and a bill the server already knows. Throws an ApiError with a plain message otherwise. */
-  async payOnline(input: { method: PaymentMethod; amount: number; tip: number; token: string | null }): Promise<OrderDto> {
+  async payOnline(input: { method: PaymentMethod; amount: number; tip: number; token: string | null; customerCode?: string | null; authorizer?: VoidAuthorizer | null }): Promise<OrderDto> {
     const o = this.requireEditable();
-    await this.ensureSynced(o.id, 'Card and transfer payments');
+    await this.ensureSynced(o.id, 'Card, transfer and points payments');
     const body: PayRequest = {
-      method: input.method, amount: input.amount, tip: input.tip, cashTendered: null, token: input.token, idempotencyKey: `pay-${crypto.randomUUID()}`, rowVersion: null
+      method: input.method, amount: input.amount, tip: input.tip, cashTendered: null, token: input.token, customerCode: input.customerCode ?? null, authorizer: input.authorizer ?? null, idempotencyKey: `pay-${crypto.randomUUID()}`, rowVersion: null
     };
     try {
       const server = await firstValueFrom(this.ordersApi.pay(o.id, body));

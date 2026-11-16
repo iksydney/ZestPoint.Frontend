@@ -9,7 +9,7 @@ export type { PagedResult };
 export type OrderKind = 'Tab' | 'Table' | 'WalkUp' | 'Takeaway';
 export type OrderStatus = 'Open' | 'PartiallyPaid' | 'Paid' | 'Voided' | 'Merged' | 'Refunded';
 export type LineStatus = 'Active' | 'Voided';
-export type PaymentMethod = 'Cash' | 'Card' | 'Transfer' | 'Other';
+export type PaymentMethod = 'Cash' | 'Card' | 'Transfer' | 'Other' | 'Points';
 export type PaymentStatus = 'Pending' | 'Succeeded' | 'Failed' | 'Reversed';
 export type VoidRequestStatus = 'Pending' | 'Approved' | 'Rejected';
 export type StockUnit = 'Milliliter' | 'Gram' | 'Each';
@@ -37,6 +37,11 @@ export interface CompanySettingsDto {
   requireOpenShiftToSell: boolean;
   /** Branch managers may set their own branch's prices and what it sells. Off: only head office does. */
   branchManagersMaySetPrices?: boolean;
+  /** What one loyalty point is worth when spent as money off a bill. 0: points cannot be spent. */
+  pointValue?: number;
+  /** The least that can be spent at once, in points, and the most of a bill (percent) that points may pay for. */
+  minRedeemPoints?: number;
+  maxRedeemPercent?: number;
   adjustmentApprovalAboveValue: number | null;
   expiryWarningDays: number;
   allowCashPayments: boolean;
@@ -376,7 +381,7 @@ export interface OrderDto {
   customerName: string | null;
   /** The customer record on the bill, if one was chosen (separate from the free-text name). */
   customerId?: string | null;
-  customer?: { id: string; number: number; name: string; phone: string; pointsBalance: number } | null;
+  customer?: { id: string; number: number; name: string; phone: string; pointsBalance: number; hasRedemptionCode?: boolean } | null;
   /** Set when the bill came from an agent's report of consignment goods sold: its items and prices are fixed. */
   consignmentSaleId?: string | null;
   /** Set when the bill is a layby: its items are fixed and it is paid in parts. */
@@ -385,6 +390,8 @@ export interface OrderDto {
   pointsOnBill?: number;
   /** Points this bill has given its customer so far. */
   pointsEarned?: number;
+  /** Points the customer has spent as money off this bill (less any given back on refunds). */
+  pointsSpent?: number;
   notes: string | null;
   ownerMembershipId: string;
   ownerName: string | null;
@@ -460,6 +467,7 @@ export interface ReceiptDto {
   /** Loyalty: the customer on the bill, what this bill earned them and their balance; absent when no customer was chosen. */
   loyaltyCustomer?: string | null;
   pointsEarned?: number | null;
+  pointsSpent?: number | null;
   pointsBalance?: number | null;
   companyName: string;
   shortName: string;
@@ -496,6 +504,9 @@ export interface PayRequest {
   tip: number;
   cashTendered: number | null;
   token: string | null;
+  /** Points only: the customer's own four-digit code, or (for a customer with no code) a supervisor's credentials. */
+  customerCode?: string | null;
+  authorizer?: VoidAuthorizer | null;
   idempotencyKey: string;
   rowVersion: string | null;
 }

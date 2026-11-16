@@ -98,6 +98,8 @@ export interface ShiftCashDto {
   readonly cardSales: number;
   readonly transferSales: number;
   readonly otherSales: number;
+  /** Paid with loyalty points during the shift: their value, never money in the drawer. */
+  readonly pointsSales: number;
   readonly paymentCount: number;
 }
 

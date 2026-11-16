@@ -13,8 +13,8 @@ const blank = (): SaveCustomerRequest => ({ name: '', phone: '', email: null, ad
 
 /**
  * Customers: found by phone or name, with their loyalty points. Anyone at the till can add one (a name and a phone); the other
- * details and deactivating need the right to manage customers. Points are earned when a bill with the customer on it is paid, and
- * cannot be spent yet.
+ * details and deactivating need the right to manage customers. Points are earned when a bill with the customer on it is paid, and can be
+ * spent at the till as money off a bill (the customer's own code, or a supervisor's PIN, allows it).
  */
 @Component({
   selector: 'zp-customers',
@@ -87,12 +87,12 @@ const blank = (): SaveCustomerRequest => ({ name: '', phone: '', email: null, ad
           <div><dt class="text-ink/70">Points now</dt><dd class="text-lg font-bold" data-testid="view-points">{{ v.pointsBalance | number: '1.0-2' }}</dd></div>
           <div><dt class="text-ink/70">Paid bills</dt><dd class="text-lg font-bold">{{ v.billCount }}</dd></div>
         </dl>
-        <p class="mb-2 text-xs text-ink/70">Points are earned when a bill with this customer on it is paid in full, and go back in proportion when money is refunded. They cannot be spent yet.</p>
+        <p class="mb-2 text-xs text-ink/70">Points are earned when a bill with this customer on it is paid in full, and go back in proportion when money is refunded. At the till they can be spent as money off a bill, where the company allows it: the customer types their own four-digit code{{ v.hasRedemptionCode ? ' (this customer has set one)' : ' (this customer has not set one yet, so a supervisor allows it with their PIN)' }}.</p>
         <table class="app-table" data-testid="view-history">
           <thead><tr><th>When</th><th>What</th><th>Bill</th><th class="text-right">Points</th></tr></thead>
           <tbody>
             @for (p of v.points; track $index) {
-              <tr><td>{{ p.occurredAtUtc | date: 'medium' }}</td><td>{{ p.kind === 'Earned' ? 'Earned' : 'Taken back' + (p.reason ? ': ' + p.reason : '') }}</td><td>{{ p.orderNumber ? '#' + p.orderNumber : '' }}</td><td class="text-right font-mono">{{ p.points | number: '1.0-2' }}</td></tr>
+              <tr><td>{{ p.occurredAtUtc | date: 'medium' }}</td><td>{{ p.kind === 'Earned' ? 'Earned' : p.kind === 'Spent' ? 'Spent on a bill' : p.kind === 'GivenBack' ? 'Given back' + (p.reason ? ': ' + p.reason : '') : 'Taken back' + (p.reason ? ': ' + p.reason : '') }}</td><td>{{ p.orderNumber ? '#' + p.orderNumber : '' }}</td><td class="text-right font-mono">{{ p.points | number: '1.0-2' }}</td></tr>
             } @empty { <tr><td colspan="4" class="py-4 text-center text-ink/70">No points yet.</td></tr> }
           </tbody>
         </table>

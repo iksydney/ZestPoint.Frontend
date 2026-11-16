@@ -159,7 +159,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
               @if (!mine()) { <p class="sys-alert sys-alert-info mt-1 text-sm" role="status" data-testid="bill-not-mine">Opened by {{ o.ownerName ?? 'someone else' }}. You can look at it; only they, a supervisor or a manager can change it or take payment. They can hand it over to you with Move / hand over.</p> }
               @if (laybyError()) { <p class="app-error" role="alert" data-testid="layby-error">{{ laybyError() }}</p> }
               <p class="mt-1 text-sm" data-testid="bill-customer">
-                @if (o.customer; as c) { <span class="font-medium">{{ c.name }}</span> <span class="text-ink/70">{{ c.pointsBalance }} points@if (o.pointsEarned) { , {{ o.pointsEarned }} from this bill } @else if (o.pointsOnBill) { , {{ o.pointsOnBill }} more when paid }</span> }
+                @if (o.customer; as c) { <span class="font-medium">{{ c.name }}</span> <span class="text-ink/70">{{ c.pointsBalance }} points@if (o.pointsEarned) { , {{ o.pointsEarned }} from this bill } @else if (o.pointsOnBill) { , {{ o.pointsOnBill }} more when paid }@if (o.pointsSpent) { , {{ o.pointsSpent }} used on this bill }</span> }
                 @if (canLayby() && !readOnly() && o.customer && !o.layby && o.status === 'Open' && o.amountPaid === 0) { <button type="button" class="btn-outline ml-1 px-2 py-0 text-sm" data-testid="bill-layby-btn" [disabled]="laybyBusy()" (click)="startLayby()">Layby</button> }
                 @if (canCustomers() && canEdit() && !readOnly() && !o.layby && (o.status === 'Open' || o.status === 'PartiallyPaid')) { <button type="button" class="btn-ghost px-1 py-0 text-sm underline" data-testid="bill-customer-btn" (click)="openCustomer()">{{ o.customer ? 'Change customer' : 'Add customer' }}</button> }
               </p>
@@ -431,6 +431,8 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
           } @else if (payMethod() === 'Cash') {
             <div><label class="app-label" for="pay-tendered">Cash handed over</label><input id="pay-tendered" type="number" step="0.01" min="0" class="app-input" data-testid="pay-tendered" [ngModel]="tendered()" (ngModelChange)="tendered.set(+$event)" />
               <p class="mt-1 text-sm" data-testid="pay-change">Change: {{ change() | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}</p></div>
+          } @else if (payMethod() === 'Points') {
+            <!-- the points box below says what is needed -->
           } @else {
             @if (store.settings()?.paymentProviderIsDemo) {
               <!-- Only when the API runs with the development stub (the automated tests). A business never sees this. -->
@@ -443,13 +445,53 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
             @if (!online()) { <p class="sys-alert sys-alert-warning" role="status">You are offline. Card and transfer payments need a connection; take cash or wait until you are back online.</p> }
           }
 
+          @if (usesPoints()) {
+            <section class="space-y-3 rounded-lg border border-ink/15 p-3" data-testid="points-panel" aria-label="Paying with points">
+              @if (o.customer; as c) {
+                <p class="text-sm" data-testid="points-balance"><strong>{{ c.name }}</strong> has {{ pointsBalance() | number: '1.0-2' }} points, worth {{ pointsWorth() | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}.
+                  One point is worth {{ pointValue() | currency: store.currency() : 'symbol-narrow' : '1.2-4' }}.
+                  @if ((store.settings()?.minRedeemPoints ?? 0) > 0) { At least {{ store.settings()?.minRedeemPoints | number: '1.0-2' }} points at a time. }
+                  @if ((store.settings()?.maxRedeemPercent ?? 100) < 100) { Points may pay for at most {{ store.settings()?.maxRedeemPercent }}% of a bill. }</p>
+                <p class="text-sm" data-testid="points-using">Using {{ pointsToSpend() | number: '1.0-2' }} points ({{ pointsAmount() | currency: store.currency() : 'symbol-narrow' : '1.2-2' }}).</p>
+                @if (pointsShort()) { <p class="app-error" role="alert" data-testid="points-short">That is more than the customer has.</p> }
+                @if (pointsTipBlocked()) { <p class="app-error" role="alert" data-testid="points-tip-note">A tip cannot be paid with points. Take the tip in cash or by card.</p> }
+                @if (c.hasRedemptionCode) {
+                  <div class="max-w-xs"><label class="app-label" for="points-code">Customer's own code (4 digits)</label>
+                    <input id="points-code" type="password" inputmode="numeric" maxlength="4" autocomplete="one-time-code" data-1p-ignore data-lpignore="true" class="app-input font-mono" data-testid="points-code" [ngModel]="pointsCode()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="pointsCode.set($event)" /></div>
+                } @else {
+                  <p class="text-sm text-ink/80" data-testid="points-no-code">{{ c.name }} has no code of their own yet. A supervisor can allow this payment with their PIN, or set the customer's code now so the customer allows it themselves next time.</p>
+                  <zp-void-authoriser [clearSecret]="pointsAuthAttempts()" (changed)="pointsAuth.set($event)" />
+                }
+                <button type="button" class="btn-ghost px-1 py-0 text-sm underline" data-testid="points-code-toggle" (click)="codeFormOpen.set(!codeFormOpen())">{{ c.hasRedemptionCode ? "Change the customer's code" : "Set the customer's code" }}</button>
+                @if (codeFormOpen()) {
+                  <form class="space-y-2 rounded-lg bg-ink/5 p-3" data-testid="points-code-form" (submit)="$event.preventDefault(); saveCode()">
+                    <p class="text-sm text-ink/80">The customer types a four-digit code, twice. It is never shown or kept: only a scrambled form of it, so nobody can read it back.</p>
+                    <div class="grid gap-2 sm:grid-cols-2">
+                      <div><label class="app-label" for="points-new-code">New code</label><input id="points-new-code" type="password" inputmode="numeric" maxlength="4" autocomplete="one-time-code" data-1p-ignore data-lpignore="true" class="app-input font-mono" data-testid="points-new-code" [ngModel]="newCode()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="newCode.set($event)" /></div>
+                      <div><label class="app-label" for="points-new-code-again">The same code again</label><input id="points-new-code-again" type="password" inputmode="numeric" maxlength="4" autocomplete="one-time-code" data-1p-ignore data-lpignore="true" class="app-input font-mono" data-testid="points-new-code-again" [ngModel]="newCodeAgain()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="newCodeAgain.set($event)" /></div>
+                    </div>
+                    @if (c.hasRedemptionCode) {
+                      <p class="text-sm text-ink/80">Changing a code that is already set needs a supervisor.</p>
+                      <zp-void-authoriser [clearSecret]="codeAuthAttempts()" (changed)="codeAuth.set($event)" />
+                    }
+                    @if (codeError()) { <p class="app-error" role="alert" data-testid="points-code-error">{{ codeError() }}</p> }
+                    <div class="flex justify-end"><button type="submit" class="btn-outline" data-testid="points-code-save" [disabled]="codeBusy() || !online()">{{ codeBusy() ? 'Saving...' : 'Save the code' }}</button></div>
+                  </form>
+                }
+              } @else {
+                <p class="sys-alert sys-alert-warning" role="status" data-testid="points-no-customer">Put the customer on the bill (Add customer) to pay with their points.</p>
+              }
+              @if (!online()) { <p class="sys-alert sys-alert-warning" role="status">You are offline. Points can only be spent with a connection, because the balance has to be checked; take cash or wait until you are back online.</p> }
+            </section>
+          }
+
           @if (payError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="pay-error">{{ payError() }}</p> }
           <div class="flex justify-end gap-2">
             <button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button>
             @if (parts().length) {
               <button type="button" class="btn-primary touch-target" data-testid="pay-confirm" [disabled]="paying() || !splitReady()" (click)="submitSplitPay()">{{ paying() ? 'Processing...' : 'Confirm ' + parts().length + ' payments' }}</button>
             } @else {
-              <button type="button" class="btn-primary touch-target" data-testid="pay-confirm" [disabled]="paying() || payAmount() <= 0 || (payMethod() !== 'Cash' && !online())" (click)="submitPay()">{{ paying() ? 'Processing...' : 'Confirm payment' }}</button>
+              <button type="button" class="btn-primary touch-target" data-testid="pay-confirm" [disabled]="paying() || payAmount() <= 0 || (payMethod() !== 'Cash' && !online()) || !pointsReady()" (click)="submitPay()">{{ paying() ? 'Processing...' : 'Confirm payment' }}</button>
             }
           </div>
         </div>
@@ -686,6 +728,18 @@ export class PosBillingComponent implements OnInit {
   protected readonly payError = signal<string | null>(null);
   protected readonly shares = signal<readonly number[]>([]);
 
+  // Loyalty points as a way to pay: the customer's own code, or a supervisor, allows each spending. Kept only while the box is open.
+  protected readonly pointsCode = signal('');
+  protected readonly pointsAuth = signal<VoidAuthorizer | null>(null);
+  protected readonly pointsAuthAttempts = signal(0);
+  protected readonly codeFormOpen = signal(false);
+  protected readonly newCode = signal('');
+  protected readonly newCodeAgain = signal('');
+  protected readonly codeAuth = signal<VoidAuthorizer | null>(null);
+  protected readonly codeAuthAttempts = signal(0);
+  protected readonly codeBusy = signal(false);
+  protected readonly codeError = signal<string | null>(null);
+
   protected readonly voidLineId = signal<string | null>(null);
   /** The row being voided (so many of its sent units), or null for a single line or the whole bill. */
   protected readonly voidRow = signal<BillRow | null>(null);
@@ -785,14 +839,36 @@ export class PosBillingComponent implements OnInit {
   protected readonly splitLeft = computed(() => cents(this.toAllocate() - this.parts().reduce((sum, p) => sum + p.amount, 0)));
   protected readonly splitNeedsOnline = computed(() => this.parts().some((p) => p.method !== 'Cash'));
   protected readonly splitReady = computed(() => this.parts().length >= 2 && this.splitLeft() === 0 && this.parts().every((p) => p.amount > 0 && (p.method !== 'Cash' || p.tendered >= p.amount))
-    && (!this.splitNeedsOnline() || this.online()));
+    && (!this.splitNeedsOnline() || this.online()) && this.pointsReady());
+
+  // ---- paying with points ----
+  protected readonly pointValue = computed(() => this.store.settings()?.pointValue ?? 0);
+  /** Points can be spent when the company has said what a point is worth and its plan includes loyalty spending. */
+  protected readonly pointsAvailable = computed(() => this.pointValue() > 0 && this.auth.accessModeFor(FEATURES.LOYALTY_GIFT_CARDS) === 'full');
+  protected readonly usesPoints = computed(() => (this.parts().length ? this.parts().some((p) => p.method === 'Points') : this.payMethod() === 'Points'));
+  protected readonly pointsBalance = computed(() => this.store.current()?.customer?.pointsBalance ?? 0);
+  protected readonly pointsWorth = computed(() => cents(this.pointsBalance() * this.pointValue()));
+  /** How much of this payment is to be paid with points (money), and how many points that is. */
+  protected readonly pointsAmount = computed(() => cents(this.parts().length ? this.parts().filter((p) => p.method === 'Points').reduce((sum, p) => sum + p.amount, 0) : this.payMethod() === 'Points' ? this.payAmount() : 0));
+  protected readonly pointsToSpend = computed(() => (this.pointValue() > 0 ? Math.round((this.pointsAmount() / this.pointValue()) * 100) / 100 : 0));
+  protected readonly pointsShort = computed(() => this.pointsAmount() > this.pointsWorth());
+  /** The tip goes with the first payment; it cannot be paid with points. */
+  protected readonly pointsTipBlocked = computed(() => this.payTip() > 0 && (this.parts().length ? this.parts()[0]?.method === 'Points' : this.payMethod() === 'Points'));
+  protected readonly pointsReady = computed(() => {
+    if (!this.usesPoints()) return true;
+    const c = this.store.current()?.customer;
+    if (!c || this.pointsAmount() <= 0 || this.pointsShort() || this.pointsTipBlocked()) return false;
+    return c.hasRedemptionCode ? /^\d{4}$/.test(this.pointsCode()) : this.pointsAuth() !== null;
+  });
+
 
   protected readonly methods = computed(() => {
     const s = this.store.settings();
     const all: { method: PaymentMethod; label: string; on: boolean }[] = [
       { method: 'Cash', label: 'Cash', on: s?.allowCashPayments ?? true },
       { method: 'Card', label: 'Card', on: s?.allowCardPayments ?? true },
-      { method: 'Transfer', label: 'Transfer', on: s?.allowTransferPayments ?? true }
+      { method: 'Transfer', label: 'Transfer', on: s?.allowTransferPayments ?? true },
+      { method: 'Points', label: 'Points', on: this.pointsAvailable() }
     ];
     return all.filter((m) => m.on);
   });
@@ -1021,7 +1097,46 @@ export class PosBillingComponent implements OnInit {
     this.payError.set(null);
     this.shares.set([]);
     this.parts.set([]);
+    this.resetPoints();
     this.dialog.set('pay');
+  }
+
+  /** Nothing typed for a points payment is kept once the box opens afresh or the payment is done. */
+  private resetPoints(): void {
+    this.pointsCode.set('');
+    this.pointsAuth.set(null);
+    this.pointsAuthAttempts.update((n) => n + 1);
+    this.codeFormOpen.set(false);
+    this.newCode.set('');
+    this.newCodeAgain.set('');
+    this.codeAuth.set(null);
+    this.codeAuthAttempts.update((n) => n + 1);
+    this.codeError.set(null);
+  }
+
+  /** What proves the customer agreed to spend points: their own code when they have one, otherwise a supervisor typing their details. */
+  private pointsConsent(): { customerCode: string | null; authorizer: VoidAuthorizer | null } {
+    return this.store.current()?.customer?.hasRedemptionCode ? { customerCode: this.pointsCode(), authorizer: null } : { customerCode: null, authorizer: this.pointsAuth() };
+  }
+
+  /** The customer's own code is set (or, with a supervisor, changed) at the till; the bill is read again so the till knows it exists. */
+  protected async saveCode(): Promise<void> {
+    const o = this.store.current();
+    const c = o?.customer;
+    if (!o || !c || this.codeBusy()) return;
+    if (!/^\d{4}$/.test(this.newCode())) { this.codeError.set('The code is four digits.'); return; }
+    if (this.newCode() !== this.newCodeAgain()) { this.codeError.set('The two codes are not the same.'); return; }
+    this.codeBusy.set(true);
+    this.codeError.set(null);
+    try {
+      await firstValueFrom(this.customersApi.setRedemptionCode(c.id, { code: this.newCode(), branchId: o.branchId, authorizer: c.hasRedemptionCode ? this.codeAuth() : null }));
+      await this.store.reload(o.id);
+      this.resetPoints();
+      this.toast.success("The customer's code is set.");
+    } catch (err) {
+      this.codeError.set(toApiError(err).message);
+      this.codeAuthAttempts.update((n) => n + 1);
+    } finally { this.codeBusy.set(false); }
   }
 
   /** A tip is collected with the payment, so the amount to take (and the cash expected) goes up by it. */
@@ -1101,19 +1216,28 @@ export class PosBillingComponent implements OnInit {
         const part = this.parts()[0]!;
         const tip = this.payTip();   // the tip goes with the first part; after that it is part of the balance
         if (part.method === 'Cash') await this.store.payCash(part.amount, part.tendered, tip);
-        else await this.store.payOnline({ method: part.method, amount: part.amount, tip, token: part.reference.trim() || null });
+        else await this.store.payOnline({ method: part.method, amount: part.amount, tip, token: part.reference.trim() || null, ...(part.method === 'Points' ? this.pointsConsent() : {}) });
         done++;
         this.payTip.set(0);
         this.parts.update((list) => list.slice(1));
       }
       this.dialog.set(null);
+      this.resetPoints();
       this.toast.success(`${count} payments recorded.`);
     } catch (err) {
+      this.refusedPoints();
       const why = err instanceof Error && !('status' in err) ? err.message : toApiError(err).message;
       this.payError.set(done > 0 ? `${done} of ${count} payments were recorded. The next one was not: ${why} What is listed below is still to pay.` : why);
     } finally {
       this.paying.set(false);
     }
+  }
+
+  /** A refused points payment leaves no code or PIN sitting in the boxes: they are typed again. */
+  private refusedPoints(): void {
+    if (!this.usesPoints()) return;
+    this.pointsCode.set('');
+    this.pointsAuthAttempts.update((n) => n + 1);
   }
 
   protected async submitPay(): Promise<void> {
@@ -1126,11 +1250,13 @@ export class PosBillingComponent implements OnInit {
         if (this.tendered() < this.payAmount()) throw new Error('The cash handed over is less than the payment.');
         await this.store.payCash(this.payAmount(), this.tendered(), this.payTip());
       } else {
-        await this.store.payOnline({ method: this.payMethod(), amount: this.payAmount(), tip: this.payTip(), token: this.token().trim() || null });
+        await this.store.payOnline({ method: this.payMethod(), amount: this.payAmount(), tip: this.payTip(), token: this.token().trim() || null, ...(this.payMethod() === 'Points' ? this.pointsConsent() : {}) });
       }
       this.dialog.set(null);
+      this.resetPoints();
       this.toast.success('Payment recorded.');
     } catch (err) {
+      this.refusedPoints();
       this.payError.set(err instanceof Error && !('status' in err) ? err.message : toApiError(err).message);
     } finally {
       this.paying.set(false);

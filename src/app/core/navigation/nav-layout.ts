@@ -44,7 +44,7 @@ export const NAV_AREAS: readonly NavArea[] = [
 ];
 
 /** Reports that belong to another area than their key prefix suggests. */
-const REPORT_AREA_OVERRIDES: Readonly<Record<string, NavAreaKey>> = { 'pos.report.laybys': 'customers', 'pos.report.backorders': 'customers' };
+const REPORT_AREA_OVERRIDES: Readonly<Record<string, NavAreaKey>> = { 'pos.report.laybys': 'customers', 'pos.report.backorders': 'customers', 'pos.report.loyalty': 'customers' };
 const REPORT_AREA_BY_PREFIX: Readonly<Record<string, NavAreaKey>> = { pos: 'sell', stock: 'stock', purchasing: 'purchasing', ledger: 'finance', head: 'head' };
 
 /** A report is reached from its area's Reports page, not from the menu. */
@@ -108,6 +108,7 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
   'pos.report.laybys': 'Every layby: its total, what is paid, what is still owed and which are overdue.',
   'pos.backorders': 'What customers are waiting for. Put one on a bill when it can be supplied.',
   'pos.report.backorders': 'A list of sales back orders and whether they can be supplied now.',
+  'pos.report.loyalty': 'Loyalty points: what customers earned and spent, what is still owed to them, and who took points as payment.',
 
   'inventory': 'Stock levels at this branch, receiving, transfers, counts and weigh checks.',
   'stock.items': 'Add an item or change one: prices, discount, units, package content, recipe and options, picture and sale rules.',

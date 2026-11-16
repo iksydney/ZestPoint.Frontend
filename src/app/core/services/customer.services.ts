@@ -6,9 +6,9 @@ import { OrderDto, PagedResult } from '../models/ops.model';
 import { unwrap } from './api.util';
 
 /** A customer as the till shows them on a bill. */
-export interface CustomerBriefDto { id: string; number: number; name: string; phone: string; pointsBalance: number }
+export interface CustomerBriefDto { id: string; number: number; name: string; phone: string; pointsBalance: number; /** The customer has set their own code for spending points; the code is never sent anywhere. */ hasRedemptionCode?: boolean }
 
-export interface CustomerPointsDto { occurredAtUtc: string; kind: 'Earned' | 'TakenBack'; points: number; orderNumber: number | null; reason: string | null }
+export interface CustomerPointsDto { occurredAtUtc: string; kind: 'Earned' | 'TakenBack' | 'Spent' | 'GivenBack'; points: number; orderNumber: number | null; reason: string | null }
 
 export interface CustomerDto extends CustomerBriefDto {
   email: string | null;
@@ -138,6 +138,11 @@ export class CustomersApi {
 
   update(id: string, body: SaveCustomerRequest): Observable<CustomerDto> {
     return this.http.put<ApiEnvelope<CustomerDto>>(`/api/v1/customers/${id}`, body).pipe(unwrap());
+  }
+
+  /** The customer's own four-digit code for spending points. The first one needs no one; changing it needs a supervisor's credentials. */
+  setRedemptionCode(id: string, body: { code: string; branchId?: string | null; authorizer?: { staffCode?: string; pin?: string; email?: string; password?: string } | null }): Observable<CustomerDto> {
+    return this.http.put<ApiEnvelope<CustomerDto>>(`/api/v1/customers/${id}/redemption-code`, body).pipe(unwrap());
   }
 
   /** Puts a customer record on an open bill, or takes it off (null). */

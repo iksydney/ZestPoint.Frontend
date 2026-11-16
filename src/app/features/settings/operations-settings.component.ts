@@ -55,6 +55,17 @@ import { ConfirmService, ToastService } from '../../shared/ui/feedback';
           </section>
         }
 
+        <section class="app-card space-y-3" data-testid="loyalty-section"><h2 class="font-semibold">Spending loyalty points</h2>
+          <p class="text-sm text-ink/80">Customers earn points on what they buy. Here you say what a point is worth when they spend it as money off a bill. At the till the customer allows it with their own four-digit code, or a supervisor does with their PIN. Leave the value at 0 to keep points from being spent.</p>
+          <div class="grid gap-3 sm:grid-cols-3">
+            <div><label class="app-label" for="s-pv">One point is worth ({{ v.currencyCode }})</label><input id="s-pv" type="number" min="0" step="0.0001" class="app-input" data-testid="loyalty-value" [ngModel]="v.pointValue ?? 0" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ pointValue: +$event })" />
+              <p class="mt-1 text-xs text-ink/70">0 means points cannot be spent.</p></div>
+            <div><label class="app-label" for="s-pm">Least that can be spent at once (points)</label><input id="s-pm" type="number" min="0" step="1" class="app-input" data-testid="loyalty-least" [ngModel]="v.minRedeemPoints ?? 0" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ minRedeemPoints: +$event })" /></div>
+            <div><label class="app-label" for="s-pp">Most of a bill points may pay (%)</label><input id="s-pp" type="number" min="1" max="100" step="1" class="app-input" data-testid="loyalty-most" [ngModel]="v.maxRedeemPercent ?? 100" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ maxRedeemPercent: +$event })" /></div>
+          </div>
+          <p class="text-xs text-ink/70">Points are only a way to pay if your plan includes Loyalty and gift cards. Points cannot be spent while a till is offline.</p>
+        </section>
+
         <section class="app-card space-y-3" data-testid="layby-section"><h2 class="font-semibold">Layby</h2>
           <p class="text-sm text-ink/80">A customer reserves goods, pays in parts and collects when everything is paid. These rules apply to laybys started from now on.</p>
           <div class="grid gap-3 sm:grid-cols-3">
