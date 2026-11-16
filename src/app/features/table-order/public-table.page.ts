@@ -302,12 +302,26 @@ export class PublicTablePageComponent implements OnInit {
 
   private async refresh(id: string): Promise<void> {
     try { this.show(await firstValueFrom(this.api.status(this.code, id, this.deviceId))); }
-    catch { this.store('request', null); this.stopPolling(); }
+    catch (err) {
+      // A busy moment (too many requests), no signal or a server hiccup is not the end of the order: carry on asking. Only a definite "no such request" forgets it.
+      const status = toApiError(err).status;
+      if (status === 0 || status === 429 || status >= 500) return;
+      this.store('request', null);
+      this.stopPolling();
+    }
   }
 
   private startPolling(): void {
     if (this.poll) return;
-    this.poll = setInterval(() => { const r = this.request(); if (r && r.state === 'Waiting' && !document.hidden) void this.refresh(r.id); }, 4000);
+    // Every 4 seconds for the first half minute (the staff are usually quick), then every 12: a table's guests share a request budget, and a waiting order does not need more.
+    const started = Date.now();
+    let tick = 0;
+    this.poll = setInterval(() => {
+      tick++;
+      if (Date.now() - started > 30_000 && tick % 3 !== 0) return;
+      const r = this.request();
+      if (r && r.state === 'Waiting' && !document.hidden) void this.refresh(r.id);
+    }, 4000);
   }
 
   private stopPolling(): void {
