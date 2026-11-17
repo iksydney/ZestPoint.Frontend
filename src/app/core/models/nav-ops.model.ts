@@ -205,6 +205,8 @@ export interface StockTakeLineDto {
   readonly inventoryItemId: string;
   readonly itemName: string;
   readonly sku: string | null;
+  /** The item's barcode, so a phone can find a line by scanning it. */
+  readonly barcode?: string | null;
   readonly unit: string;
   readonly expectedQuantity: number | null;
   readonly countedQuantity: number | null;
