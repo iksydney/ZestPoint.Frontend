@@ -567,7 +567,7 @@ export interface PayRequest {
 
 export type SyncKind =
   | 'order.create' | 'order.line.add' | 'order.line.update' | 'order.line.remove' | 'order.confirm'
-  | 'order.discount' | 'order.tip' | 'payment.cash' | 'stock.adjust' | 'measurement.add'
+  | 'order.discount' | 'order.tip' | 'payment.cash' | 'stock.adjust' | 'measurement.add' | 'stocktake.counts'
   | 'shift.open' | 'shift.cash_movement' | 'shift.close';
 
 export interface SyncOperationDto { clientOperationId: string; kind: SyncKind; payload: unknown; createdAtUtc: string }
