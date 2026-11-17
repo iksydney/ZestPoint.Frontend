@@ -186,7 +186,9 @@ export const APP_NAV: readonly NavDefinition[] = [
   { key: 'pos.stations', label: 'Preparation Stations', route: '/app/settings/stations', icon: 'grid', permission: P.POS_STATIONS_MANAGE, feature: FEATURES.CORE_POS, kind: 'screen',
     load: () => import('../../features/settings/stations.component').then((m) => m.StationsComponent), description: 'The bar, the kitchen and other places orders are prepared, and how each behaves.' },
   { key: 'pos.tables', label: 'Tables', route: '/app/settings/tables', icon: 'grid', permission: P.POS_TABLES_MANAGE, feature: FEATURES.CORE_POS, kind: 'screen', needsBranch: true,
-    load: () => import('../../features/settings/tables.component').then((m) => m.TablesComponent), description: 'The tables at each branch, offered by the till when a table bill is opened.' }
+    load: () => import('../../features/settings/tables.component').then((m) => m.TablesComponent), description: 'The tables at each branch, offered by the till when a table bill is opened.' },
+  { key: 'pos.printers', label: 'Printers', route: '/app/settings/printers', icon: 'grid', permission: P.POS_PRINTERS_MANAGE, feature: FEATURES.CORE_POS, kind: 'screen',
+    load: () => import('../../features/settings/printers.component').then((m) => m.PrintersComponent), description: 'The printers your phones print to: receipts, reports and labels.' }
 ];
 
 /** The permissions a screen accepts, always as a list ("any of"). */

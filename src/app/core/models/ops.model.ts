@@ -337,6 +337,36 @@ export interface PaymentDto {
   refunded: number;
 }
 
+/** How a phone reaches a printer, the language it speaks, whose handheld a built-in printer is, and what a printer is for. Mirrors the backend enums. */
+export type PrinterKind = 'Network' | 'Bluetooth' | 'Handheld';
+export type PrinterLanguage = 'EscPos' | 'Tspl' | 'Zpl';
+export type HandheldMake = 'Sunmi';
+export type PrinterPurpose = 'Receipts' | 'Reports' | 'Labels' | 'Kitchen';
+
+/** A printer the company's phones print to (backend section 48). The server only keeps the list: a phone talks to the printer. */
+export interface PrinterDto {
+  id: string;
+  /** The branch it is at; null for every branch. */
+  branchId: string | null;
+  branchName: string | null;
+  name: string;
+  kind: PrinterKind;
+  language: PrinterLanguage;
+  /** Network printers: the address and port the phone connects to. */
+  host: string | null;
+  port: number | null;
+  /** Bluetooth printers: the name to look for among paired devices. */
+  deviceName: string | null;
+  handheldMake: HandheldMake | null;
+  /** 58 or 80 for a receipt printer; the width of a label for a label printer. */
+  paperWidthMm: number;
+  labelHeightMm: number | null;
+  purposes: PrinterPurpose[];
+  isActive: boolean;
+  sortOrder: number;
+  notes: string | null;
+}
+
 /** A preparation station (bar, kitchen, grill) and how it behaves. */
 export interface StationDto {
   id: string;

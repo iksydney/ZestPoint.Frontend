@@ -47,8 +47,8 @@ export const APP_TOUR = 'app';
 
 export const TOURS: readonly TourDefinition[] = [
   {
-    key: APP_TOUR, title: 'Welcome to ZestPoint', version: 4,
-    changes: [{ version: 2, steps: [{ id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Set-up has moved', body: 'Branches, Settings and Branding have left the menu. Things you set up once and change now and then are behind one Set-up entry: branches, tables, settings and your brand, each with a line on what it is for. Search finds them too.' }] }, { version: 3, steps: [{ id: 'head', target: '[data-tour="nav-area-head"]', menu: true, optional: true, title: 'Head Office', body: 'All your branches together: two reports (every branch side by side, and a comparison over time) behind its Reports entry, and Prices and Menus, which has moved here from Stock.' }] }, { version: 4, steps: [{ id: 'notices', target: '[data-testid="notices-bell"]', title: 'Notices', body: 'The new speech-bubble button at the top is where ZestPoint tells you things: alerts, summaries and messages from the system. The number is how many you have not read.' }] }],
+    key: APP_TOUR, title: 'Welcome to ZestPoint', version: 5,
+    changes: [{ version: 2, steps: [{ id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Set-up has moved', body: 'Branches, Settings and Branding have left the menu. Things you set up once and change now and then are behind one Set-up entry: branches, tables, settings and your brand, each with a line on what it is for. Search finds them too.' }] }, { version: 3, steps: [{ id: 'head', target: '[data-tour="nav-area-head"]', menu: true, optional: true, title: 'Head Office', body: 'All your branches together: two reports (every branch side by side, and a comparison over time) behind its Reports entry, and Prices and Menus, which has moved here from Stock.' }] }, { version: 4, steps: [{ id: 'notices', target: '[data-testid="notices-bell"]', title: 'Notices', body: 'The new speech-bubble button at the top is where ZestPoint tells you things: alerts, summaries and messages from the system. The number is how many you have not read.' }] }, { version: 5, steps: [{ id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Printers are in Set-up', body: 'Printers is new under Admin > Set-up: add the receipt, report and label printers your phones print to, once for the company. Every phone at the branch finds them.' }] }],
     steps: [
       { id: 'welcome', title: 'Welcome', body: 'This takes about a minute. It shows where things are; you can leave at any time and take it again from Help.' },
       { id: 'menu', target: '[data-tour="nav"]', menu: true, title: 'The menu', body: 'Everything you can do is here, grouped by the job you are doing. You only see what your role allows. Click an area\'s name to fold it away.' },
@@ -58,8 +58,8 @@ export const TOURS: readonly TourDefinition[] = [
       { id: 'purchasing', target: '[data-tour="nav-area-purchasing"]', menu: true, optional: true, title: 'Purchasing', body: 'Order from suppliers, check deliveries in and record what you pay.' },
       { id: 'finance', target: '[data-tour="nav-area-finance"]', menu: true, optional: true, title: 'Finance', body: 'The ledger. Nothing is typed into it: every sale, payment and delivery posts its own entry.' },
       { id: 'head', target: '[data-tour="nav-area-head"]', menu: true, optional: true, title: 'Head Office', body: 'All your branches together: reports that put every branch side by side and compare them over time, and the prices and menus they share under Set-up.' },
-      { id: 'admin', target: '[data-tour="nav-area-admin"]', menu: true, optional: true, title: 'Admin', body: 'Staff and their roles, your subscription and support. Branches, tables, settings and your brand are under Set-up.' },
-      { id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Set-up', body: 'Things you set up once and change now and then are behind one Set-up entry: branches, tables, settings and your brand, each with a line on what it is for. Search finds them too.' },
+      { id: 'admin', target: '[data-tour="nav-area-admin"]', menu: true, optional: true, title: 'Admin', body: 'Staff and their roles, your subscription and support. Branches, tables, printers, settings and your brand are under Set-up.' },
+      { id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Set-up', body: 'Things you set up once and change now and then are behind one Set-up entry: branches, tables, printers, settings and your brand, each with a line on what it is for. Search finds them too.' },
       { id: 'reports', target: '[data-nav^="reports."]', menu: true, optional: true, title: 'Reports', body: 'Each area keeps its reports behind one Reports entry: a page listing them, each with a line on what it shows.' },
       { id: 'search', target: '[data-tour="nav-search"]', menu: true, title: 'Search', body: 'The quickest way anywhere: press Ctrl+K (or click here) and type part of a screen\'s or report\'s name.' },
       { id: 'notices', target: '[data-testid="notices-bell"]', title: 'Notices', body: 'The speech-bubble button is where ZestPoint tells you things: alerts, summaries and messages from the system. The number is how many you have not read; open it to read them, or mark them all read.' },
@@ -201,6 +201,14 @@ export const TOURS: readonly TourDefinition[] = [
       { id: 'what', title: 'Your tables', body: 'List the tables of each branch once. When someone opens a table bill, the till offers the list and shows which tables already have a bill running. A name typed at the till still works for anything not listed.' },
       { id: 'add', target: '[data-testid="table-new"]', title: 'Add tables', body: 'Add one table with its name, area and seats, or use Add several to make Table 1 to Table 20 in one go.' },
       { id: 'list', target: '[data-testid="table-list"]', title: 'The list', body: 'Edit renames a table or switches it off. A table is never deleted, so old bills keep their table, and one with a bill still open cannot be switched off.' }
+    ]
+  },
+  {
+    key: 'pos.printers', nav: 'pos.printers', title: 'Printers', version: 1,
+    steps: [
+      { id: 'what', title: 'The printers your phones print to', body: 'Add each printer once here. Phones at the branch use it to print customer receipts and gift card slips, shift reports, and labels. The phone does the printing, so a printer on the shop network must be reachable from inside the shop.' },
+      { id: 'add', target: '[data-testid="printer-new"]', title: 'Add a printer', body: 'Say how a phone reaches it: on the shop network (its address), by Bluetooth (each phone pairs it), or a handheld\'s own printer. Then the language it speaks, the paper in it, and what it is for. A label printer needs the size of a label.' },
+      { id: 'list', target: '[data-testid="printer-list"]', title: 'Your printers', body: 'A phone uses the first printer in use at its branch that is for what it is printing, lowest order first. Edit changes a printer or switches it off; a printer is never deleted.' }
     ]
   },
   {
