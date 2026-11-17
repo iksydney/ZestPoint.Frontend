@@ -452,10 +452,15 @@ export interface OrderSummaryDto {
   tableLabel: string | null;
   customerName: string | null;
   ownerMembershipId: string;
+  /** Whose bill it is, so a till can say "Tunde's bill" without opening it. */
+  ownerName?: string | null;
   total: number;
   balance: number;
   itemCount: number;
   openedAtUtc: string;
+  /** A waiter asked a cashier to take payment on this bill: when, and who. Null when nobody has. The website does not show it yet. */
+  paymentRequestedAtUtc?: string | null;
+  paymentRequestedByName?: string | null;
 }
 
 export interface SplitPreviewDto { balance: number; shares: number[] }
