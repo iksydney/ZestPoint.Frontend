@@ -39,7 +39,7 @@ const PAGE = 25;
         }
       </section>
 
-      <section class="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Ways of sending" data-testid="msg-channels">
+      <section class="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" aria-label="Ways of sending" data-testid="msg-channels">
         @for (c of u.channels; track c.channel) {
           <div class="app-card" [attr.data-testid]="'msg-channel-' + c.label">
             <div class="flex items-start justify-between gap-2">
@@ -55,7 +55,7 @@ const PAGE = 25;
 
     @if (result(); as r) {
       <p class="sys-alert mb-4" [class.sys-alert-info]="r.status !== 'Failed'" [class.sys-alert-danger]="r.status === 'Failed'" role="status" data-testid="msg-test-result">
-        <strong>{{ r.status === 'Failed' ? 'The test did not go: ' : r.status === 'Queued' ? 'The test is on its way. ' : 'The test went. ' }}</strong>{{ r.error ?? r.note ?? (r.channel === 'InApp' ? 'Look in the notices bell at the top.' : 'Check the inbox of the address on file.') }}
+        <strong>{{ r.status === 'Failed' ? 'The test did not go: ' : r.status === 'Queued' ? 'The test is on its way. ' : 'The test went. ' }}</strong>{{ r.error ?? r.note ?? (r.channel === 'InApp' ? 'Look in the notices bell at the top.' : r.channel === 'Push' ? 'Look at the phone you are signed in on.' : 'Check the inbox of the address on file.') }}
       </p>
     }
 
@@ -63,7 +63,7 @@ const PAGE = 25;
       <div><label class="app-label" for="msg-channel">Way of sending</label>
         <select id="msg-channel" class="app-input" data-testid="msg-filter-channel" (change)="channel.set($any($event.target).value)">
           <option value="" [selected]="!channel()">All</option><option value="InApp" [selected]="channel() === 'InApp'">In the app</option><option value="Email" [selected]="channel() === 'Email'">E-mail</option>
-          <option value="Sms" [selected]="channel() === 'Sms'">SMS</option><option value="WhatsApp" [selected]="channel() === 'WhatsApp'">WhatsApp</option></select></div>
+          <option value="Sms" [selected]="channel() === 'Sms'">SMS</option><option value="WhatsApp" [selected]="channel() === 'WhatsApp'">WhatsApp</option><option value="Push" [selected]="channel() === 'Push'">Push to phones</option></select></div>
       <div><label class="app-label" for="msg-status">How it went</label>
         <select id="msg-status" class="app-input" data-testid="msg-filter-status" (change)="status.set($any($event.target).value)">
           <option value="" [selected]="!status()">All</option><option value="Sent" [selected]="status() === 'Sent'">Sent</option><option value="Queued" [selected]="status() === 'Queued'">Waiting to be sent</option>
@@ -87,7 +87,7 @@ const PAGE = 25;
                 @if (m.error) { <span class="mt-1 block max-w-xs text-xs text-ink/80" data-testid="msg-error-text">{{ m.error }}</span> }
                 @if (m.note) { <span class="mt-1 block max-w-xs text-xs text-ink/70">{{ m.note }}</span> }
               </td>
-              <td class="text-right">@if (m.status === 'Failed' && m.to) { <button type="button" class="btn-outline px-2 py-1 text-sm" [attr.data-testid]="'msg-retry-' + m.subject" [disabled]="retrying() === m.id" (click)="retry(m)">Try again</button> }</td>
+              <td class="text-right">@if (m.status === 'Failed' && (m.to || m.channel === 'Push')) { <button type="button" class="btn-outline px-2 py-1 text-sm" [attr.data-testid]="'msg-retry-' + m.subject" [disabled]="retrying() === m.id" (click)="retry(m)">Try again</button> }</td>
             </tr>
           } @empty { <tr><td colspan="6" class="py-8 text-center text-ink/70" data-testid="msg-empty">{{ loading() ? 'Loading...' : 'No messages yet.' }}</td></tr> }
         </tbody>
@@ -124,7 +124,7 @@ export class MessagesComponent implements OnInit {
 
   ngOnInit(): void { void this.reload(1); }
 
-  protected label(c: MessageChannel): string { return c === 'InApp' ? 'In the app' : c === 'Email' ? 'E-mail' : c === 'Sms' ? 'SMS' : 'WhatsApp'; }
+  protected label(c: MessageChannel): string { return c === 'InApp' ? 'In the app' : c === 'Email' ? 'E-mail' : c === 'Sms' ? 'SMS' : c === 'Push' ? 'Push to phones' : 'WhatsApp'; }
 
   protected async reload(page = this.page()): Promise<void> {
     this.loading.set(true);

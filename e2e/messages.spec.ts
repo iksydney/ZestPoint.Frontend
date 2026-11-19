@@ -35,6 +35,13 @@ test.describe('Messaging', () => {
     await expect(page.getByTestId('msg-channel-E-mail')).toContainText('Not set up');
     await expect(page.getByTestId('msg-channel-SMS')).toContainText('provider account');
 
+    // Push to phones needs the company's Firebase key, which the test server does not have: it says so, and a test with no phone signed in fails in words.
+    await expect(page.getByTestId('msg-channel-Push to phones')).toContainText('Not set up');
+    await expect(page.getByTestId('msg-channel-Push to phones')).toContainText('Firebase');
+    await page.getByTestId('msg-test-Push').click();
+    await expect(page.getByTestId('msg-test-result')).toContainText('The test did not go');
+    await expect(page.getByTestId('msg-test-result')).toContainText('no phone signed in');
+
     // A test in the app arrives at once, in the bell.
     await page.getByTestId('msg-test-InApp').click();
     await expect(page.getByTestId('msg-test-result')).toContainText('The test went');

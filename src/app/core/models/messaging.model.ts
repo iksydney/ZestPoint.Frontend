@@ -1,6 +1,6 @@
 /** Messaging: the log of what the system sent, the plan's paid messages, the notices in the bell. Mirrors the server's MessagingModels. */
 
-export type MessageChannel = 'InApp' | 'Email' | 'Sms' | 'WhatsApp';
+export type MessageChannel = 'InApp' | 'Email' | 'Sms' | 'WhatsApp' | 'Push';
 export type MessageStatus = 'Queued' | 'Sent' | 'Failed';
 
 export interface MessageLogDto {
