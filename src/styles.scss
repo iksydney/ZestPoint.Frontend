@@ -37,6 +37,21 @@ html.zp-entry:not(.dark) {
   color-scheme: light;
 }
 
+/*
+ * A page that is always light, like paper, whatever the app's own colours are: the customer's receipt, opened from its web link with no venue theme behind it. The colour tokens above
+ * default to the dark app, so text drawn with them (`text-ink`) on this page's white card was near-white on white: the words beside the QR code and the Share and Download buttons could
+ * not be read. The same light set as `zp-entry`, put on the element itself so it covers everything inside it and nothing else.
+ */
+.zp-paper {
+  --canvas-rgb: 241 245 249;
+  --panel-rgb: 255 255 255;
+  --ink-rgb: 15 23 42;
+  --success-rgb: 21 128 61;
+  --warning-rgb: 180 83 9;
+  --danger-rgb: 185 28 28;
+  color-scheme: light;
+}
+
 html, body { height: 100%; }
 body { background-color: rgb(var(--canvas-rgb)); color: rgb(var(--ink-rgb)); font-family: var(--font-app); }
 

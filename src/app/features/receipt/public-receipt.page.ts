@@ -17,7 +17,7 @@ import { ReceiptShareComponent, ReceiptViewComponent } from '../../shared/ui/rec
     imports: [ReceiptViewComponent, ReceiptShareComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
-    <main class="min-h-screen bg-slate-100 px-4 py-8 text-slate-900" data-testid="public-receipt">
+    <main class="zp-paper min-h-screen bg-slate-100 px-4 py-8 text-slate-900" data-testid="public-receipt">
       <div class="mx-auto max-w-sm space-y-4">
         @if (receipt(); as r) {
           <h1 class="text-center text-lg font-bold">Your receipt from {{ r.companyName }}</h1>

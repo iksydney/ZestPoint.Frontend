@@ -89,6 +89,22 @@ test.describe('Receipts and the screen lock', () => {
     await expect(phone.getByTestId('receipt-view')).toContainText('1 x Notebook');
     await expect(phone.getByTestId('receipt-total')).toContainText('1,500.00');
     await expect(phone.getByTestId('main-nav')).toHaveCount(0);
+
+    // Everything beside the QR code and the Print button can be read: dark on the white card. (It used the app's near-white text, so on this page it was grey on white.)
+    const readable = async (testId: string, within?: string) => {
+      const target = within ? phone.getByTestId(testId).locator(within) : phone.getByTestId(testId);
+      const [r, g, b, a] = await target.first().evaluate((el) => {
+        const m = /rgba?\(([^)]+)\)/.exec(getComputedStyle(el).color)![1]!.split(/[ ,/]+/).filter(Boolean).map(Number);
+        return [m[0]!, m[1]!, m[2]!, m[3] ?? 1];
+      }) as [number, number, number, number];
+      const over = [r, g, b].map((c) => c * a + 255 * (1 - a));            // the colour as it looks on the white card
+      const lum = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+      const L = 0.2126 * lum(over[0]!) + 0.7152 * lum(over[1]!) + 0.0722 * lum(over[2]!);
+      return (1 + 0.05) / (L + 0.05);                                      // contrast with white
+    };
+    expect(await readable('receipt-qr', 'xpath=following-sibling::p'), 'the words beside the QR code').toBeGreaterThanOrEqual(4.5);
+    expect(await readable('receipt-download'), 'the Download button').toBeGreaterThanOrEqual(4.5);
+    expect(await readable('receipt-copy'), 'the Copy link button').toBeGreaterThanOrEqual(4.5);
     await phone.goto('/r/this-is-not-a-real-receipt-link-0000000000000000');
     await expect(phone.getByTestId('public-receipt-error')).toContainText('not valid');
     await customer.close();
