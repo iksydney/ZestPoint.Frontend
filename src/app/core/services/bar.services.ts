@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import { ApiEnvelope } from '../models/api.model';
 import { BarOrderDto, BarOrderNotice, KitchenBoardDto } from '../models/ops.model';
 import { SCREEN_PERMISSIONS } from '../models/rbac.model';
+import { tableWording } from '../table-wording';
 import { AccessService } from './access.service';
 import { toApiError, unwrap } from './api.util';
 import { AuthService } from './auth.service';
@@ -408,6 +409,6 @@ export function elapsed(fromUtc: string | null, now: number): string {
 
 /** Where to take it: "Table 12", else the tab or guest name, else the bill number. */
 export function placeOf(o: BarOrderDto): string {
-  if (o.tableLabel) return `Table ${o.tableLabel}`;
+  if (o.tableLabel) return tableWording(o.tableLabel);
   return o.label ?? o.customerName ?? `Bill #${o.orderNumber}`;
 }

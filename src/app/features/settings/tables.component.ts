@@ -10,6 +10,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { printTableStickers, tableLink, tableQr } from '../../core/receipt/table-qr';
 import { TableOrdersApi } from '../../core/services/table-ordering.service';
+import { tableWording } from '../../core/table-wording';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { DomSanitizer } from '@angular/platform-browser';
 import { BranchPickerComponent } from '../../shared/ui/ops-chrome.components';
@@ -65,7 +66,7 @@ interface TableForm { id: string | null; name: string; area: string; seats: numb
       </section>
     </div>
 
-    <zp-dialog [open]="!!form()" [title]="form()?.id ? 'Table ' + editingName() : 'Add a table'" (closed)="form.set(null)">
+    <zp-dialog [open]="!!form()" [title]="form()?.id ? tableWording(editingName()) : 'Add a table'" (closed)="form.set(null)">
       @if (form(); as f) {
         <form class="space-y-3" (submit)="$event.preventDefault(); save()" data-testid="table-form">
           <div><label class="app-label" for="tb-name">Name or number</label><input id="tb-name" class="app-input" maxlength="60" data-testid="table-name" placeholder="e.g. 12 or VIP 1" [ngModel]="f.name" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ name: $event })" />
@@ -127,6 +128,7 @@ interface TableForm { id: string | null; name: string; area: string; seats: numb
   `
 })
 export class TablesComponent {
+  protected readonly tableWording = tableWording;
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);

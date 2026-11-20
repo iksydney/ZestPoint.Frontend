@@ -8,6 +8,7 @@ import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { chime } from '../../core/services/bar.services';
 import { TableOrdersApi } from '../../core/services/table-ordering.service';
+import { tableWording } from '../../core/table-wording';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 
 /**
@@ -30,7 +31,7 @@ import { DialogComponent, ToastService } from '../../shared/ui/feedback';
           @for (r of requests(); track r.id) {
             <article class="rounded-lg border border-ink/15 p-3" [attr.data-testid]="'tr-' + r.number">
               <div class="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 class="font-semibold">Table {{ r.tableName }}@if (r.customerName) { <span class="font-normal text-ink/70">, {{ r.customerName }}</span> }</h3>
+                <h3 class="font-semibold">{{ tableWording(r.tableName) }}@if (r.customerName) { <span class="font-normal text-ink/70">, {{ r.customerName }}</span> }</h3>
                 <span class="text-xs text-ink/70">{{ minutes(r) }} min ago</span>
               </div>
               @if (r.kind === 'waiter') { <p class="mt-1 text-sm" [attr.data-testid]="'tr-what-' + r.number">Is asking for a waiter.</p> }
@@ -77,6 +78,7 @@ import { DialogComponent, ToastService } from '../../shared/ui/feedback';
   `
 })
 export class TableRequestsComponent {
+  protected readonly tableWording = tableWording;
   private readonly api = inject(TableOrdersApi);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);

@@ -74,7 +74,9 @@ test.describe('Tables', () => {
     await picker.getByTestId('nb-table-Table 2').click();
     await expect(page.getByTestId('nb-table')).toHaveValue('Table 2');
     await page.getByTestId('nb-create').click();
-    await expect(page.getByTestId('current-bill')).toContainText('table Table 2');
+    // A table named "Table 2" is worded "Table 2", not "Table Table 2" (FND-121).
+    await expect(page.getByTestId('current-bill')).toContainText('Table 2');
+    await expect(page.getByTestId('current-bill')).not.toContainText('Table Table');
     await expect(page.getByTestId('sync-pending')).toHaveCount(0, { timeout: 30_000 });
 
     // Opening another bill: Table 2 now says it has a bill running. A typed name that is no table still works.
@@ -84,7 +86,7 @@ test.describe('Tables', () => {
     await expect(page.getByTestId('nb-table-Table 2')).toContainText('bill open');
     await page.getByTestId('nb-table').fill('By the pool');
     await page.getByTestId('nb-create').click();
-    await expect(page.getByTestId('current-bill')).toContainText('table By the pool');
+    await expect(page.getByTestId('current-bill')).toContainText('Table By the pool');
     await expect(page.getByTestId('sync-pending')).toHaveCount(0, { timeout: 30_000 });
 
     // Back on the Tables screen: Table 2 has a bill open and cannot be switched off; another can.

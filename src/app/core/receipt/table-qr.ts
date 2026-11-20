@@ -1,4 +1,5 @@
 import qrcode from 'qrcode-generator';
+import { tableWording } from '../table-wording';
 
 const esc = (text: string): string => text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
@@ -31,7 +32,7 @@ html, body { margin: 0; padding: 0; background: #fff; color: #000; font-family: 
  * codes are drawn on the device and are not kept anywhere once printed.
  */
 export function printTableStickers(company: string, stickers: readonly TableSticker[]): void {
-  const cards = stickers.map((s) => `<section class="card"><p>${esc(company)}</p><h2>Table ${esc(s.name)}</h2>${s.area ? `<p>${esc(s.area)}</p>` : ''}<div class="qr">${tableQr(s.code)}</div><p>Scan to see the menu, order from your table, call a waiter or ask for the bill.</p></section>`).join('');
+  const cards = stickers.map((s) => `<section class="card"><p>${esc(company)}</p><h2>${esc(tableWording(s.name))}</h2>${s.area ? `<p>${esc(s.area)}</p>` : ''}<div class="qr">${tableQr(s.code)}</div><p>Scan to see the menu, order from your table, call a waiter or ask for the bill.</p></section>`).join('');
   const frame = document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
   frame.setAttribute('data-testid', 'table-qr-print-frame');

@@ -52,7 +52,7 @@ test.describe('Table ordering', () => {
     // The customer: the menu with the company's name, only what is on the customer menu, an option, a name, and Send.
     const guest = await newContext(browser);
     await guest.page.goto(path);
-    await expect(guest.page.getByTestId('tp-table')).toContainText('table T7');
+    await expect(guest.page.getByTestId('tp-table')).toContainText('Table T7');
     await expect(guest.page.getByTestId('tp-item-Mojito')).toBeVisible();
     await expect(guest.page.getByTestId('tp-item-Soap')).toHaveCount(0);
     await guest.page.getByTestId('tp-add-Mojito').click();

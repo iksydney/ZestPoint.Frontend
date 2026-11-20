@@ -299,7 +299,7 @@ test.describe('Till and bar: typed quantities and collated marks', () => {
     await w.getByTestId('nb-kind').selectOption('Table');
     await w.getByTestId('nb-table').fill('4');
     await w.getByTestId('nb-create').click();
-    await expect(w.getByTestId('current-bill')).toContainText('table 4');
+    await expect(w.getByTestId('current-bill')).toContainText('Table 4');
     await w.getByTestId('product-Demo Canned Beans').click();
     await typeQuantity(w, 'Demo Canned Beans', '3');
     await w.getByTestId('send-order').click();

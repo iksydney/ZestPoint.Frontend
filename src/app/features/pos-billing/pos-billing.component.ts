@@ -23,6 +23,7 @@ import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { BranchPickerComponent, SyncStatusComponent } from '../../shared/ui/ops-chrome.components';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 import { printReceipt } from '../../core/receipt/receipt-render';
+import { tableWording } from '../../core/table-wording';
 import { ReceiptShareComponent, ReceiptViewComponent } from '../../shared/ui/receipt.components';
 import { VoidAuthoriserComponent } from './void-authoriser.component';
 
@@ -111,7 +112,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
                 </span>
                 <span class="flex items-center gap-2 text-xs text-ink/70">
                   <span>{{ b.numberPending ? 'Not synced yet' : '#' + b.number }}</span><span>{{ b.itemCount }} item(s)</span>
-                  @if (b.tableLabel) { <span>Table {{ b.tableLabel }}</span> }
+                  @if (b.tableLabel) { <span>{{ tableWording(b.tableLabel) }}</span> }
                   @if (b.pendingSync) { <span class="app-badge app-badge-warning">pending</span> }
                 </span>
               </button>
@@ -162,7 +163,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
           <div class="mb-2 flex items-start justify-between gap-2">
             <div>
               <h2 class="font-semibold">{{ o.label ?? 'Bill' }} <span class="text-sm font-normal text-ink/70">{{ o.numberPending ? '(not synced yet)' : '#' + o.number }}</span></h2>
-              <p class="text-xs text-ink/70">{{ o.kind }}@if (o.tableLabel) { , table {{ o.tableLabel }} } @if (o.ownerName) { , {{ o.ownerName }} }</p>
+              <p class="text-xs text-ink/70">{{ o.kind }}@if (o.tableLabel) { , {{ tableWording(o.tableLabel) }} } @if (o.ownerName) { , {{ o.ownerName }} }</p>
               @if (o.layby; as lb) {
                 <p class="mt-1 text-sm font-semibold" data-testid="bill-layby">Layby #{{ lb.number }}@if (lb.status === 'Active') { , due {{ lb.dueDate }}@if (o.amountPaid === 0) { . First payment at least {{ lb.minimumDeposit | currency: store.currency() : 'symbol-narrow' : '1.2-2' }} } } @else { : {{ lb.status.toLowerCase() }} }</p>
                 @if (lb.status === 'Active') { <p class="text-xs text-ink/70">Its items are fixed. Take payments here or on the Laybys screen.</p> }
@@ -699,6 +700,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
   `
 })
 export class PosBillingComponent implements OnInit {
+  protected readonly tableWording = tableWording;
   protected readonly store = inject(PosStore);
   protected readonly branches = inject(BranchContextService);
   private readonly auth = inject(AuthService);

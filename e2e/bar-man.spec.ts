@@ -48,7 +48,7 @@ async function tableWith(page: Page, table: string, ...products: string[]): Prom
   await page.getByTestId('nb-kind').selectOption('Table');
   await page.getByTestId('nb-table').fill(table);
   await page.getByTestId('nb-create').click();
-  await expect(page.getByTestId('current-bill')).toContainText(`table ${table}`);
+  await expect(page.getByTestId('current-bill')).toContainText(`Table ${table}`);
   for (const product of products) {
     await page.getByTestId(`product-${product}`).click();
     if (product === 'Demo Gin & Tonic') await page.getByTestId('mod-add').click();

@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { PublicMenuItemDto, PublicTableMenuDto, PublicTableRequestDto } from '../../core/models/table-ordering.model';
 import { toApiError } from '../../core/services/api.util';
 import { PublicTableApi } from '../../core/services/table-ordering.service';
+import { tableWording } from '../../core/table-wording';
 
 interface BasketLine { key: string; productId: string; name: string; unitPrice: number; quantity: number; optionIds: string[]; optionNames: string }
 
@@ -24,7 +25,7 @@ interface BasketLine { key: string; productId: string; name: string; unitPrice: 
         <header class="px-4 py-4 text-center" [style.background]="m.primaryColor || '#0f172a'" [style.color]="m.onPrimaryColor || '#ffffff'">
           @if (m.logoUrl) { <img [src]="m.logoUrl" alt="" class="mx-auto mb-2 h-12 w-auto" /> }
           <h1 class="text-xl font-bold" data-testid="tp-title">{{ m.companyName }}</h1>
-          <p class="text-sm opacity-90" data-testid="tp-table">{{ m.branchName }}, table {{ m.tableName }}</p>
+          <p class="text-sm opacity-90" data-testid="tp-table">{{ m.branchName }}, {{ tableWording(m.tableName) }}</p>
           @if (m.tagline) { <p class="text-xs opacity-80">{{ m.tagline }}</p> }
         </header>
 
@@ -150,6 +151,7 @@ interface BasketLine { key: string; productId: string; name: string; unitPrice: 
   `
 })
 export class PublicTablePageComponent implements OnInit {
+  protected readonly tableWording = tableWording;
   private readonly api = inject(PublicTableApi);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
