@@ -206,10 +206,11 @@ export const TOURS: readonly TourDefinition[] = [
     ]
   },
   {
-    key: 'pos.printers', nav: 'pos.printers', title: 'Printers', version: 1,
+    key: 'pos.printers', nav: 'pos.printers', title: 'Printers', version: 2,
+    changes: [{ version: 2, steps: [{ id: 'add', target: '[data-testid="printer-new"]', title: 'Printers can print kitchen and bar tickets', body: 'When a printer is for Kitchen and bar tickets, you now choose the stations whose tickets it prints. A waiter presses Print ticket on a bill in the phone app and the ticket of each station comes out on the printer that lists it.' }] }],
     steps: [
-      { id: 'what', title: 'The printers your phones print to', body: 'Add each printer once here. Phones at the branch use it to print customer receipts and gift card slips, shift reports, and labels. The phone does the printing, so a printer on the shop network must be reachable from inside the shop.' },
-      { id: 'add', target: '[data-testid="printer-new"]', title: 'Add a printer', body: 'Say how a phone reaches it: on the shop network (its address), by Bluetooth (each phone pairs it), or a handheld\'s own printer. Then the language it speaks, the paper in it, and what it is for. A label printer needs the size of a label.' },
+      { id: 'what', title: 'The printers your phones print to', body: 'Add each printer once here. Phones at the branch use it to print customer receipts and gift card slips, shift reports, labels, and kitchen and bar tickets. The phone does the printing, so a printer on the shop network must be reachable from inside the shop.' },
+      { id: 'add', target: '[data-testid="printer-new"]', title: 'Add a printer', body: 'Say how a phone reaches it: on the shop network (its address), by Bluetooth (each phone pairs it), or a handheld\'s own printer. Then the language it speaks, the paper in it, and what it is for. A label printer needs the size of a label; a kitchen or bar printer needs the stations whose tickets it prints.' },
       { id: 'list', target: '[data-testid="printer-list"]', title: 'Your printers', body: 'A phone uses the first printer in use at its branch that is for what it is printing, lowest order first. Edit changes a printer or switches it off; a printer is never deleted.' }
     ]
   },

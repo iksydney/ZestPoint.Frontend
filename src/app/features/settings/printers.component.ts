@@ -8,11 +8,12 @@ import { FEATURES } from '../../core/models/rbac.model';
 import { toApiError, unwrap } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { BranchContextService } from '../../core/services/branch-context.service';
+import { StationsService } from '../../core/services/stations.service';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 
 interface PrinterForm {
   id: string | null; branchId: string | null; name: string; kind: PrinterKind; language: PrinterLanguage; host: string; port: number | null; deviceName: string;
-  handheldMake: HandheldMake | null; paperWidthMm: number; labelHeightMm: number | null; purposes: PrinterPurpose[]; isActive: boolean; sortOrder: number; notes: string;
+  handheldMake: HandheldMake | null; paperWidthMm: number; labelHeightMm: number | null; purposes: PrinterPurpose[]; stationIds: string[]; isActive: boolean; sortOrder: number; notes: string;
 }
 
 const KINDS: readonly { value: PrinterKind; label: string }[] = [
@@ -29,7 +30,7 @@ const PURPOSES: readonly { value: PrinterPurpose; label: string; hint: string }[
   { value: 'Receipts', label: 'Receipts', hint: 'Customer receipts and gift card slips.' },
   { value: 'Reports', label: 'Reports', hint: 'Shift summaries and other reports on paper.' },
   { value: 'Labels', label: 'Labels', hint: 'Price and barcode labels, and table QR stickers.' },
-  { value: 'Kitchen', label: 'Kitchen and bar tickets', hint: 'Kept for later: the phone does not print these yet.' }
+  { value: 'Kitchen', label: 'Kitchen and bar tickets', hint: 'A paper ticket of what was sent to a station, printed by the waiter\'s phone from the bill. Choose the stations below.' }
 ];
 
 /**
@@ -45,7 +46,7 @@ const PURPOSES: readonly { value: PrinterPurpose; label: string; hint: string }[
     <div class="flex flex-col gap-4" data-testid="printers">
       <div>
         <h1 class="text-2xl font-bold">Printers</h1>
-        <p class="text-sm text-ink/70">The printers your phones print to: receipts and gift card slips, shift reports, and labels. Set each one up once here; every phone at the branch finds it. Each phone pairs its own Bluetooth printer.</p>
+        <p class="text-sm text-ink/70">The printers your phones print to: receipts and gift card slips, shift reports, labels, and kitchen and bar tickets. Set each one up once here; every phone at the branch finds it. Each phone pairs its own Bluetooth printer.</p>
       </div>
       @if (error()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="printers-error">{{ error() }}</p> }
       @if (readOnly()) { <p class="sys-alert sys-alert-info" role="status">Your subscription is read-only: printers can be seen but not changed.</p> }
@@ -137,6 +138,22 @@ const PURPOSES: readonly { value: PrinterPurpose; label: string; hint: string }[
             </div>
             @if (fieldError('purposes')) { <p class="app-error" role="alert" data-testid="printer-purposes-error">{{ fieldError('purposes') }}</p> }
           </fieldset>
+          @if (f.purposes.includes('Kitchen')) {
+            <fieldset data-testid="printer-stations">
+              <legend class="app-label">Print the tickets of these stations</legend>
+              @if (stations.list().length === 0) {
+                <p class="text-sm text-ink/70" data-testid="printer-stations-none">This company has no stations yet. Stations are the bar, the kitchen, the grill: add them under Set-up, Stations, and then choose them here.</p>
+              } @else {
+                <div class="grid gap-1 sm:grid-cols-2">
+                  @for (st of stations.list(); track st.id) {
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" [attr.data-testid]="'printer-station-' + st.name" [checked]="f.stationIds.includes(st.id)" (change)="toggleStation(st.id)" /> {{ st.name }}</label>
+                  }
+                </div>
+                <p class="mt-1 text-xs text-ink/70">A waiter's phone prints a station's ticket on a printer at its branch that lists the station here. A station no printer lists prints nothing, and the phone says so.</p>
+              }
+              @if (fieldError('stationIds')) { <p class="app-error" role="alert" data-testid="printer-stations-error">{{ fieldError('stationIds') }}</p> }
+            </fieldset>
+          }
 
           <div class="grid gap-3 sm:grid-cols-2">
             @if (labelsOnly()) {
@@ -172,6 +189,7 @@ export class PrintersComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   protected readonly branches = inject(BranchContextService);
+  protected readonly stations = inject(StationsService);
 
   protected readonly kinds = KINDS;
   protected readonly languages = LANGUAGES;
@@ -192,13 +210,19 @@ export class PrintersComponent implements OnInit {
   protected readonly everyBranch = computed(() => !!this.auth.session()?.hasAllBranches);
   protected readonly labelsOnly = computed(() => { const p = this.form()?.purposes ?? []; return p.length > 0 && p.every((x) => x === 'Labels'); });
 
-  ngOnInit(): void { void this.branches.load(); void this.load(); }
+  ngOnInit(): void { void this.branches.load(); void this.stations.load(); void this.load(); }
 
   protected fieldError = (name: string): string | null => this.fieldErrors()[name]?.[0] ?? null;
   protected patch(p: Partial<PrinterForm>): void { this.form.update((f) => (f ? { ...f, ...p } : f)); }
 
   protected languageName = (l: PrinterLanguage): string => ({ EscPos: 'ESC/POS', Tspl: 'TSPL', Zpl: 'ZPL' })[l];
-  protected purposeNames = (p: PrinterDto): string => p.purposes.map((x) => PURPOSES.find((c) => c.value === x)?.label ?? x).join(', ');
+  protected purposeNames = (p: PrinterDto): string => p.purposes.map((x) => {
+    const label = PURPOSES.find((c) => c.value === x)?.label ?? x;
+    if (x !== 'Kitchen') return label;
+    // The stations it prints the tickets of, by name; none chosen is said, because then nothing prints on it.
+    const names = (p.stationIds ?? []).map((id) => this.stations.list().find((st) => st.id === id)?.name).filter((n): n is string => !!n);
+    return names.length ? `${label} (${names.join(', ')})` : `${label} (no station chosen)`;
+  }).join(', ');
   protected connection(p: PrinterDto): string {
     if (p.kind === 'Network') return `${p.host}:${p.port ?? 9100}`;
     if (p.kind === 'Bluetooth') return p.deviceName ? `Bluetooth: ${p.deviceName}` : 'Bluetooth';
@@ -212,6 +236,12 @@ export class PrintersComponent implements OnInit {
   /** Choosing how it is reached sets what goes with it: a handheld's own printer speaks ESC/POS and is Sunmi's (the only one built). */
   protected chooseKind(kind: PrinterKind): void {
     this.patch(kind === 'Handheld' ? { kind, language: 'EscPos', handheldMake: 'Sunmi', purposes: (this.form()?.purposes ?? []).filter((x) => x !== 'Labels') } : { kind });
+  }
+
+  protected toggleStation(id: string): void {
+    const f = this.form();
+    if (!f) return;
+    this.patch({ stationIds: f.stationIds.includes(id) ? f.stationIds.filter((x) => x !== id) : [...f.stationIds, id] });
   }
 
   protected togglePurpose(p: PrinterPurpose): void {
@@ -236,8 +266,8 @@ export class PrintersComponent implements OnInit {
     this.dialogError.set(null);
     this.fieldErrors.set({});
     this.form.set(p
-      ? { id: p.id, branchId: p.branchId, name: p.name, kind: p.kind, language: p.language, host: p.host ?? '', port: p.port, deviceName: p.deviceName ?? '', handheldMake: p.handheldMake, paperWidthMm: p.paperWidthMm, labelHeightMm: p.labelHeightMm, purposes: [...p.purposes], isActive: p.isActive, sortOrder: p.sortOrder, notes: p.notes ?? '' }
-      : { id: null, branchId: this.everyBranch() ? (this.branches.activeId() ?? null) : (this.branches.activeId() ?? this.branches.branches()[0]?.id ?? null), name: '', kind: 'Network', language: 'EscPos', host: '', port: null, deviceName: '', handheldMake: null, paperWidthMm: 58, labelHeightMm: null, purposes: ['Receipts'], isActive: true, sortOrder: this.printers().length, notes: '' });
+      ? { id: p.id, branchId: p.branchId, name: p.name, kind: p.kind, language: p.language, host: p.host ?? '', port: p.port, deviceName: p.deviceName ?? '', handheldMake: p.handheldMake, paperWidthMm: p.paperWidthMm, labelHeightMm: p.labelHeightMm, purposes: [...p.purposes], stationIds: [...(p.stationIds ?? [])], isActive: p.isActive, sortOrder: p.sortOrder, notes: p.notes ?? '' }
+      : { id: null, branchId: this.everyBranch() ? (this.branches.activeId() ?? null) : (this.branches.activeId() ?? this.branches.branches()[0]?.id ?? null), name: '', kind: 'Network', language: 'EscPos', host: '', port: null, deviceName: '', handheldMake: null, paperWidthMm: 58, labelHeightMm: null, purposes: ['Receipts'], stationIds: [], isActive: true, sortOrder: this.printers().length, notes: '' });
   }
 
   protected async save(): Promise<void> {
@@ -251,7 +281,7 @@ export class PrintersComponent implements OnInit {
       branchId: f.branchId, name: f.name.trim(), kind: f.kind, language: f.language,
       host: f.kind === 'Network' ? f.host.trim() : null, port: f.kind === 'Network' ? f.port : null, deviceName: f.kind === 'Bluetooth' ? f.deviceName.trim() || null : null,
       handheldMake: f.kind === 'Handheld' ? f.handheldMake : null, paperWidthMm: f.paperWidthMm, labelHeightMm: f.purposes.includes('Labels') ? f.labelHeightMm : null,
-      purposes: f.purposes, isActive: f.isActive, sortOrder: f.sortOrder, notes: f.notes.trim() || null
+      purposes: f.purposes, stationIds: f.purposes.includes('Kitchen') ? f.stationIds : [], isActive: f.isActive, sortOrder: f.sortOrder, notes: f.notes.trim() || null
     };
     try {
       await firstValueFrom((f.id ? this.http.put<ApiEnvelope<PrinterDto>>(`/api/v1/printers/${f.id}`, body) : this.http.post<ApiEnvelope<PrinterDto>>('/api/v1/printers', body)).pipe(unwrap()));

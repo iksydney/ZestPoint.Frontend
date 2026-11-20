@@ -110,4 +110,58 @@ test.describe('Printers', () => {
     await expect(page.getByTestId('printer-row-Counter')).toContainText('192.168.1.60:9101');
     await expect(page.getByTestId('printer-list').locator('tbody tr')).toHaveCount(4);
   });
+
+  // Owner's decisions of 2026-11-21: a waiter's phone prints a bill's kitchen and bar tickets, each station's on the printer that lists it.
+  test('a kitchen and bar printer is linked to the stations whose tickets it prints, and the list says which', async ({ page }) => {
+    test.slow();
+    await registerViaUi(page, { type: 'Nightclub', barManMethod: true });                  // the bar method is on: a Bar station exists
+    await page.getByTestId('save-continue').click();
+    await page.getByTestId('go-staff').click();
+    await expect(page).toHaveURL(/\/app\/staff$/);
+    await openPrinters(page);
+
+    // The stations only show for a printer that prints tickets.
+    await page.getByTestId('printer-new').click();
+    await expect(page.getByTestId('printer-stations')).toHaveCount(0);
+    await page.getByTestId('printer-name').fill('Bar tickets');
+    await page.getByTestId('printer-host').fill('192.168.1.60');
+    await page.getByTestId('printer-purpose-Receipts').uncheck();
+    await page.getByTestId('printer-purpose-Kitchen').check();
+    await expect(page.getByTestId('printer-stations')).toBeVisible();
+    await expect(page.getByTestId('printer-station-Bar')).not.toBeChecked();
+    await page.getByTestId('printer-save').click();
+
+    // With no station chosen the list says so: nothing prints on it yet.
+    const row = page.getByTestId('printer-row-Bar tickets');
+    await expect(row).toContainText('Kitchen and bar tickets (no station chosen)');
+
+    // Choosing the Bar: the list names it, and the choice is there when the printer is opened again.
+    await page.getByTestId('printer-edit-Bar tickets').click();
+    await page.getByTestId('printer-station-Bar').check();
+    await page.getByTestId('printer-save').click();
+    await expect(row).toContainText('Kitchen and bar tickets (Bar)');
+    await page.getByTestId('printer-edit-Bar tickets').click();
+    await expect(page.getByTestId('printer-station-Bar')).toBeChecked();
+
+    // Taking the Kitchen purpose off hides the stations and the server keeps none.
+    await page.getByTestId('printer-purpose-Kitchen').uncheck();
+    await page.getByTestId('printer-purpose-Receipts').check();
+    await expect(page.getByTestId('printer-stations')).toHaveCount(0);
+    await page.getByTestId('printer-save').click();
+    await expect(row).toContainText('Receipts');
+    await expect(row).not.toContainText('no station chosen');
+    await page.getByTestId('printer-edit-Bar tickets').click();
+    await page.getByTestId('printer-purpose-Kitchen').check();
+    await expect(page.getByTestId('printer-station-Bar')).not.toBeChecked();
+  });
+
+  test('a company with no stations is told where to add them when it sets a kitchen printer up', async ({ page }) => {
+    test.slow();
+    await ownerInApp(page);
+    await openPrinters(page);
+    await page.getByTestId('printer-new').click();
+    await page.getByTestId('printer-purpose-Kitchen').check();
+    await expect(page.getByTestId('printer-stations-none')).toContainText('no stations yet');
+    await expect(page.getByTestId('printer-stations-none')).toContainText('Set-up, Stations');
+  });
 });

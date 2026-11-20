@@ -362,6 +362,8 @@ export interface PrinterDto {
   paperWidthMm: number;
   labelHeightMm: number | null;
   purposes: PrinterPurpose[];
+  /** For a printer with the Kitchen purpose: the stations whose tickets it prints. Empty: it prints no station's tickets. */
+  stationIds: string[];
   isActive: boolean;
   sortOrder: number;
   notes: string | null;
