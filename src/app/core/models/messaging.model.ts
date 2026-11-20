@@ -39,3 +39,14 @@ export interface MessageUsageDto {
   remaining: number | null;
   channels: MessageChannelStateDto[];
 }
+
+/** One signed-in phone of the company and whether it can receive notifications (never its notification address). Mirrors the server's PushPhoneDto. */
+export interface PushPhoneDto {
+  person: string;
+  phone: string;
+  platform: string | null;
+  appVersion: string | null;
+  /** The phone has given the server its notification address, so a push can reach it. */
+  canReceive: boolean;
+  lastUsedAtUtc: string;
+}

@@ -136,12 +136,13 @@ export const TOURS: readonly TourDefinition[] = [
     ]
   },
   {
-    key: 'messages', nav: 'messages', title: 'Messages', version: 2,
-    changes: [{ version: 2, steps: [{ id: 'push', target: '[data-testid="msg-channels"]', title: 'Notifications on phones', body: 'A new way of sending: a notification on the phone people are signed in on, for alerts, things waiting for approval, the daily summary, requests from guests at the tables, bills ready to pay and orders that are ready. Send a test to yourself from the phone app.' }] }],
+    key: 'messages', nav: 'messages', title: 'Messages', version: 3,
+    changes: [{ version: 2, steps: [{ id: 'push', target: '[data-testid="msg-channels"]', title: 'Notifications on phones', body: 'A new way of sending: a notification on the phone people are signed in on, for alerts, things waiting for approval, the daily summary, requests from guests at the tables, bills ready to pay and orders that are ready. Send a test to yourself from the phone app.' }] }, { version: 3, steps: [{ id: 'phones', target: '[data-testid="msg-phones"]', title: 'Phones that can be told', body: 'New: every phone signed in to the app, with whether it can receive notifications. A phone that says Off has not given the server its notification address: the person said no in the settings of the phone, or it had no signal at sign-in. Opening the bell in the app tries again.' }] }],
     steps: [
       { id: 'what', title: 'What the system sends', body: 'Every message ZestPoint sends to your people is kept here: in the app, by e-mail, by SMS, by WhatsApp or as a notification on a phone, with how it went. A message that could not be sent stays with the reason.' },
       { id: 'usage', target: '[data-testid="msg-usage"]', title: 'Paid messages', body: 'SMS and WhatsApp are paid messages: your plan includes a number each month. When they are used up, further ones go by e-mail and you are told once.' },
       { id: 'channels', target: '[data-testid="msg-channels"]', title: 'Ways of sending', body: 'Each way says whether it is ready on this server. Send a test to yourself to see that it works, or why it does not.' },
+      { id: 'phones', target: '[data-testid="msg-phones"]', title: 'Phones that can be told', body: 'Every phone signed in to the app, and whether it can receive notifications. A phone that says Off has not given the server its notification address: the person said no in the settings of the phone, or it had no signal at sign-in. Opening the bell in the app tries again.' },
       { id: 'table', target: '[data-testid="msg-table"]', title: 'What was sent', body: 'Filter by way of sending or by how it went. Try again puts a failed message back in the queue.' }
     ]
   },

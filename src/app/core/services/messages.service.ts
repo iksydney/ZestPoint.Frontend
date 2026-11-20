@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiEnvelope } from '../models/api.model';
-import { MessageChannel, MessageLogDto, MessageStatus, MessageUsageDto } from '../models/messaging.model';
+import { MessageChannel, MessageLogDto, MessageStatus, MessageUsageDto, PushPhoneDto } from '../models/messaging.model';
 import { PagedResult } from '../models/subscription.model';
 import { unwrap } from './api.util';
 
@@ -27,6 +27,11 @@ export class MessagesApi {
 
   test(channel: MessageChannel): Observable<MessageLogDto> {
     return this.http.post<ApiEnvelope<MessageLogDto>>(`${this.base}/test`, { channel }).pipe(unwrap());
+  }
+
+  /** The company's signed-in phones and whether each can receive notifications. */
+  pushPhones(): Observable<PushPhoneDto[]> {
+    return this.http.get<ApiEnvelope<PushPhoneDto[]>>(`${this.base}/push-phones`).pipe(unwrap());
   }
 
   retry(id: string): Observable<MessageLogDto> {

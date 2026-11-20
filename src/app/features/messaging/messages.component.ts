@@ -1,7 +1,7 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { MessageChannel, MessageChannelStateDto, MessageLogDto, MessageStatus, MessageUsageDto } from '../../core/models/messaging.model';
+import { MessageChannel, MessageChannelStateDto, MessageLogDto, MessageStatus, MessageUsageDto, PushPhoneDto } from '../../core/models/messaging.model';
 import { toApiError } from '../../core/services/api.util';
 import { MessagesApi } from '../../core/services/messages.service';
 import { NoticesStore } from '../../core/services/notices.store';
@@ -52,6 +52,32 @@ const PAGE = 25;
         }
       </section>
     }
+
+    <section class="app-card mb-4" aria-label="Phones that can receive notifications" data-testid="msg-phones">
+      <h2 class="text-lg font-semibold">Phones that can receive notifications</h2>
+      <p class="mb-2 text-sm text-ink/70">Every phone that is signed in to the ZestPoint app. A phone that cannot receive notifications has not given the server its notification address: the person said no in the phone's settings, the phone has no Google services, or it had no signal when they signed in. Opening the bell in the app on that phone tries again. Nothing here shows the phone's notification address.</p>
+      @if (phonesError()) { <p class="text-sm text-ink/70" data-testid="msg-phones-error">{{ phonesError() }}</p> }
+      @else if (phones().length === 0) { <p class="text-sm" data-testid="msg-phones-empty">No phone is signed in to the app.</p> }
+      @else {
+        <div class="overflow-x-auto">
+          <table class="app-table" data-testid="msg-phones-table">
+            <caption class="sr-only">Phones signed in to the app</caption>
+            <thead><tr><th scope="col">Person</th><th scope="col">Phone</th><th scope="col">App</th><th scope="col">Notifications</th><th scope="col">Last used</th></tr></thead>
+            <tbody>
+              @for (ph of phones(); track $index) {
+                <tr [attr.data-testid]="'msg-phone-' + ph.person + '-' + ph.phone" [attr.data-can-receive]="ph.canReceive">
+                  <td>{{ ph.person }}</td>
+                  <td>{{ ph.phone }}<span class="block text-xs text-ink/70">{{ ph.platform }}</span></td>
+                  <td>{{ ph.appVersion ?? '-' }}</td>
+                  <td><zp-status-badge [tone]="ph.canReceive ? 'success' : 'warning'">{{ ph.canReceive ? 'On' : 'Off' }}</zp-status-badge></td>
+                  <td>{{ ph.lastUsedAtUtc | date: 'medium' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
 
     @if (result(); as r) {
       <p class="sys-alert mb-4" [class.sys-alert-info]="r.status !== 'Failed'" [class.sys-alert-danger]="r.status === 'Failed'" role="status" data-testid="msg-test-result">
@@ -114,6 +140,8 @@ export class MessagesComponent implements OnInit {
   protected readonly testing = signal<MessageChannel | null>(null);
   protected readonly retrying = signal<string | null>(null);
   protected readonly result = signal<MessageLogDto | null>(null);
+  protected readonly phones = signal<readonly PushPhoneDto[]>([]);
+  protected readonly phonesError = signal<string | null>(null);
 
   protected readonly first = computed(() => (this.total() === 0 ? 0 : (this.page() - 1) * PAGE + 1));
   protected readonly last = computed(() => Math.min(this.total(), this.page() * PAGE));
@@ -142,6 +170,17 @@ export class MessagesComponent implements OnInit {
       this.error.set(toApiError(err).message);
     } finally {
       this.loading.set(false);
+    }
+    await this.loadPhones();
+  }
+
+  /** The list of phones is read on its own: if it cannot be, the rest of the screen still works and this part says so. */
+  private async loadPhones(): Promise<void> {
+    try {
+      this.phones.set(await firstValueFrom(this.api.pushPhones()));
+      this.phonesError.set(null);
+    } catch (err) {
+      this.phonesError.set(toApiError(err).message);
     }
   }
 

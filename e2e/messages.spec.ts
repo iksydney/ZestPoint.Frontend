@@ -42,6 +42,10 @@ test.describe('Messaging', () => {
     await expect(page.getByTestId('msg-test-result')).toContainText('The test did not go');
     await expect(page.getByTestId('msg-test-result')).toContainText('no phone signed in');
 
+    // The phones that could be told: none is signed in to the app here, and the section says so (with phones, the server's own tests cover who is listed and that no token is shown).
+    await expect(page.getByTestId('msg-phones')).toBeVisible();
+    await expect(page.getByTestId('msg-phones-empty')).toContainText('No phone is signed in');
+
     // A test in the app arrives at once, in the bell.
     await page.getByTestId('msg-test-InApp').click();
     await expect(page.getByTestId('msg-test-result')).toContainText('The test went');
