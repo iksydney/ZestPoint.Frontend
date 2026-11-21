@@ -7,7 +7,8 @@ const AREAS: [string, string[], number][] = [
   ['sell', ['Point of Sale', 'Start / End of Day', 'My Sales', 'Tips'], 10],   // + Daily Summary (2026-11-15);   // + My Sales (2026-11-15);   // + Tips, and the Tips Report and Payments History
   ['customers', ['Customers', 'Laybys', 'Sales Back Orders'], 4],
   ['stock', ['Stock Overview', 'Items', 'Stock Groups', 'Adjustments', 'Bulk Changes', 'Bin Locations', 'Labels', 'Consignment Out'], 17],
-  ['purchasing', ['Purchase Orders', 'Goods Receiving', 'Suppliers', 'Supplier Payments'], 12],
+  ['kitchen', ['Production', 'Store Issues', 'Food Cost'], 4],   // 2026-11-21: Prep List, Kitchen Waste, Production Variance and Actual Against Expected Use are its reports
+  ['purchasing', ['Purchase Orders', 'Goods Receiving', 'Market Runs', 'Suppliers', 'Supplier Payments'], 13],   // + Market Runs and its expenses report (2026-11-21)
   ['finance', ['Chart of Accounts'], 3],
   ['head', ['Set-up'], 3],   // Overview and Comparison are its reports; Prices and Menus is behind Set-up (2026-11-15)
   ['admin', ['Staff', 'Subscription', 'Support', 'Set-up'], 0]   // Branches, Tables, Settings and Branding are behind Set-up (2026-11-15)
@@ -69,7 +70,7 @@ test.describe('Navigation', () => {
     }
     // No report is listed in the menu itself: the menu is the short list of places to work.
     await expect(page.locator('[data-testid="main-nav"] [data-nav*=".report."]')).toHaveCount(0);
-    expect(await page.locator('[data-testid="main-nav"] a.nav-link').count()).toBeLessThanOrEqual(32);
+    expect(await page.locator('[data-testid="main-nav"] a.nav-link').count()).toBeLessThanOrEqual(38);   // 32 until 2026-11-21: the Kitchen area adds three working screens and its Reports page, and Purchasing adds Market Runs
 
     // An area can be folded away, and the choice is kept.
     await page.getByTestId('nav-group-purchasing').click();
@@ -134,7 +135,7 @@ test.describe('Navigation', () => {
         reports++;
       }
     }
-    expect(reports).toBe(49);   // + Gift Cards (2026-11-16);   // + Loyalty Points Report (2026-11-16);   // + Loss Prevention (2026-11-15);   // + Daily Summary (2026-11-15);   // + Head Office Overview and Branch Comparison (2026-11-15)
+    expect(reports).toBe(54);   // + Gift Cards (2026-11-16);   // + Loyalty Points Report (2026-11-16);   // + Loss Prevention (2026-11-15);   // + Daily Summary (2026-11-15);   // + Head Office Overview and Branch Comparison (2026-11-15)
   });
 
   test('search (Ctrl+K) reaches any screen or report, by its old name too, and the keyboard moves through the menu', async ({ page }) => {

@@ -19,6 +19,7 @@ import { BinApi } from '../../core/services/purchasing.services';
 import { utcToZoned, zonedToUtc } from '../../core/time-zone';
 import { ItemFollowUpService } from '../../core/services/item-follow-up.service';
 import { ToastService } from '../../shared/ui/feedback';
+import { ItemBatchRecipeComponent } from './item-batch-recipe.component';
 import { ItemRecipeComponent } from './item-recipe.component';
 
 const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
@@ -35,7 +36,7 @@ const blank = (): SaveInventoryItemRequest => ({
   averageCost: 0, supplierId: null, tracksBatches: false, tracksSerials: false, groupId: null, barcode: null, description: null, purchaseUnitName: null, purchaseUnitSize: null,
   reorderQuantity: 0, targetStock: null, listedOnWebStore: false, onCustomerMenu: false, sellingPrice: null, tradePrice: null, wholesalePrice: null, resellerPrice: null, bundlePrice: null,
   specialPrice: null, specialFromUtc: null, specialToUtc: null, discountPercent: null, discountFromUtc: null, discountToUtc: null, minimumPrice: null, suggestedRetailPrice: null, lastCost: null, specialCost: null, specialCostFrom: null, specialCostTo: null,
-  blockQtyFractions: false, useScale: false, printOnInvoice: true, editQtyOnSales: true, blockDiscount: false, taxExempt: false, pointsValue: 0, salesAccountId: null, purchaseAccountId: null, stationId: null,
+  blockQtyFractions: false, useScale: false, printOnInvoice: true, editQtyOnSales: true, blockDiscount: false, taxExempt: false, pointsValue: 0, salesAccountId: null, purchaseAccountId: null, stationId: null, shelfLifeDays: null, expiryAlertDays: null, portionsPerBatch: null,
   userPrompt: null, notes: null, isActive: true, rowVersion: null
 });
 
@@ -51,7 +52,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
  */
 @Component({
     selector: 'zp-stock-card',
-    imports: [DecimalPipe, FormsModule, RouterLink, TenantTimePipe, ItemRecipeComponent],
+    imports: [DecimalPipe, FormsModule, RouterLink, TenantTimePipe, ItemRecipeComponent, ItemBatchRecipeComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="fixed inset-0 z-50 grid place-items-start overflow-auto bg-black/60 p-2 sm:p-4 print:static print:bg-transparent print:p-0" (mousedown)="onBackdrop($event)">
@@ -157,6 +158,14 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
                     <div><label class="app-label" for="sc-station">Prepared at</label><select id="sc-station" class="app-input" data-testid="item-station" [ngModel]="f().stationId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ stationId: $event || null })">
             <option [ngValue]="null">As the stock group says</option>@for (s of stations.list(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select>
                       @if (fe('stationId')) { <p class="app-error" role="alert">{{ fe('stationId') }}</p> }</div>
+                    <div><label class="app-label" for="sc-shelf">Shelf life (days)</label><input id="sc-shelf" type="number" min="1" max="3650" step="1" class="app-input" data-testid="item-shelf-life" [ngModel]="f().shelfLifeDays" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ shelfLifeDays: n($event) })" />
+                      <p class="app-hint">How long it keeps once it arrives or is made. Receiving fills the expiry date from this, and the item keeps batches. Leave empty if it has none.</p>
+                      @if (fe('shelfLifeDays')) { <p class="app-error" role="alert">{{ fe('shelfLifeDays') }}</p> }</div>
+                    <div><label class="app-label" for="sc-warn">Warn before expiry (days)</label><input id="sc-warn" type="number" min="0" max="3650" step="1" class="app-input" data-testid="item-expiry-alert" [ngModel]="f().expiryAlertDays" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ expiryAlertDays: n($event) })" />
+                      <p class="app-hint">The alert comes this many days before a batch expires. Empty: a day for an item with a shelf life, otherwise the company's own warning days.</p></div>
+                    <div><label class="app-label" for="sc-portions">Portions per batch</label><input id="sc-portions" type="number" min="0" step="any" class="app-input" data-testid="item-portions" [ngModel]="f().portionsPerBatch" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ portionsPerBatch: n($event) })" />
+                      <p class="app-hint">For something made in batches (a cake baked once and sold by the slice): how many portions one batch gives. Then say what a batch takes on the Recipe and options tab. Leave empty if it is made to order.</p>
+                      @if (fe('portionsPerBatch')) { <p class="app-error" role="alert">{{ fe('portionsPerBatch') }}</p> }</div>
                     <div><label class="app-label" for="sc-sales-ac">Sales A/C</label><select id="sc-sales-ac" class="app-input" data-testid="item-sales-ac" [ngModel]="f().salesAccountId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ salesAccountId: $event || null })">
             <option [ngValue]="null">As the stock group says</option>@for (a of salesAccounts(); track a.id) { <option [ngValue]="a.id">{{ a.code }} {{ a.name }}</option> }</select>
                       @if (fe('salesAccountId')) { <p class="app-error" role="alert">{{ fe('salesAccountId') }}</p> }</div>
@@ -324,7 +333,8 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
               </div>
             }
 
-            @case ('recipe') { <zp-item-recipe [productId]="item()?.productId ?? null" /> }
+            @case ('recipe') { <zp-item-batch-recipe [itemId]="item()?.id ?? null" [portions]="item()?.portionsPerBatch ?? null" />
+              <zp-item-recipe [productId]="item()?.productId ?? null" /> }
             @case ('activity') {
               <div class="space-y-3" data-testid="activity-tab">
                 <dl class="grid gap-2 text-sm sm:grid-cols-3">
@@ -471,7 +481,7 @@ export class StockCardComponent implements OnDestroy {
   private static readonly FIELD_NAMES: Readonly<Record<string, string>> = {
     name: 'Item details (name)', sku: 'Part number (SKU)', barcode: 'Barcode', sellingPrice: 'Retail sell price', specialPrice: 'On special price', discountPercent: 'Discount %',
     minimumPrice: 'Minimum price', reorderLevel: 'Reorder level', targetStock: 'Target stock', groupId: 'Stock group', supplierId: 'Default supplier', baseUnit: 'Units', kind: 'Item type',
-    tracksSerials: 'Track serial numbers', blockQtyFractions: 'Block qty fractions', purchaseUnitSize: 'Bought by the', stationId: 'Prepared at', specialCost: 'Special cost', salesAccountId: 'Sales A/C', purchaseAccountId: 'Purchase A/C'
+    tracksSerials: 'Track serial numbers', blockQtyFractions: 'Block qty fractions', purchaseUnitSize: 'Bought by the', stationId: 'Prepared at', shelfLifeDays: 'Shelf life', expiryAlertDays: 'Warn before expiry', portionsPerBatch: 'Portions per batch', specialCost: 'Special cost', salesAccountId: 'Sales A/C', purchaseAccountId: 'Purchase A/C'
   };
   protected readonly problems = computed<readonly string[]>(() => {
     if (!this.attempted()) return [];
@@ -616,7 +626,7 @@ export class StockCardComponent implements OnDestroy {
       minimumPrice: i.minimumPrice ?? null, suggestedRetailPrice: i.suggestedRetailPrice ?? null, lastCost: i.lastPurchaseCost ?? null, specialCost: i.specialCost ?? null,
       specialCostFrom: i.specialCostFrom ?? null, specialCostTo: i.specialCostTo ?? null, blockQtyFractions: !!i.blockQtyFractions, useScale: !!i.useScale, printOnInvoice: i.printOnInvoice !== false,
       editQtyOnSales: i.editQtyOnSales !== false, blockDiscount: !!i.blockDiscount, taxExempt: !!i.taxExempt, pointsValue: i.pointsValue ?? 0, salesAccountId: i.salesAccountId ?? null,
-      purchaseAccountId: i.purchaseAccountId ?? null, stationId: i.stationId ?? null, userPrompt: i.userPrompt ?? null, notes: i.notes ?? null, isActive: i.isActive, rowVersion: i.rowVersion
+      purchaseAccountId: i.purchaseAccountId ?? null, stationId: i.stationId ?? null, shelfLifeDays: i.shelfLifeDays ?? null, expiryAlertDays: i.expiryAlertDays ?? null, portionsPerBatch: i.portionsPerBatch ?? null, userPrompt: i.userPrompt ?? null, notes: i.notes ?? null, isActive: i.isActive, rowVersion: i.rowVersion
     });
     if (i.hasPicture) void this.loadPicture(i.id); else this.revokePicture();
   }

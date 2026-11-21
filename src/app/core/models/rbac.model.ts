@@ -56,11 +56,17 @@ export const SCREEN_PERMISSIONS = {
   INVENTORY_REPORT_AGING: 'inventory.reports.aging.view',
   INVENTORY_REPORT_SERIAL_NUMBERS: 'inventory.reports.serial_numbers.view',
   INVENTORY_REPORT_BIN_STOCK: 'inventory.reports.bin_stock.view',
+  /** The kitchen (owner's decisions, 2026-11-21): mirrors the backend Permissions.cs. */
+  INVENTORY_PRODUCTION_RECORD: 'inventory.production.record',
+  INVENTORY_ISSUES_MANAGE: 'inventory.issues.manage',
+  INVENTORY_REPORT_KITCHEN: 'inventory.reports.kitchen.view',
 
   PURCHASING_RECEIVE: 'purchasing.receive',
   PURCHASING_PAYMENTS_VIEW: 'purchasing.payments.view',
   PURCHASING_PAYMENTS_MANAGE: 'purchasing.payments.manage',
   PURCHASING_REPORTS_VIEW: 'purchasing.reports.view',
+  PURCHASING_MARKETRUN_RECORD: 'purchasing.marketrun.record',
+  PURCHASING_MARKETRUN_CONFIRM: 'purchasing.marketrun.confirm',
 
   PRODUCTS_MANAGE: 'products.manage',
   PRODUCTS_PRICES_MANAGE: 'products.prices.manage',

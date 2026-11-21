@@ -1,4 +1,4 @@
-import { Routes } from '@angular/router';
+import { Routes, UrlMatchResult, UrlSegment } from '@angular/router';
 import { authGuard, guestGuard } from './core/guards/auth.guard';
 import { landingGuard } from './core/guards/landing.guard';
 import { onboardingGuard } from './core/guards/onboarding.guard';
@@ -9,6 +9,10 @@ import { screenRbacGuard } from './core/guards/screen-rbac.guard';
 import { subscriptionGateGuard } from './core/guards/subscription-gate.guard';
 import { FEATURES, RouteAccessData, SCREEN_PERMISSIONS, ScreenPermission } from './core/models/rbac.model';
 import { APP_NAV, permissionsOf } from './core/navigation/app-nav';
+
+/** /help and /help/:chapter as one route, so the Help screen is kept (with its search and job filter) when the chapter in the address changes. */
+const helpMatcher = (segments: UrlSegment[]): UrlMatchResult | null =>
+  segments[0]?.path === 'help' && segments.length <= 2 ? { consumed: segments, posParams: segments[1] ? { chapter: segments[1] } : {} } : null;
 
 /**
  * Every screen that carries a lazy loader in the navigation list (POS, Stock and Purchasing screens and their reports) is routed from that
@@ -120,6 +124,9 @@ export const routes: Routes = [
       { path: 'reports/:area', title: 'Reports', loadComponent: () => import('./features/reports/report-hub.component').then((m) => m.ReportHubComponent) },
       // The set-up screens of one area on one page (Branches, Tables, Settings, Branding ...), listed the same way.
       { path: 'setup/:area', title: 'Set-up', data: { hub: 'setup' }, loadComponent: () => import('./features/reports/report-hub.component').then((m) => m.ReportHubComponent) },
+      // The manual: how ZestPoint works, for any signed-in person (it holds no company data, so it asks for no permission). Not a menu entry (not in APP_NAV): it is opened from Help.
+      // /app/help and /app/help/:chapter are ONE route (a matcher), so moving from one chapter to another keeps the screen, and with it the search and the job picked.
+      { matcher: helpMatcher, title: 'The manual', loadComponent: () => import('./features/help/help.component').then((m) => m.HelpComponent) },
       {
         path: 'dashboard',
         title: 'Dashboard',
@@ -239,5 +246,7 @@ export const routes: Routes = [
   { path: 'gift-card', title: 'Check your gift card', loadComponent: () => import('./features/gift-card/public-gift-card.page').then((m) => m.PublicGiftCardPageComponent) },
   // A purchase order, opened by its supplier from the link they were sent, without signing in.
   { path: 'po/:token', title: 'Purchase order', loadComponent: () => import('./features/purchasing/public-purchase-order.page').then((m) => m.PublicPurchaseOrderPageComponent) },
+  // The whole manual laid out for A4. The PDF in public/manual is printed from this page (scripts/build-manual-pdf.mjs), so it is made from the same words the Help screen shows.
+  { path: 'manual-print', title: 'The ZestPoint manual', loadComponent: () => import('./features/help/manual-print.component').then((m) => m.ManualPrintComponent) },
   { path: '**', redirectTo: '' }
 ];

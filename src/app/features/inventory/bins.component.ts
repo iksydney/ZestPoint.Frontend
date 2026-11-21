@@ -9,6 +9,7 @@ import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { InventoryApi } from '../../core/services/ops.services';
+import { StationsService } from '../../core/services/stations.service';
 import { BinApi } from '../../core/services/purchasing.services';
 import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { BranchPickerComponent } from '../../shared/ui/ops-chrome.components';
@@ -17,7 +18,7 @@ import { EntitledActionDirective } from '../../shared/directives/entitled-action
 
 const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
 
-interface BinForm { id: string | null; code: string; name: string; isHighSecurity: boolean; isActive: boolean; sortOrder: number; rowVersion: string | null }
+interface BinForm { id: string | null; code: string; name: string; isHighSecurity: boolean; isActive: boolean; sortOrder: number; stationId: string | null; rowVersion: string | null }
 
 /**
  * Bin locations: the named places inside a branch's store (a shelf, a cage, a cellar). Stock is counted per bin; what is not in any bin is the
@@ -83,6 +84,11 @@ interface BinForm { id: string | null; code: string; name: string; isHighSecurit
           <div><label class="app-label" for="bf-code">Code (shown on labels and screens)</label><input id="bf-code" class="app-input font-data uppercase" maxlength="30" data-testid="bin-code" [ngModel]="f.code" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchForm({ code: $event })" /></div>
           <div><label class="app-label" for="bf-name">Name</label><input id="bf-name" class="app-input" maxlength="120" data-testid="bin-name" [ngModel]="f.name" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchForm({ name: $event })" /></div>
           <label class="flex items-start gap-2 text-sm"><input type="checkbox" class="mt-1" data-testid="bin-secure" [ngModel]="f.isHighSecurity" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchForm({ isHighSecurity: $event })" /> <span><strong>High security</strong><span class="block text-ink/70">Goods going in need a second person, signed in on their own device, to confirm them before they count as stock.</span></span></label>
+          @if (stations().length > 0) {
+            <div><label class="app-label" for="bin-station">A station's own stock place</label><select id="bin-station" class="app-input" data-testid="bin-station" [ngModel]="f.stationId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchForm({ stationId: $event || null })" [disabled]="f.isHighSecurity">
+              <option [ngValue]="null">No: an ordinary store bin</option>@for (s of stations(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select>
+              <p class="app-hint">Make this the kitchen's (or the bar's) own place at this branch: what the store issues to it lands here, and its sales and batches take from it first. One for each station at a branch.</p></div>
+          }
           @if (f.id) { <label class="flex items-center gap-2 text-sm"><input type="checkbox" [ngModel]="f.isActive" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchForm({ isActive: $event })" /> In use</label> }
           @if (formError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="bin-form-error">{{ formError() }}</p> }
           <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="form.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="bin-save" zpAction="inventory.bins.manage" [disabled]="busy() || f.code.trim().length === 0 || f.name.trim().length === 0">Save bin</button></div>
@@ -111,6 +117,8 @@ export class BinsComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   protected readonly branches = inject(BranchContextService);
+  protected readonly stations = inject(StationsService).list;
+  private readonly stationsService = inject(StationsService);
 
   protected readonly bins = signal<readonly BinDto[]>([]);
   protected readonly stock = signal<readonly BinStockRowDto[]>([]);
@@ -134,6 +142,7 @@ export class BinsComponent implements OnInit {
   protected readonly activeBins = computed(() => this.bins().filter((b) => b.isActive));
 
   constructor() {
+    void this.stationsService.load();
     effect(() => { this.branches.activeId(); untracked(() => void this.reload()); }, { allowSignalWrites: true });
   }
 
@@ -170,7 +179,7 @@ export class BinsComponent implements OnInit {
 
   protected openForm(b: BinDto | null): void {
     this.formError.set(null);
-    this.form.set(b ? { id: b.id, code: b.code, name: b.name, isHighSecurity: b.isHighSecurity, isActive: b.isActive, sortOrder: b.sortOrder, rowVersion: b.rowVersion } : { id: null, code: '', name: '', isHighSecurity: false, isActive: true, sortOrder: this.bins().length + 1, rowVersion: null });
+    this.form.set(b ? { id: b.id, code: b.code, name: b.name, isHighSecurity: b.isHighSecurity, isActive: b.isActive, sortOrder: b.sortOrder, stationId: b.stationId ?? null, rowVersion: b.rowVersion } : { id: null, code: '', name: '', isHighSecurity: false, isActive: true, sortOrder: this.bins().length + 1, stationId: null, rowVersion: null });
   }
 
   protected patchForm(p: Partial<BinForm>): void { this.form.update((f) => (f ? { ...f, ...p } : f)); }
@@ -182,7 +191,7 @@ export class BinsComponent implements OnInit {
     this.busy.set(true);
     this.formError.set(null);
     try {
-      await firstValueFrom(this.api.save(f.id, { branchId: branch, code: f.code.trim(), name: f.name.trim(), isHighSecurity: f.isHighSecurity, isActive: f.isActive, sortOrder: f.sortOrder, rowVersion: f.rowVersion }));
+      await firstValueFrom(this.api.save(f.id, { branchId: branch, code: f.code.trim(), name: f.name.trim(), isHighSecurity: f.isHighSecurity, isActive: f.isActive, sortOrder: f.sortOrder, stationId: f.isHighSecurity ? null : f.stationId, rowVersion: f.rowVersion }));
       this.form.set(null);
       this.toast.success('Bin saved.');
       await this.reload();

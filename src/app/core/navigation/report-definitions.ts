@@ -162,6 +162,16 @@ export const REPORTS = {
     status: { label: 'Item status', options: opts(['all', 'All items'], ['', 'Active only'], ['inactive', 'Inactive only']) }
   },
   itemsHistory: { path: 'inventory/reports/items-history', period: 'range', branch: true, item: true, itemRequired: true },
+  /** What the kitchen lost: by reason, item or station. */
+  kitchenWaste: { path: 'inventory/reports/kitchen-waste', period: 'range', branch: true, item: true, view: { label: 'Group by', default: 'reason', options: opts(['reason', 'Reason'], ['item', 'Item'], ['station', 'Station']) } },
+  /** What each batch was expected to give against what it gave. */
+  productionVariance: { path: 'inventory/reports/production-variance', period: 'range', branch: true, item: true, view: { label: 'Show', default: 'item', options: opts(['item', 'By item'], ['runs', 'Run by run']) } },
+  /** What to prepare today: par less what is on hand, with the same-weekday sales average beside it. */
+  prepList: { path: 'inventory/reports/prep-list', period: 'none', branch: true },
+  /** What sales and batches should have used, what was written off, and what the stock takes found unexplained. */
+  actualVsExpected: { path: 'inventory/reports/actual-vs-expected', period: 'range', branch: true, item: true },
+  /** Money spent on market runs that was not stock. */
+  marketRunExpenses: { path: 'purchasing/reports/market-run-expenses', period: 'range', branch: true, view: { label: 'Group by', default: 'category', options: opts(['category', 'Category'], ['buyer', 'Buyer'], ['branch', 'Branch'], ['lines', 'Line by line']) } },
   expiry: {
     path: 'inventory/reports/expiry', period: 'none', branch: true, group: true, search: 'Name, SKU or barcode', warningDays: { label: 'Warn within (days)', default: 30 },
     status: { label: 'Status', options: opts(['', 'All'], ['expired', 'Expired'], ['expiringsoon', 'Expiring soon'], ['ok', 'OK']) }

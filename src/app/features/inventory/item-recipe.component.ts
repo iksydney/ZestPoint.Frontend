@@ -8,7 +8,7 @@ import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogApi, InventoryApi } from '../../core/services/ops.services';
 
-interface IngredientRow { inventoryItemId: string; quantity: number; substituteItemId: string | null; substituteRatio: number | null }
+interface IngredientRow { inventoryItemId: string; quantity: number; usablePercent: number; substituteItemId: string | null; substituteRatio: number | null }
 type OptionRow = SaveProductRequest['modifiers'][number];
 
 /**
@@ -41,15 +41,16 @@ type OptionRow = SaveProductRequest['modifiers'][number];
             <p class="mb-2 text-xs text-ink/70">With a recipe, each sale takes these ingredients from stock and this item itself holds no stock. Saving creates a new version; past sales keep what they used then.
               @if (current(); as c) { <span data-testid="recipe-current">Current: version {{ c.version }}, cost per sale {{ c.costPerUnit | number: '1.2-2' }}.</span> } @else { No recipe yet: the item is sold as it is. }</p>
             @for (r of rows(); track $index) {
-              <div class="mb-2 grid grid-cols-[1fr_6rem_1fr_5rem_auto] items-end gap-2">
+              <div class="mb-2 grid grid-cols-[1fr_6rem_5rem_1fr_5rem_auto] items-end gap-2">
                 <select class="app-input" aria-label="Ingredient" [attr.data-testid]="'ing-item-' + $index" [ngModel]="r.inventoryItemId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchIng($index, { inventoryItemId: $event })"><option value="">Ingredient...</option>@for (i of items(); track i.id) { <option [value]="i.id">{{ i.name }}</option> }</select>
                 <input type="number" min="0" step="any" class="app-input" aria-label="Quantity per sale" [attr.data-testid]="'ing-qty-' + $index" [ngModel]="r.quantity" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchIng($index, { quantity: +$event })" />
+                <input type="number" min="1" max="100" step="any" class="app-input" aria-label="Usable percent" title="How much of what you buy is usable once trimmed (tomato 85). The quantity is the usable amount; the shelf gives up more." [attr.data-testid]="'ing-usable-' + $index" [ngModel]="r.usablePercent" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchIng($index, { usablePercent: +$event || 100 })" />
                 <select class="app-input" aria-label="Allowed substitute" [ngModel]="r.substituteItemId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchIng($index, { substituteItemId: $event || null, substituteRatio: $event ? 1 : null })"><option [ngValue]="null">No substitute</option>@for (i of items(); track i.id) { <option [ngValue]="i.id">{{ i.name }}</option> }</select>
                 <input type="number" min="0" step="any" class="app-input" aria-label="Substitute ratio" [disabled]="!r.substituteItemId" [ngModel]="r.substituteRatio" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchIng($index, { substituteRatio: $event ? +$event : null })" />
                 <button type="button" class="btn-ghost px-2" aria-label="Remove ingredient" (click)="removeIng($index)">x</button>
               </div>
             }
-            <p class="mb-2 text-xs text-ink/70">Ingredient, quantity per sale (in the ingredient's own unit), an allowed substitute and how much of it replaces one unit.</p>
+            <p class="mb-2 text-xs text-ink/70">Ingredient, quantity per sale (the usable amount, in the ingredient's own unit), how much of it is usable once trimmed (100 when all of it is; tomato 85 means 850 g usable takes 1,000 g off the shelf), an allowed substitute and how much of it replaces one unit.</p>
             <div class="flex gap-2"><button type="button" class="btn-outline text-sm" data-testid="add-ingredient" [disabled]="!loaded()" (click)="addIng()">Add ingredient</button>
               <button type="button" class="btn-primary text-sm" data-testid="save-recipe" [disabled]="busy() || !loaded() || validIngredients().length === 0" (click)="saveRecipe()">Save recipe</button></div>
             @if (recipeMsg()) { <p class="mt-2 text-sm" role="status" data-testid="recipe-msg">{{ recipeMsg() }}</p> }
@@ -128,14 +129,14 @@ export class ItemRecipeComponent {
         const cur = (await firstValueFrom(this.catalog.recipes(productId))).find((v) => v.isCurrent) ?? null;
         if (this.productId() !== productId) return;
         this.current.set(cur);
-        this.rows.set(cur?.ingredients.map((i) => ({ inventoryItemId: i.inventoryItemId, quantity: i.quantity, substituteItemId: i.substituteItemId, substituteRatio: i.substituteRatio })) ?? []);
+        this.rows.set(cur?.ingredients.map((i) => ({ inventoryItemId: i.inventoryItemId, quantity: i.quantity, usablePercent: i.usablePercent ?? 100, substituteItemId: i.substituteItemId, substituteRatio: i.substituteRatio })) ?? []);
       }
       this.loaded.set(true);
     } catch (err) { this.error.set(toApiError(err).message); }
   }
 
   // ---- recipe ----
-  protected addIng(): void { this.rows.update((r) => [...r, { inventoryItemId: '', quantity: 0, substituteItemId: null, substituteRatio: null }]); }
+  protected addIng(): void { this.rows.update((r) => [...r, { inventoryItemId: '', quantity: 0, usablePercent: 100, substituteItemId: null, substituteRatio: null }]); }
   protected removeIng(i: number): void { this.rows.update((r) => r.filter((_, x) => x !== i)); }
   protected patchIng(i: number, p: Partial<IngredientRow>): void { this.rows.update((r) => r.map((x, n) => (n === i ? { ...x, ...p } : x))); }
 

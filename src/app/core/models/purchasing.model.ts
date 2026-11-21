@@ -20,8 +20,8 @@ export const STATUS_TEXT: Readonly<Record<PurchaseOrderStatus, string>> = {
   Draft: 'Draft - unposted', Submitted: 'Posted - awaiting approval', Approved: 'Approved - awaiting receiving', PartiallyReceived: 'Awaiting verification / partial', Received: 'Received', Cancelled: 'Cancelled'
 };
 
-export interface BinDto { id: string; branchId: string; code: string; name: string; isHighSecurity: boolean; isActive: boolean; sortOrder: number; itemCount: number; rowVersion: string }
-export interface SaveBinRequest { branchId: string; code: string; name: string; isHighSecurity: boolean; isActive: boolean; sortOrder: number; rowVersion?: string | null }
+export interface BinDto { id: string; branchId: string; code: string; name: string; isHighSecurity: boolean; isActive: boolean; sortOrder: number; stationId: string | null; itemCount: number; rowVersion: string }
+export interface SaveBinRequest { branchId: string; code: string; name: string; isHighSecurity: boolean; isActive: boolean; sortOrder: number; stationId?: string | null; rowVersion?: string | null }
 
 export interface BinStockRowDto {
   inventoryItemId: string;

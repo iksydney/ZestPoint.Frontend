@@ -154,6 +154,20 @@ export const APP_NAV: readonly NavDefinition[] = [
   report('purchasing.report.onorder', 'Stock On Order Report', 'purchasing/reports/stock-on-order', 'purchasing', REPORTS.stockOnOrder, P.PURCHASING_REPORTS_VIEW, FEATURES.INVENTORY, '9', 'box'),
   report('purchasing.report.tax', 'Purchases Tax Report', 'purchasing/reports/purchases-tax', 'purchasing', REPORTS.purchasesTax, P.PURCHASING_REPORTS_VIEW, FEATURES.INVENTORY, 'x', 'file'),
   report('purchasing.report.payments', 'Purchase Payments Report', 'purchasing/reports/purchase-payments', 'purchasing', REPORTS.purchasePayments, P.PURCHASING_PAYMENTS_VIEW, FEATURES.INVENTORY, 'y', 'wallet'),
+  // ---- The kitchen (owner's decisions, 2026-11-21) -----------------------------------------------------------
+  { key: 'inventory.production', label: 'Production', route: '/app/inventory/production', icon: 'recipe', permission: P.INVENTORY_PRODUCTION_RECORD, feature: FEATURES.INVENTORY, group: 'stock', kind: 'screen', needsBranch: true,
+    load: () => import('../../features/kitchen/production.component').then((m) => m.ProductionComponent), description: 'Record a batch the kitchen made: the ingredients leave stock and the portions are added.' },
+  { key: 'inventory.issues', label: 'Store Issues', route: '/app/inventory/issues', icon: 'inbox', permission: P.INVENTORY_ISSUES_MANAGE, feature: FEATURES.INVENTORY, group: 'stock', kind: 'screen', needsBranch: true,
+    load: () => import('../../features/kitchen/store-issues.component').then((m) => m.StoreIssuesComponent), description: 'Ask the store for stock for a station, issue it, and confirm what arrived.' },
+  { key: 'inventory.foodcost', label: 'Food Cost', route: '/app/inventory/food-cost', icon: 'chart', permission: P.INVENTORY_REPORT_COST_PRICES, feature: FEATURES.INVENTORY, group: 'stock', kind: 'screen',
+    load: () => import('../../features/kitchen/food-cost.component').then((m) => m.FoodCostComponent), description: 'What each dish costs against its price, and a price that would reach the food cost you want.' },
+  { key: 'purchasing.marketruns', label: 'Market Runs', route: '/app/purchasing/market-runs', icon: 'wallet', permission: [P.PURCHASING_MARKETRUN_RECORD, P.PURCHASING_MARKETRUN_CONFIRM], feature: FEATURES.INVENTORY, group: 'purchasing', kind: 'screen', needsBranch: true,
+    load: () => import('../../features/purchasing/market-runs.component').then((m) => m.MarketRunsComponent), description: 'Cash buying at a market: what was bought, the money spent on the way, and a manager to confirm it.' },
+  report('stock.report.prep', 'Prep List', 'inventory/reports/prep-list', 'stock', REPORTS.prepList, P.INVENTORY_REPORT_KITCHEN, FEATURES.INVENTORY, 'x', 'list'),
+  report('stock.report.waste', 'Kitchen Waste Report', 'inventory/reports/kitchen-waste', 'stock', REPORTS.kitchenWaste, P.INVENTORY_REPORT_KITCHEN, FEATURES.INVENTORY, 'x', 'file'),
+  report('stock.report.production', 'Production Variance Report', 'inventory/reports/production-variance', 'stock', REPORTS.productionVariance, P.INVENTORY_REPORT_KITCHEN, FEATURES.INVENTORY, 'x', 'file'),
+  report('stock.report.usage', 'Actual Against Expected Use Report', 'inventory/reports/actual-vs-expected', 'stock', REPORTS.actualVsExpected, P.INVENTORY_REPORT_KITCHEN, FEATURES.INVENTORY, 'x', 'file'),
+  report('purchasing.report.marketruns', 'Market Run Expenses Report', 'purchasing/reports/market-run-expenses', 'purchasing', REPORTS.marketRunExpenses, P.PURCHASING_REPORTS_VIEW, FEATURES.INVENTORY, 'x', 'file'),
   report('purchasing.report.equivalent', 'Equivalent Part Numbers Report', 'purchasing/reports/equivalent-part-numbers', 'purchasing', REPORTS.equivalentPartNumbers, P.PURCHASING_REPORTS_VIEW, FEATURES.INVENTORY, 'q', 'tag'),
 
   // ---- Ledger ------------------------------------------------------------------------------------

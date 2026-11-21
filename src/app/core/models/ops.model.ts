@@ -181,6 +181,8 @@ export interface SaveProductRequest {
 }
 
 export interface RecipeIngredientDto {
+  /** 1 to 100: how much of what is bought is usable once trimmed (tomato 85). The quantity is the usable amount; the shelf gives up more. */
+  usablePercent?: number;
   inventoryItemId: string;
   itemName: string;
   unit: StockUnit;
@@ -202,7 +204,7 @@ export interface RecipeDto {
 
 export interface SaveRecipeRequest {
   notes: string | null;
-  ingredients: { inventoryItemId: string; quantity: number; substituteItemId: string | null; substituteRatio: number | null }[];
+  ingredients: { inventoryItemId: string; quantity: number; usablePercent?: number | null; substituteItemId: string | null; substituteRatio: number | null }[];
 }
 
 // ---- Orders -----------------------------------------------------------------------------------
@@ -653,6 +655,12 @@ export interface InventoryItemDto {
   purchaseAccountId?: string | null;
   /** Where this item is prepared, overriding its stock group's station; null = as the group says. */
   stationId?: string | null;
+  /** Days the item keeps once it arrives or is made: receiving fills its expiry date from this. Setting it makes the item keep batches. */
+  shelfLifeDays?: number | null;
+  /** Warn this many days before a batch expires; null = a day for an item with a shelf life, else the company's own warning days. */
+  expiryAlertDays?: number | null;
+  /** How many portions one batch gives, for an item made in batches (its ingredients are the batch recipe); null = not made in batches. */
+  portionsPerBatch?: number | null;
   userPrompt?: string | null;
   notes?: string | null;
   onSpecial?: boolean;
@@ -739,6 +747,12 @@ export interface SaveInventoryItemRequest {
   purchaseAccountId?: string | null;
   /** Where this item is prepared, overriding its stock group's station; null = as the group says. */
   stationId?: string | null;
+  /** Days the item keeps once it arrives or is made: receiving fills its expiry date from this. Setting it makes the item keep batches. */
+  shelfLifeDays?: number | null;
+  /** Warn this many days before a batch expires; null = a day for an item with a shelf life, else the company's own warning days. */
+  expiryAlertDays?: number | null;
+  /** How many portions one batch gives, for an item made in batches (its ingredients are the batch recipe); null = not made in batches. */
+  portionsPerBatch?: number | null;
   userPrompt?: string | null;
   notes?: string | null;
   /** Cost of the most recent purchase; applied only with the cost right. */

@@ -81,6 +81,8 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
               </button>
               @if (help()) {
                 <div class="absolute right-0 top-full z-40 mt-1 w-72 rounded-xl border border-ink/15 bg-panel p-1.5 shadow-xl" role="menu" aria-label="Help" data-testid="help-menu">
+                  <a class="help-item no-underline" role="menuitem" routerLink="/app/help" data-testid="help-manual" (click)="help.set(false)">
+                    <span class="font-semibold">The manual</span><span class="text-xs text-ink/70">How everything works and connects, with a PDF to download.</span></a>
                   <button type="button" class="help-item" role="menuitem" data-testid="help-tour-app" (click)="startTour(appTour)">
                     <span class="font-semibold">Tour of ZestPoint</span><span class="text-xs text-ink/70">The menu, search and where things are. About a minute.</span></button>
                   @if (screenTour(); as t) {

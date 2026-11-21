@@ -47,14 +47,16 @@ export const APP_TOUR = 'app';
 
 export const TOURS: readonly TourDefinition[] = [
   {
-    key: APP_TOUR, title: 'Welcome to ZestPoint', version: 5,
-    changes: [{ version: 2, steps: [{ id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Set-up has moved', body: 'Branches, Settings and Branding have left the menu. Things you set up once and change now and then are behind one Set-up entry: branches, tables, settings and your brand, each with a line on what it is for. Search finds them too.' }] }, { version: 3, steps: [{ id: 'head', target: '[data-tour="nav-area-head"]', menu: true, optional: true, title: 'Head Office', body: 'All your branches together: two reports (every branch side by side, and a comparison over time) behind its Reports entry, and Prices and Menus, which has moved here from Stock.' }] }, { version: 4, steps: [{ id: 'notices', target: '[data-testid="notices-bell"]', title: 'Notices', body: 'The new speech-bubble button at the top is where ZestPoint tells you things: alerts, summaries and messages from the system. The number is how many you have not read.' }] }, { version: 5, steps: [{ id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Printers are in Set-up', body: 'Printers is new under Admin > Set-up: add the receipt, report and label printers your phones print to, once for the company. Every phone at the branch finds them.' }] }],
+    key: APP_TOUR, title: 'Welcome to ZestPoint', version: 6,
+    changes: [{ version: 2, steps: [{ id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Set-up has moved', body: 'Branches, Settings and Branding have left the menu. Things you set up once and change now and then are behind one Set-up entry: branches, tables, settings and your brand, each with a line on what it is for. Search finds them too.' }] }, { version: 3, steps: [{ id: 'head', target: '[data-tour="nav-area-head"]', menu: true, optional: true, title: 'Head Office', body: 'All your branches together: two reports (every branch side by side, and a comparison over time) behind its Reports entry, and Prices and Menus, which has moved here from Stock.' }] }, { version: 4, steps: [{ id: 'notices', target: '[data-testid="notices-bell"]', title: 'Notices', body: 'The new speech-bubble button at the top is where ZestPoint tells you things: alerts, summaries and messages from the system. The number is how many you have not read.' }] }, { version: 5, steps: [{ id: 'setup', target: '[data-nav^="setup."]', menu: true, optional: true, title: 'Printers are in Set-up', body: 'Printers is new under Admin > Set-up: add the receipt, report and label printers your phones print to, once for the company. Every phone at the branch finds them.' }] },
+      { version: 6, steps: [{ id: 'kitchen', target: '[data-tour="nav-area-kitchen"]', menu: true, optional: true, title: 'The Kitchen is new', body: 'Kitchen is a new area: record the batches the kitchen makes, ask the store for stock, see what each dish costs and what to prepare. Buying at a market for cash is under Purchasing, and Help now opens the manual.' }] }],
     steps: [
       { id: 'welcome', title: 'Welcome', body: 'This takes about a minute. It shows where things are; you can leave at any time and take it again from Help.' },
       { id: 'menu', target: '[data-tour="nav"]', menu: true, title: 'The menu', body: 'Everything you can do is here, grouped by the job you are doing. You only see what your role allows. Click an area\'s name to fold it away.' },
       { id: 'sell', target: '[data-tour="nav-area-sell"]', menu: true, optional: true, title: 'Sell', body: 'The till, and starting and ending your day: open your shift with a float, sell, then count the drawer when you finish.' },
       { id: 'customers', target: '[data-tour="nav-area-customers"]', menu: true, optional: true, title: 'Customers', body: 'Customer records and their loyalty points, goods being paid off on layby, and what customers are waiting for.' },
       { id: 'stock', target: '[data-tour="nav-area-stock"]', menu: true, optional: true, title: 'Stock', body: 'The items you sell, their groups and prices, counts and adjustments, where stock is kept, and goods out with agents.' },
+      { id: 'kitchen', target: '[data-tour="nav-area-kitchen"]', menu: true, optional: true, title: 'Kitchen', body: 'Batches the kitchen made, stock asked of the store, what each dish costs, and the prep list and kitchen reports.' },
       { id: 'purchasing', target: '[data-tour="nav-area-purchasing"]', menu: true, optional: true, title: 'Purchasing', body: 'Order from suppliers, check deliveries in and record what you pay.' },
       { id: 'finance', target: '[data-tour="nav-area-finance"]', menu: true, optional: true, title: 'Finance', body: 'The ledger. Nothing is typed into it: every sale, payment and delivery posts its own entry.' },
       { id: 'head', target: '[data-tour="nav-area-head"]', menu: true, optional: true, title: 'Head Office', body: 'All your branches together: reports that put every branch side by side and compare them over time, and the prices and menus they share under Set-up.' },
@@ -63,7 +65,7 @@ export const TOURS: readonly TourDefinition[] = [
       { id: 'reports', target: '[data-nav^="reports."]', menu: true, optional: true, title: 'Reports', body: 'Each area keeps its reports behind one Reports entry: a page listing them, each with a line on what it shows.' },
       { id: 'search', target: '[data-tour="nav-search"]', menu: true, title: 'Search', body: 'The quickest way anywhere: press Ctrl+K (or click here) and type part of a screen\'s or report\'s name.' },
       { id: 'notices', target: '[data-testid="notices-bell"]', title: 'Notices', body: 'The speech-bubble button is where ZestPoint tells you things: alerts, summaries and messages from the system. The number is how many you have not read; open it to read them, or mark them all read.' },
-      { id: 'help', target: '[data-tour="help"]', title: 'Help', body: 'Take this tour again, or the tour of the screen you are on, whenever you like. When something changes in ZestPoint you will be shown what moved.' },
+      { id: 'help', target: '[data-tour="help"]', title: 'Help', body: 'Take this tour again, or the tour of the screen you are on, whenever you like, or open the manual: how everything works and connects. When something changes in ZestPoint you will be shown what moved.' },
       { id: 'account', target: '[data-tour="account"]', title: 'You', body: 'Who is signed in on this device. Sign out here when you leave, especially on a shared till.' }
     ]
   },
@@ -79,8 +81,9 @@ export const TOURS: readonly TourDefinition[] = [
     ]
   },
   {
-    key: 'stock.items', nav: 'stock.items', title: 'Items', version: 3,
-    changes: [{ version: 2, steps: [{ id: 'discount', target: '[data-testid="items-table"]', title: 'A discount on the item', body: 'The stock card now has Discount %, under the prices. The till takes it off that item by itself on every sale, always or only between the dates you give, and never below the minimum price.' }, { id: 'recipe', target: '[data-testid="items-table"]', title: 'Recipes moved here', body: 'The Catalogue screen is gone. A drink or dish made from ingredients is now an item like any other: open its stock card and use the Recipe and options tab. Everything about an item is on its card.' }] }, { version: 3, steps: [{ id: 'import', target: '[data-testid="item-import"]', optional: true, title: 'Add many items from a file', body: 'Download the template, fill it in a spreadsheet and choose the file. It is checked first: every problem is listed by row, and nothing is added until the file is right.' }, { id: 'after-save', target: '[data-testid="items-table"]', title: 'Saving an item', body: 'Save tells you what is missing instead of staying grey. After a new item the card closes and offers to add another. The card has an Activity tab now, in place of History, Sales and Purchases.' }] }],
+    key: 'stock.items', nav: 'stock.items', title: 'Items', version: 4,
+    changes: [{ version: 2, steps: [{ id: 'discount', target: '[data-testid="items-table"]', title: 'A discount on the item', body: 'The stock card now has Discount %, under the prices. The till takes it off that item by itself on every sale, always or only between the dates you give, and never below the minimum price.' }, { id: 'recipe', target: '[data-testid="items-table"]', title: 'Recipes moved here', body: 'The Catalogue screen is gone. A drink or dish made from ingredients is now an item like any other: open its stock card and use the Recipe and options tab. Everything about an item is on its card.' }] }, { version: 3, steps: [{ id: 'import', target: '[data-testid="item-import"]', optional: true, title: 'Add many items from a file', body: 'Download the template, fill it in a spreadsheet and choose the file. It is checked first: every problem is listed by row, and nothing is added until the file is right.' }, { id: 'after-save', target: '[data-testid="items-table"]', title: 'Saving an item', body: 'Save tells you what is missing instead of staying grey. After a new item the card closes and offers to add another. The card has an Activity tab now, in place of History, Sales and Purchases.' }] },
+      { version: 4, steps: [{ id: 'kitchen', target: '[data-testid="items-table"]', title: 'For the kitchen', body: 'The stock card has a shelf life and a warning time for things that go off, and portions per batch for a cake baked once and sold by the slice (its recipe tab then says what a batch takes). Each recipe line has a usable percent: tomato at 85 means 850 g usable takes 1,000 g off the shelf.' }] }],
     steps: [
       { id: 'search', target: '[data-testid="items-search"]', title: 'Find an item', body: 'Search by name, part number or barcode, or narrow the list to one stock group.' },
       { id: 'new', target: '[data-testid="item-new"]', optional: true, title: 'Add an item', body: 'Opens the stock card: name, prices, the special price and its dates, the discount percentage, tax, loyalty points and the rules the till follows. Creating an item adds no stock; stock comes in through purchasing and adjustments.' },
@@ -199,6 +202,38 @@ export const TOURS: readonly TourDefinition[] = [
       { id: 'add', target: '[data-testid="station-new"]', title: 'Add a station', body: 'Name it, and choose how it behaves: whether a bill waits for it before it can be paid (a bar usually does, a kitchen usually does not), and whether stock leaves when it is ready or when the bill is sent.' },
       { id: 'list', target: '[data-testid="station-list"]', title: 'Your stations', body: 'Give each stock group a station on the Stock Groups screen, and one item its own on its stock card. The default station takes whatever has none. A station is switched off, never deleted.' },
       { id: 'who', title: 'Who works at a station', body: 'Each role says which stations it works at. On Staff, Roles, tick the kitchen on a cook\'s role and the people who hold it hear only the kitchen\'s orders, on screen and on their phone. A role with no station ticked works at every station.' }
+    ]
+  },
+  {
+    key: 'inventory.production', nav: 'inventory.production', title: 'Production', version: 1,
+    steps: [
+      { id: 'what', title: 'Batches the kitchen made', body: 'A cake is baked once and sold by the slice; a pot of stew by the plate. When a batch is finished, record it here: the ingredients leave stock, the portions you got are added, and a portion\'s cost is worked out.' },
+      { id: 'form', target: '[data-testid="production-form"]', optional: true, title: 'Record a batch', body: 'Choose what was made, how many batches, and how many portions actually came out. If fewer came out than the recipe says, the difference is kept and reported. Nobody has to approve it.' },
+      { id: 'runs', target: '[data-testid="production-runs"]', title: 'Recent batches', body: 'Each batch with what was expected, what was made and what a portion cost. A batch you send twice is recorded once. Which items are made in batches, and what a batch takes, is set on the stock card.' }
+    ]
+  },
+  {
+    key: 'inventory.issues', nav: 'inventory.issues', title: 'Store issues', version: 1,
+    steps: [
+      { id: 'what', title: 'Stock from the store to a station', body: 'The kitchen or the bar asks the store for stock, the store hands over what it can, and the station confirms what arrived. Then it is counted in the station\'s own place, apart from the store\'s.' },
+      { id: 'ask', target: '[data-testid="issue-new"]', title: 'Ask the store', body: 'Choose the station, the items and how much. The person who asks cannot hand it over, and the person who handed it over cannot confirm it.' },
+      { id: 'list', target: '[data-testid="issue-list"]', title: 'Where each request is', body: 'Hand over, confirm what arrived, or cancel a request that has not been handed over. If less arrives than was handed over, the difference is shown and the store is told.' }
+    ]
+  },
+  {
+    key: 'inventory.foodcost', nav: 'inventory.foodcost', title: 'Food cost', version: 1,
+    steps: [
+      { id: 'what', title: 'What each dish costs', body: 'The cost of one portion from what its ingredients cost, allowing for what is lost in trimming, against the price without tax. The food cost % shows red when it is above what you want.' },
+      { id: 'target', target: '[data-testid="foodcost-target"]', title: 'The food cost you want', body: 'Type the food cost you aim for, for example 30, and press Work it out. Each dish then shows the price that would reach it.' },
+      { id: 'table', target: '[data-testid="foodcost-table"]', title: 'Cost now, and last bought', body: 'The average cost is what stock is valued at; the last-bought cost beside it shows a price rise early. Use this price sets the company price in one click, if you may set prices.' }
+    ]
+  },
+  {
+    key: 'purchasing.marketruns', nav: 'purchasing.marketruns', title: 'Market runs', version: 1,
+    steps: [
+      { id: 'what', title: 'Cash buying at a market', body: 'When food is bought for cash with no supplier or order, record it here. The stock is counted in at once so the kitchen can cook; a manager confirms the run afterwards.' },
+      { id: 'new', target: '[data-testid="run-new"]', optional: true, title: 'Record a run', body: 'Say what was bought and what each cost, the cash you were given and the change you hand back, and any other money spent: transport, loaders, levies, water. Every expense needs a reason. Add a photo of the receipt.' },
+      { id: 'list', target: '[data-testid="runs-list"]', title: 'Each run', body: 'The cash is reconciled on every run: any money not accounted for is shown in red. A manager who did not buy confirms it, or queries it with a question the buyer must answer.' }
     ]
   },
   {

@@ -10,7 +10,7 @@ import { NavDefinition, NavIcon } from './app-nav';
  * and every tour step must point at something on screen (e2e/tour.spec.ts).
  */
 
-export type NavAreaKey = 'sell' | 'customers' | 'stock' | 'purchasing' | 'finance' | 'head' | 'admin';
+export type NavAreaKey = 'sell' | 'customers' | 'stock' | 'kitchen' | 'purchasing' | 'finance' | 'head' | 'admin';
 
 export interface NavArea {
   readonly key: NavAreaKey;
@@ -37,14 +37,18 @@ export const NAV_AREAS: readonly NavArea[] = [
     key: 'stock', label: 'Stock', icon: 'box', blurb: 'What you hold and sell: items, groups, counts and where things are.',
     screens: ['inventory', 'stock.items', 'stock.groups', 'stock.adjust', 'stock.global', 'stock.bins', 'stock.labels', 'stock.consignment']
   },
-  { key: 'purchasing', label: 'Purchasing', icon: 'truck', blurb: 'Order from suppliers, receive goods and pay for them.', screens: ['purchasing.orders', 'purchasing.receiving', 'purchasing.suppliers', 'purchasing.payments'] },
+  {
+    key: 'kitchen', label: 'Kitchen', icon: 'recipe', blurb: 'What the kitchen makes and uses: batches, stock asked of the store, what each dish costs, and what to prepare.',
+    screens: ['inventory.production', 'inventory.issues', 'inventory.foodcost']
+  },
+  { key: 'purchasing', label: 'Purchasing', icon: 'truck', blurb: 'Order from suppliers, receive goods and pay for them.', screens: ['purchasing.orders', 'purchasing.receiving', 'purchasing.marketruns', 'purchasing.suppliers', 'purchasing.payments'] },
   { key: 'finance', label: 'Finance', icon: 'wallet', blurb: 'The ledger: accounts and the entries posted from sales, purchases and stock.', screens: ['ledger.accounts'] },
   { key: 'head', label: 'Head Office', icon: 'branch', blurb: 'All your branches together: how each is doing side by side, and the prices and menus they share.', screens: [], setup: ['stock.prices'] },
   { key: 'admin', label: 'Admin', icon: 'settings', blurb: 'People, branches, settings, your brand and your subscription.', screens: ['staff', 'subscription', 'support'], setup: ['branches', 'pos.tables', 'pos.stations', 'pos.printers', 'operations', 'dailysummary', 'messages', 'branding'] }
 ];
 
 /** Reports that belong to another area than their key prefix suggests. */
-const REPORT_AREA_OVERRIDES: Readonly<Record<string, NavAreaKey>> = { 'pos.report.laybys': 'customers', 'pos.report.backorders': 'customers', 'pos.report.loyalty': 'customers', 'pos.report.giftcards': 'customers' };
+const REPORT_AREA_OVERRIDES: Readonly<Record<string, NavAreaKey>> = { 'stock.report.prep': 'kitchen', 'stock.report.waste': 'kitchen', 'stock.report.production': 'kitchen', 'stock.report.usage': 'kitchen', 'pos.report.laybys': 'customers', 'pos.report.backorders': 'customers', 'pos.report.loyalty': 'customers', 'pos.report.giftcards': 'customers' };
 const REPORT_AREA_BY_PREFIX: Readonly<Record<string, NavAreaKey>> = { pos: 'sell', stock: 'stock', purchasing: 'purchasing', ledger: 'finance', head: 'head' };
 
 /** A report is reached from its area's Reports page, not from the menu. */
@@ -72,6 +76,10 @@ const MENU_LABELS: Readonly<Record<string, string>> = {
   'stock.labels': 'Labels',
   'purchasing.orders': 'Purchase Orders',
   'purchasing.suppliers': 'Suppliers',
+  'inventory.production': 'Production',
+  'inventory.issues': 'Store Issues',
+  'inventory.foodcost': 'Food Cost',
+  'purchasing.marketruns': 'Market Runs',
   'purchasing.payments': 'Supplier Payments',
   'operations': 'Settings'
 };
@@ -139,6 +147,15 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
   'stock.report.aging': 'How long stock has been sitting.',
   'stock.report.bins': 'What is in each bin.',
   'stock.report.serials': 'Serial-numbered units and where each one is.',
+  'inventory.production': 'Batches the kitchen made: the ingredients that left stock, the portions that were added, what a portion cost, and how many came out against how many were expected.',
+  'inventory.issues': 'Stock a station asks the store for: the store hands it over, and the station confirms what arrived. What went missing on the way is shown.',
+  'inventory.foodcost': 'What each dish costs against its price, the food cost you want, and a price that would reach it, applied with one button.',
+  'stock.report.prep': 'What to prepare today: the par each item should have ready, less what is on hand, with what usually sells on this weekday beside it.',
+  'stock.report.waste': 'What the kitchen lost: prep trim, spoiled stock, staff meals and tasting, food remade or thrown away.',
+  'stock.report.production': 'Portions each batch was expected to give against the portions that came out.',
+  'stock.report.usage': 'For each item: what sales and batches should have used, what was written off, and what the stock takes found unexplained.',
+  'purchasing.marketruns': 'Cash buying at a market: what was bought, the money spent on the way (transport, carriers, levies) with a reason for each, and a manager who confirms it.',
+  'purchasing.report.marketruns': 'The money spent on market runs that was not stock, by category, buyer or line, with the reason given for each.',
   'stock.report.consignment': 'Goods agents are holding: sent, sold, returned and still out.',
 
   'purchasing.orders': 'Raise, approve and follow purchase orders.',

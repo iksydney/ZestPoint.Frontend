@@ -166,6 +166,6 @@ export class NavSidebarComponent {
       if (saved) return new Set(JSON.parse(saved) as NavAreaKey[]);
     } catch { /* ignore */ }
     // A first visit shows every area open: a new person sees the whole of what they can do. They close what they do not need.
-    return new Set<NavAreaKey>(['sell', 'customers', 'stock', 'purchasing', 'finance', 'head', 'admin']);
+    return new Set<NavAreaKey>(['sell', 'customers', 'stock', 'kitchen', 'purchasing', 'finance', 'head', 'admin']);
   }
 }
