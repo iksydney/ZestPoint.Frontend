@@ -180,20 +180,25 @@ export const TOURS: readonly TourDefinition[] = [
     ]
   },
   {
-    key: 'pos.kitchen', nav: 'pos.kitchen', title: 'Kitchen display', version: 1,
+    key: 'pos.kitchen', nav: 'pos.kitchen', title: 'Kitchen display', version: 2,
+    changes: [{ version: 2, steps: [{ id: 'what', title: 'Only your station\'s tickets', body: 'If your role works at one station, such as the kitchen, this screen shows only that station\'s tickets, and you are told about a new one by name. Someone whose role works at every station still chooses.' }] }],
     steps: [
-      { id: 'what', title: 'Your station\'s tickets', body: 'Choose the station this screen is for (Kitchen, Grill...). Its tickets appear by themselves, oldest first, and the screen remembers your choice.' },
+      { id: 'what', title: 'Your station\'s tickets', body: 'Choose the station this screen is for (Kitchen, Grill...). Its tickets appear by themselves, oldest first, and the screen remembers your choice. If your role works at one station, you see only that one.' },
       { id: 'allday', target: '[data-testid="kitchen-allday"]', title: 'All day', body: 'What is still to make across every ticket added up: how many burgers, how many fries.' },
       { id: 'tickets', target: '[data-testid="kitchen-tickets"]', title: 'Tickets', body: 'Start takes a ticket. Tap an item to tick it off. Bump tells the waiter it is ready. A ticket turns amber, then red, as it waits. Can\'t make asks how many and why.' }
     ]
   },
   {
-    key: 'pos.stations', nav: 'pos.stations', title: 'Preparation stations', version: 2,
-    changes: [{ version: 2, steps: [{ id: 'add', target: '[data-testid="station-new"]', title: 'Colours for the kitchen display', body: 'A station now also has the minutes after which its tickets turn amber and then red on the kitchen display. Open a station with Edit to set them.' }] }],
+    key: 'pos.stations', nav: 'pos.stations', title: 'Preparation stations', version: 3,
+    changes: [
+      { version: 2, steps: [{ id: 'add', target: '[data-testid="station-new"]', title: 'Colours for the kitchen display', body: 'A station now also has the minutes after which its tickets turn amber and then red on the kitchen display. Open a station with Edit to set them.' }] },
+      { version: 3, steps: [{ id: 'who', title: 'Who works at a station', body: 'Each role can now say which stations it works at. On Staff, Roles, tick the kitchen on a cook\'s role and the people who hold it hear only the kitchen\'s orders, on screen and on their phone. A role with no station ticked works at every station, as before.' }] }
+    ],
     steps: [
       { id: 'what', title: 'Where orders are prepared', body: 'A station is a place that makes what you sell: the bar, the kitchen, a grill. When someone presses Send, each station gets its own ticket with its items.' },
       { id: 'add', target: '[data-testid="station-new"]', title: 'Add a station', body: 'Name it, and choose how it behaves: whether a bill waits for it before it can be paid (a bar usually does, a kitchen usually does not), and whether stock leaves when it is ready or when the bill is sent.' },
-      { id: 'list', target: '[data-testid="station-list"]', title: 'Your stations', body: 'Give each stock group a station on the Stock Groups screen, and one item its own on its stock card. The default station takes whatever has none. A station is switched off, never deleted.' }
+      { id: 'list', target: '[data-testid="station-list"]', title: 'Your stations', body: 'Give each stock group a station on the Stock Groups screen, and one item its own on its stock card. The default station takes whatever has none. A station is switched off, never deleted.' },
+      { id: 'who', title: 'Who works at a station', body: 'Each role says which stations it works at. On Staff, Roles, tick the kitchen on a cook\'s role and the people who hold it hear only the kitchen\'s orders, on screen and on their phone. A role with no station ticked works at every station.' }
     ]
   },
   {

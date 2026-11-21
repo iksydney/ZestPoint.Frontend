@@ -25,6 +25,8 @@ export interface RoleDto {
   readonly isSuperAdmin: boolean;
   readonly permissions: readonly string[];
   readonly memberCount: number;
+  /** The stations (kitchen, bar, ...) this role works at: its holders hear and see only those stations' orders. Empty = every station. */
+  readonly stationIds: readonly string[];
   /** False when the caller may not edit this role (owner role, or it holds permissions the caller lacks). */
   readonly canEdit: boolean;
   readonly rowVersion: string;
@@ -34,6 +36,8 @@ export interface SaveRoleRequest {
   name: string;
   description: string | null;
   permissions: string[];
+  /** Omitted = left as it is. */
+  stationIds?: string[];
   rowVersion?: string | null;
 }
 

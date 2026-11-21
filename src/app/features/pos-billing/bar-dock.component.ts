@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inj
 import { RouterLink } from '@angular/router';
 import { BarOrderDto } from '../../core/models/ops.model';
 import { BarStore, elapsed, placeOf } from '../../core/services/bar.services';
+import { StationsService } from '../../core/services/stations.service';
 import { ToastService } from '../../shared/ui/feedback';
 import { BarOrderCardComponent } from './bar-order-card.component';
 
@@ -25,9 +26,9 @@ import { BarOrderCardComponent } from './bar-order-card.component';
               <div class="pointer-events-auto rounded-xl border-2 border-primary bg-panel p-3 text-ink shadow-xl" role="alert" [attr.data-testid]="'bar-prompt-mine-' + place(o)">
                 @if (o.status === 'Ready') {
                   <p class="text-base font-bold">{{ place(o) }} is ready</p>
-                  <p class="text-sm text-ink/80">Collect from {{ o.takenByName ?? 'the bar' }}.@if (refused(o); as r) { <span class="font-semibold text-danger"> Could not make: {{ r }}.</span> }</p>
+                  <p class="text-sm text-ink/80">Collect from {{ o.takenByName ?? 'the ' + stationWord(o) }}.@if (refused(o); as r) { <span class="font-semibold text-danger"> Could not make: {{ r }}.</span> }</p>
                 } @else {
-                  <p class="text-base font-bold">{{ place(o) }}: the bar can't make something</p>
+                  <p class="text-base font-bold">{{ place(o) }}: the {{ stationWord(o) }} can't make something</p>
                   <p class="text-sm font-semibold text-danger">{{ refused(o) }}</p>
                 }
                 <div class="mt-2 flex gap-2">
@@ -39,7 +40,7 @@ import { BarOrderCardComponent } from './bar-order-card.component';
             @for (o of bar.arrivals(); track o.id) {
               <div class="pointer-events-auto rounded-xl border-2 border-primary bg-panel text-ink shadow-xl" role="alert" [attr.data-testid]="'bar-prompt-' + place(o)">
                 <button type="button" class="app-focus block w-full rounded-t-xl p-3 text-left" data-testid="bar-prompt-open" (click)="expand(o.id)">
-                  <span class="block text-xs font-semibold uppercase tracking-wide text-ink/70">New bar order</span>
+                  <span class="block text-xs font-semibold uppercase tracking-wide text-ink/70" data-testid="bar-prompt-title">New {{ o.stationName ?? 'bar' }} order</span>
                   <span class="block text-base font-bold">{{ place(o) }}</span>
                   <span class="block text-sm text-ink/80">from {{ o.requestedByName }} &middot; {{ summary(o) }}</span>
                   <span class="mt-1 block text-sm font-semibold underline">Tap to open</span>
@@ -52,9 +53,9 @@ import { BarOrderCardComponent } from './bar-order-card.component';
 
         <!-- The expanded panel -->
         @if (open()) {
-          <section class="pointer-events-auto flex max-h-[70vh] w-[26rem] max-w-full flex-col rounded-2xl border border-ink/15 bg-canvas text-ink shadow-2xl" role="dialog" aria-label="Bar orders" data-testid="bar-panel">
+          <section class="pointer-events-auto flex max-h-[70vh] w-[26rem] max-w-full flex-col rounded-2xl border border-ink/15 bg-canvas text-ink shadow-2xl" role="dialog" [attr.aria-label]="title()" data-testid="bar-panel">
             <header class="flex items-center justify-between gap-2 border-b border-ink/10 px-3 py-2">
-              <h2 class="text-base font-bold">Bar orders</h2>
+              <h2 class="text-base font-bold" data-testid="bar-panel-title">{{ title() }}</h2>
               <div class="flex items-center gap-1">
                 <span class="app-badge" [class]="bar.liveState() === 'live' ? 'app-badge-success' : 'app-badge-warning'" data-testid="bar-live" [attr.data-state]="bar.liveState()">{{ bar.liveState() === 'live' ? 'Live' : 'Reconnecting' }}</span>
                 <button type="button" class="btn-ghost px-2 py-1 text-xs" [attr.aria-pressed]="bar.muted()" data-testid="bar-mute" (click)="bar.toggleMute()">{{ bar.muted() ? 'Sound off' : 'Sound on' }}</button>
@@ -64,7 +65,7 @@ import { BarOrderCardComponent } from './bar-order-card.component';
 
             @if (bar.isBarMan() && bar.isAttendant()) {
               <div class="flex gap-1 border-b border-ink/10 px-3 py-1.5" role="tablist" aria-label="Which orders">
-                <button type="button" role="tab" class="app-badge cursor-pointer px-3 py-1" [class]="tab() === 'bar' ? 'bg-primary text-on-primary' : 'bg-ink/10'" [attr.aria-selected]="tab() === 'bar'" data-testid="bar-tab-bar" (click)="tab.set('bar')">At the bar ({{ bar.queue().length }})</button>
+                <button type="button" role="tab" class="app-badge cursor-pointer px-3 py-1" [class]="tab() === 'bar' ? 'bg-primary text-on-primary' : 'bg-ink/10'" [attr.aria-selected]="tab() === 'bar'" data-testid="bar-tab-bar" (click)="tab.set('bar')">At {{ atWord() }} ({{ bar.queue().length }})</button>
                 <button type="button" role="tab" class="app-badge cursor-pointer px-3 py-1" [class]="tab() === 'mine' ? 'bg-primary text-on-primary' : 'bg-ink/10'" [attr.aria-selected]="tab() === 'mine'" data-testid="bar-tab-mine" (click)="tab.set('mine')">Sent by me ({{ bar.mine().length }})</button>
               </div>
             }
@@ -76,11 +77,11 @@ import { BarOrderCardComponent } from './bar-order-card.component';
                   <zp-bar-order-card [order]="o" side="bar" [me]="bar.myId()" [now]="bar.now()" [busy]="busy()"
                                      (take)="run(bar.take($event))" (release)="run(bar.release($event))" (ready)="run(bar.ready($event), 'Dispatched. The attendant has been told.')"
                                      (cantMake)="run(bar.cantMake($event.id, $event.itemIds, $event.reason, $event.parts), 'The attendant has been told.')" />
-                } @empty { <p class="py-6 text-center text-sm text-ink/70" data-testid="bar-empty">No orders are waiting at the bar.</p> }
+                } @empty { <p class="py-6 text-center text-sm text-ink/70" data-testid="bar-empty">No orders are waiting at {{ atWord() }}.</p> }
               } @else {
                 @for (o of bar.mine(); track o.id) {
                   <zp-bar-order-card [order]="o" side="mine" [me]="bar.myId()" [now]="bar.now()" [busy]="busy()" (acknowledge)="acknowledge($event)" />
-                } @empty { <p class="py-6 text-center text-sm text-ink/70" data-testid="bar-mine-empty">Nothing you sent is with the bar.</p> }
+                } @empty { <p class="py-6 text-center text-sm text-ink/70" data-testid="bar-mine-empty">Nothing you sent is still being made.</p> }
               }
             </div>
 
@@ -105,11 +106,13 @@ import { BarOrderCardComponent } from './bar-order-card.component';
 export class BarDockComponent {
   protected readonly bar = inject(BarStore);
   private readonly toast = inject(ToastService);
+  private readonly stationsService = inject(StationsService);
 
   protected readonly open = signal(false);
   protected readonly tab = signal<'bar' | 'mine'>('bar');
 
   constructor() {
+    void this.stationsService.load();
     // The bell in the header opens the panel: on what is calling this person if anything is, otherwise on the bar's queue.
     effect(() => {
       if (this.bar.panelRequests() === 0) return;
@@ -131,8 +134,15 @@ export class BarDockComponent {
   protected readonly label = computed(() => {
     const waiting = this.bar.isBarMan() ? this.bar.waiting().length : 0;
     const calling = this.bar.attention().length;
-    return `Bar orders: ${waiting} waiting${calling ? `, ${calling} need you` : ''}`;
+    return `${this.title()}: ${waiting} waiting${calling ? `, ${calling} need you` : ''}`;
   });
+
+  /** The stations this person works at, by name (the server says which: a role that lists none works at every one). */
+  private readonly mine = computed(() => this.stationsService.list().filter((s) => s.worksHere).map((s) => s.name));
+
+  /** "Kitchen orders" for a cook, "Bar orders" for the bar, and "Station orders" for someone who works at several, so no one is told "bar" about a kitchen's work. */
+  protected readonly title = computed(() => (this.mine().length === 1 ? `${this.mine()[0]} orders` : this.mine().length > 1 ? 'Station orders' : 'Bar orders'));
+  protected readonly atWord = computed(() => (this.mine().length === 1 ? `the ${this.mine()[0].toLowerCase()}` : this.mine().length > 1 ? 'your stations' : 'the bar'));
 
   /** The order just opened from a prompt comes first; otherwise oldest first, as the server sent them. */
   protected readonly ordered = computed(() => {
@@ -142,6 +152,9 @@ export class BarDockComponent {
   });
 
   protected place(o: BarOrderDto): string { return placeOf(o); }
+
+  /** Where the order is made, in a sentence ("the kitchen"): the ticket's own station, the bar for one from before stations. */
+  protected stationWord(o: BarOrderDto): string { return (o.stationName ?? 'bar').toLowerCase(); }
 
   protected summary(o: BarOrderDto): string {
     const units = o.items.reduce((sum, i) => sum + i.quantity, 0);

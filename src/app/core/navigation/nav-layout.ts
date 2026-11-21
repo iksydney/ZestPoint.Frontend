@@ -166,7 +166,7 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
   'staff': 'The people who work here, their roles and their sign-in.',
   'branches': 'Your branches and their details.',
   'pos.tables': 'The tables at each branch. The till offers them and shows which have a bill running.',
-  'pos.stations': 'The bar, the kitchen and other places orders are prepared: which items go where, and whether payment and stock wait for them.',
+  'pos.stations': 'The bar, the kitchen and other places orders are prepared: which items go where, and whether payment and stock wait for them. Who works at each is set on their role.',
   'pos.printers': 'The printers your phones print to: receipts and gift card slips, shift reports, labels, and kitchen and bar tickets for the stations you choose, for each branch or all of them.',
   'operations': 'Tax, payments, shifts, layby rules and other settings for how you trade.',
   'dailysummary': 'Whether the daily summary is sent, at what time, and to whom: staff or anyone with an e-mail address or a number, for every branch or one.',

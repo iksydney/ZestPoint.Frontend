@@ -78,6 +78,10 @@ test.describe('Preparation stations', () => {
     await expect(page.getByTestId('pay')).toBeDisabled();
     await expect(page.getByTestId('pay-lock')).toContainText('Waiting for the bar');
 
+    // The prompts name the station each ticket is for, not "bar" for everything (the owner works at every station here).
+    await expect(page.getByTestId('bar-prompt-title').filter({ hasText: 'New Kitchen order' })).toBeVisible();
+    await expect(page.getByTestId('bar-prompt-title').filter({ hasText: 'New Bar order' })).toBeVisible();
+
     // A bill of kitchen food alone can be paid while the food is still waiting: the kitchen does not hold payment.
     await page.getByTestId('new-bill').click();
     await page.getByTestId('nb-label').fill('Food only');
@@ -114,5 +118,44 @@ test.describe('Preparation stations', () => {
     await page.getByTestId('bill-Both').click();
     await expect(page.getByTestId('pay')).toBeEnabled();
     await expect(page.getByTestId('pay-lock')).toHaveCount(0);
+  });
+
+  test('a role is limited to the stations it works at, and is kept', async ({ page }) => {
+    test.slow();
+    await ownerInApp(page);
+
+    // A kitchen next to the bar the owner's answer made.
+    await page.locator('[data-nav="setup.admin"]').click();
+    await page.locator('[data-testid="hub-list"] [data-nav="pos.stations"]').click();
+    await page.getByTestId('station-new').click();
+    await page.getByTestId('station-name').fill('Kitchen');
+    await page.getByTestId('station-save').click();
+    await expect(page.getByTestId('station-row-Kitchen')).toBeVisible();
+
+    // The station section appears only once the role can work a station's orders, and says plainly what the ticks mean.
+    await page.goto('/app/staff');
+    await page.getByTestId('tab-roles').click();
+    await page.getByTestId('new-role').click();
+    await page.getByTestId('role-name').fill('Line cook');
+    await expect(page.getByTestId('role-stations')).toHaveCount(0);
+    await page.getByTestId('perm-pos.bar_order.fulfil').check();
+    await expect(page.getByTestId('role-stations')).toBeVisible();
+    await expect(page.getByTestId('role-stations-summary')).toHaveText('Works at every station.');
+    await page.getByTestId('role-station-Kitchen').check();
+    await expect(page.getByTestId('role-stations-summary')).toHaveText('Works only at: Kitchen.');
+    await page.getByTestId('save-role').click();
+    await expect(page.getByTestId('role-Line cook')).toBeVisible();
+
+    // It is kept: after the page is loaded again the kitchen is still ticked and the bar is not; unticking it makes the role work at every station again.
+    await page.reload();
+    await page.getByTestId('tab-roles').click();
+    await page.getByTestId('role-Line cook').click();
+    await expect(page.getByTestId('role-station-Kitchen')).toBeChecked();
+    await expect(page.getByTestId('role-station-Bar')).not.toBeChecked();
+    await page.getByTestId('role-station-Kitchen').uncheck();
+    await expect(page.getByTestId('role-stations-summary')).toHaveText('Works at every station.');
+    await page.getByTestId('save-role').click();
+    await page.getByTestId('role-Line cook').click();
+    await expect(page.getByTestId('role-station-Kitchen')).not.toBeChecked();
   });
 });

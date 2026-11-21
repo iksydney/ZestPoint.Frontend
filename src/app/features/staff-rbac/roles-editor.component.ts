@@ -6,8 +6,11 @@ import { PermissionDto, RoleDto } from '../../core/models/staff.model';
 import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { RolesApiService } from '../../core/services/staff.services';
+import { StationsService } from '../../core/services/stations.service';
 import { ConfirmService, ToastService } from '../../shared/ui/feedback';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
+
+interface RoleDraft { name: string; description: string; permissions: string[]; stationIds: string[]; }
 
 /**
  * Role and permission editor: grouped toggles with plain-language descriptions. The server decides what the signed-in
@@ -65,6 +68,22 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
               </fieldset>
             }
 
+            @if (worksAtStations() && stations().length > 0) {
+              <fieldset class="rounded-lg border border-ink/15 p-3" data-testid="role-stations">
+                <legend class="px-1 text-sm font-bold">Stations this role works at</legend>
+                <p class="mb-2 text-sm text-ink/80">Tick the kitchen to make this a kitchen role: the people who hold it hear only the kitchen's orders, on screen and on their phone, and are not called for a drink. Tick nothing and the role works at every station.</p>
+                <ul class="flex flex-wrap gap-x-4 gap-y-2">
+                  @for (s of stations(); track s.id) {
+                    <li class="flex items-center gap-2">
+                      <input type="checkbox" class="h-4 w-4" [id]="'station-' + s.id" [checked]="draft()!.stationIds.includes(s.id)" [disabled]="locked()" (change)="toggleStation(s.id)" [attr.data-testid]="'role-station-' + s.name" />
+                      <label [for]="'station-' + s.id" class="text-sm font-semibold">{{ s.name }}</label>
+                    </li>
+                  }
+                </ul>
+                <p class="mt-2 text-xs text-ink/70" data-testid="role-stations-summary">{{ stationsSummary() }}</p>
+              </fieldset>
+            }
+
             @if (canManage()) {
               <div class="flex flex-wrap items-center gap-2 border-t border-ink/10 pt-3">
                 <button type="button" class="btn-primary" (click)="save()" [disabled]="saving() || locked() || !dirty()" data-testid="save-role">{{ creating() ? 'Create role' : 'Save changes' }}</button>
@@ -87,7 +106,9 @@ export class RolesEditorComponent {
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly stationsService = inject(StationsService);
 
+  protected readonly stations = this.stationsService.list;
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
   protected readonly saving = signal(false);
@@ -95,8 +116,17 @@ export class RolesEditorComponent {
   protected readonly catalogue = signal<PermissionDto[]>([]);
   protected readonly selectedId = signal<string | null>(null);
   protected readonly creating = signal(false);
-  protected readonly draft = signal<{ name: string; description: string; permissions: string[] } | null>(null);
+  protected readonly draft = signal<RoleDraft | null>(null);
   private readonly baseline = signal('');
+
+  /** The station list means something only to a role that can work a station's orders. */
+  protected readonly worksAtStations = computed(() => this.draft()?.permissions.includes(SCREEN_PERMISSIONS.POS_BAR_ORDER_FULFIL) ?? false);
+
+  protected readonly stationsSummary = computed(() => {
+    const chosen = this.draft()?.stationIds ?? [];
+    const names = this.stations().filter((s) => chosen.includes(s.id)).map((s) => s.name);
+    return names.length === 0 ? 'Works at every station.' : `Works only at: ${names.join(', ')}.`;
+  });
 
   protected readonly canManage = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.ROLES_MANAGE));
   protected readonly selected = computed(() => this.roles().find((r) => r.id === this.selectedId()) ?? null);
@@ -120,6 +150,7 @@ export class RolesEditorComponent {
   });
 
   constructor() {
+    void this.stationsService.load();   // names for the station section; without them the section is simply not shown
     forkJoin({ roles: this.api.list(), catalogue: this.api.permissions() }).subscribe({
       next: ({ roles, catalogue }) => { this.roles.set(roles); this.catalogue.set(catalogue); this.loading.set(false); if (roles[0]) this.select(roles[0]); },
       error: (e: unknown) => { this.error.set(toApiError(e).message); this.loading.set(false); }
@@ -135,18 +166,18 @@ export class RolesEditorComponent {
   protected select(r: RoleDto): void {
     this.creating.set(false);
     this.selectedId.set(r.id);
-    this.setDraft({ name: r.name, description: r.description, permissions: [...r.permissions] });
+    this.setDraft({ name: r.name, description: r.description, permissions: [...r.permissions], stationIds: [...(r.stationIds ?? [])] });
     this.error.set(null);
   }
 
   protected startCreate(): void {
     this.creating.set(true);
     this.selectedId.set(null);
-    this.setDraft({ name: '', description: '', permissions: [] });
+    this.setDraft({ name: '', description: '', permissions: [], stationIds: [] });
     this.error.set(null);
   }
 
-  private setDraft(d: { name: string; description: string; permissions: string[] }): void {
+  private setDraft(d: RoleDraft): void {
     this.draft.set(d);
     this.baseline.set(JSON.stringify(d));
   }
@@ -159,20 +190,26 @@ export class RolesEditorComponent {
     this.draft.update((d) => d ? { ...d, permissions: d.permissions.includes(key) ? d.permissions.filter((k) => k !== key) : [...d.permissions, key] } : d);
   }
 
+  protected toggleStation(id: string): void {
+    this.draft.update((d) => d ? { ...d, stationIds: d.stationIds.includes(id) ? d.stationIds.filter((s) => s !== id) : [...d.stationIds, id] } : d);
+  }
+
   protected async save(): Promise<void> {
     const d = this.draft();
     if (!d) return;
     this.saving.set(true);
     this.error.set(null);
     try {
-      const request = { name: d.name.trim(), description: d.description.trim() || null, permissions: d.permissions, rowVersion: this.creating() ? null : this.selected()?.rowVersion ?? null };
+      // The stations mean something only while the role can work a station's orders, so a role that cannot is saved with none.
+      const stationIds = d.permissions.includes(SCREEN_PERMISSIONS.POS_BAR_ORDER_FULFIL) ? d.stationIds : [];
+      const request = { name: d.name.trim(), description: d.description.trim() || null, permissions: d.permissions, stationIds, rowVersion: this.creating() ? null : this.selected()?.rowVersion ?? null };
       const saved = await firstValueFrom(this.creating() ? this.api.create(request) : this.api.update(this.selectedId()!, request));
       this.roles.update((list) => this.creating() ? [...list, saved] : list.map((r) => (r.id === saved.id ? saved : r)));
       this.toast.success(this.creating() ? 'Role created.' : 'Role saved. Changes apply to staff straight away.');
       this.select(saved);
     } catch (err) {
       const e = toApiError(err);
-      this.error.set(e.fieldErrors['permissions']?.[0] ?? e.fieldErrors['name']?.[0] ?? e.message);
+      this.error.set(e.fieldErrors['permissions']?.[0] ?? e.fieldErrors['name']?.[0] ?? e.fieldErrors['stationIds']?.[0] ?? e.message);
     } finally {
       this.saving.set(false);
     }

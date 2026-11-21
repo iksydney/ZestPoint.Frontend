@@ -385,6 +385,8 @@ export interface StationDto {
   redMinutes: number;
   groupCount: number;
   itemCount: number;
+  /** Whether the signed-in person's roles work at this station (a role that lists none works at every one). */
+  worksHere: boolean;
 }
 
 /** What a kitchen screen shows: the tickets still to make, and the ones just made that can still be called back. */
