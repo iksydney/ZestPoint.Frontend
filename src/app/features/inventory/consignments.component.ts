@@ -12,6 +12,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { InventoryApi } from '../../core/services/ops.services';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
 export interface ConsignmentAgentDto { id: string; number: number; name: string; phone: string | null; address: string | null; notes: string | null; isActive: boolean; openConsignments: number; valueHeld: number; rowVersion: string }
@@ -70,7 +71,7 @@ interface DraftLine { item: InventoryItemDto; quantity: number; unitPrice: numbe
  */
 @Component({
     selector: 'zp-consignments',
-    imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, StatusBadgeComponent],
+    imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, SearchSelectComponent, StatusBadgeComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -144,10 +145,8 @@ interface DraftLine { item: InventoryItemDto; quantity: number; unitPrice: numbe
     <zp-dialog [open]="dialog() === 'new'" title="Send goods out on consignment" (closed)="dialog.set(null)">
       <form class="space-y-3" autocomplete="off" (submit)="$event.preventDefault(); send()">
         <div><label class="app-label" for="cn-agent">Agent</label>
-          <select id="cn-agent" class="app-input" data-testid="cn-agent" [ngModel]="agentId()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="agentId.set($event)">
-            <option [ngValue]="null">Choose an agent...</option>@for (a of activeAgents(); track a.id) { <option [ngValue]="a.id">{{ a.name }}</option> }</select>
-          @if (!activeAgents().length) { <p class="mt-1 text-xs text-ink/70">No agents yet. Close this and press Agents to add one.</p> }
-          @if (fe('agentId')) { <p class="app-error" role="alert">{{ fe('agentId') }}</p> }</div>
+          <zp-search-select inputId="cn-agent" testId="cn-agent" emptyLabel="Choose an agent..." noun="agent" placeholder="Search agents" [options]="agentOptions()" [value]="agentId()" [error]="fe('agentId')" (valueChange)="agentId.set($event || null)" />
+          @if (!activeAgents().length) { <p class="mt-1 text-xs text-ink/70">No agents yet. Close this and press Agents to add one.</p> }</div>
         <div><label class="app-label" for="cn-item">Add an item</label>
           <input id="cn-item" class="app-input" placeholder="Name or part number" autocomplete="off" data-testid="cn-item-search" [ngModel]="itemSearch()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="findItems($event)" />
           @if (itemResults().length) {
@@ -274,6 +273,7 @@ export class ConsignmentsComponent {
   protected readonly readOnly = computed(() => this.auth.accessModeFor(FEATURES.INVENTORY) === 'readonly');
   protected readonly canPrice = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.PRODUCTS_MANAGE));
   protected readonly activeAgents = computed(() => this.agents().filter((a) => a.isActive));
+  protected readonly agentOptions = computed<readonly SelectOption[]>(() => this.activeAgents().map((a) => ({ value: a.id, label: a.name })));
   protected readonly draftValid = computed(() => this.draft().length > 0 && this.draft().every((d) => d.quantity > 0 && d.unitPrice > 0));
   protected readonly anyQuantity = computed(() => Object.values(this.quantities()).some((q) => q > 0));
 

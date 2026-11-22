@@ -10,6 +10,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { StationsService } from '../../core/services/stations.service';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 
 interface PrinterForm {
   id: string | null; branchId: string | null; name: string; kind: PrinterKind; language: PrinterLanguage; host: string; port: number | null; deviceName: string;
@@ -40,7 +41,7 @@ const PURPOSES: readonly { value: PrinterPurpose; label: string; hint: string }[
  */
 @Component({
     selector: 'zp-printers',
-    imports: [FormsModule, DialogComponent],
+    imports: [FormsModule, DialogComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="flex flex-col gap-4" data-testid="printers">
@@ -89,10 +90,8 @@ const PURPOSES: readonly { value: PrinterPurpose; label: string; hint: string }[
             <div><label class="app-label" for="pr-name">Name</label><input id="pr-name" class="app-input" maxlength="60" data-testid="printer-name" placeholder="e.g. Counter, Bar labels" [ngModel]="f.name" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ name: $event })" />
               @if (fieldError('name')) { <p class="app-error" role="alert" data-testid="printer-name-error">{{ fieldError('name') }}</p> }</div>
             <div><label class="app-label" for="pr-branch">Where</label>
-              <select id="pr-branch" class="app-input" data-testid="printer-branch" [ngModel]="f.branchId ?? ''" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ branchId: $event || null })">
-                @if (everyBranch()) { <option value="">Every branch</option> }
-                @for (b of branches.branches(); track b.id) { <option [value]="b.id">{{ b.name }}</option> }
-              </select></div>
+              <zp-search-select inputId="pr-branch" testId="printer-branch" [emptyLabel]="everyBranch() ? 'Every branch' : null" noun="branch" placeholder="Search branches"
+                                [options]="branchOptions()" [value]="f.branchId ?? ''" (valueChange)="patch({ branchId: $event || null })" /></div>
           </div>
           <div class="grid gap-3 sm:grid-cols-2">
             <div><label class="app-label" for="pr-kind">How the phone reaches it</label>
@@ -189,6 +188,7 @@ export class PrintersComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   protected readonly branches = inject(BranchContextService);
+  protected readonly branchOptions = computed<readonly SelectOption[]>(() => this.branches.branches().map((b) => ({ value: b.id, label: b.name })));
   protected readonly stations = inject(StationsService);
 
   protected readonly kinds = KINDS;

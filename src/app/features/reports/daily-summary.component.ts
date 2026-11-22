@@ -10,6 +10,7 @@ import { BranchContextService } from '../../core/services/branch-context.service
 import { DailySummaryApi } from '../../core/services/daily-summary.service';
 import { NoticesStore } from '../../core/services/notices.store';
 import { TenantTimePipe } from '../../core/pipes/tenant-time.pipe';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 
 /**
  * Daily Summary: yesterday and every earlier day, built once each morning and kept as built, for the company or one branch. The figures are the sales
@@ -17,7 +18,7 @@ import { TenantTimePipe } from '../../core/pipes/tenant-time.pipe';
  */
 @Component({
     selector: 'zp-daily-summary',
-    imports: [CurrencyPipe, DatePipe, DecimalPipe, RouterLink, TenantTimePipe],
+    imports: [CurrencyPipe, DatePipe, DecimalPipe, RouterLink, TenantTimePipe, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -30,10 +31,8 @@ import { TenantTimePipe } from '../../core/pipes/tenant-time.pipe';
 
     @if (branches.branches().length > 1) {
       <div class="mb-3 max-w-xs"><label class="app-label" for="sum-branch">Branch</label>
-        <select id="sum-branch" class="app-input" data-testid="sum-branch" (change)="pick($any($event.target).value)">
-          <option value="" [selected]="!branchId()">All branches</option>
-          @for (b of branches.branches(); track b.id) { <option [value]="b.id" [selected]="branchId() === b.id">{{ b.name }}</option> }
-        </select></div>
+        <zp-search-select inputId="sum-branch" testId="sum-branch" emptyLabel="All branches" noun="branch" placeholder="Search branches"
+                          [options]="branchOptions()" [value]="branchId()" (valueChange)="pick($event)" /></div>
     }
 
     @if (error()) { <div class="sys-alert sys-alert-danger mb-3" role="alert" data-testid="sum-error">{{ error() }}</div> }
@@ -151,6 +150,7 @@ export class DailySummaryComponent implements OnInit {
   protected readonly branches = inject(BranchContextService);
 
   protected readonly branchId = signal<string | null>(null);
+  protected readonly branchOptions = computed<readonly SelectOption[]>(() => this.branches.branches().map((b) => ({ value: b.id, label: b.name })));
   protected readonly days = signal<readonly DailySummaryHeadDto[]>([]);
   protected readonly date = signal<string | null>(null);
   protected readonly summary = signal<DailySummaryDto | null>(null);

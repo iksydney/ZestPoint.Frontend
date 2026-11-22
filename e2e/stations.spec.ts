@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { registerViaUi } from './helpers';
+import { choose, registerViaUi } from './helpers';
 
 /**
  * Owner's decisions of 2026-11-15: a company names its preparation stations; each stock group goes to one and an item can name its own;
@@ -19,7 +19,7 @@ async function newItem(page: Page, name: string, price: string, group?: string) 
   await page.getByTestId('item-new').click();
   await page.getByTestId('item-name').fill(name);
   await page.getByTestId('item-price').fill(price);
-  if (group) await page.getByTestId('item-group').selectOption({ label: group });
+  if (group) await choose(page, 'item-group', group);
   await page.getByTestId('item-save').click();
   await expect(page.getByTestId(`item-${name}`)).toBeVisible();
 }
@@ -55,14 +55,14 @@ test.describe('Preparation stations', () => {
     await page.goto('/app/inventory/groups');
     await page.getByTestId('group-new').click();
     await page.getByTestId('group-name').fill('Food');
-    await expect(page.getByTestId('group-station').locator('option:checked')).toContainText('The default station (Bar)');
-    await page.getByTestId('group-station').selectOption({ label: 'Kitchen' });
+    await expect(page.getByTestId('group-station')).toHaveValue('The default station (Bar)');
+    await choose(page, 'group-station', 'Kitchen');
     await page.getByTestId('group-save').click();
     await expect(page.getByTestId('group-Food')).toBeVisible();
     await newItem(page, 'Burger', '3000', 'Food');
     await newItem(page, 'Cola', '500');
     await page.getByTestId('item-edit-Cola').click();
-    await expect(page.getByTestId('item-station').locator('option:checked')).toHaveText('As the stock group says');
+    await expect(page.getByTestId('item-station')).toHaveValue('As the stock group says');
     await page.getByTestId('sc-close').click();
 
     // Both on one bill: each goes to its station, and the bar's drink holds payment.

@@ -12,6 +12,7 @@ import { BranchContextService } from '../../core/services/branch-context.service
 import { StockExtrasApi } from '../../core/services/nav-ops.services';
 import { InventoryApi } from '../../core/services/ops.services';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { ReportViewComponent } from '../reports/report-view.component';
 
 /** The lifecycle the server allows. The UI only offers the next steps that are legal; the server refuses the rest. */
@@ -25,7 +26,7 @@ const NEXT: Record<SerialStatus, readonly SerialStatus[]> = {
  */
 @Component({
     selector: 'zp-serials',
-    imports: [FormsModule, ReportViewComponent, DialogComponent],
+    imports: [FormsModule, ReportViewComponent, DialogComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <zp-report-view #view [definition]="definition" title="Serial Numbers Report" description="Every serial-tracked unit, where it is and what happened to it." [rowActions]="canAct() ? actions : null" />
@@ -39,7 +40,7 @@ const NEXT: Record<SerialStatus, readonly SerialStatus[]> = {
     <zp-dialog [open]="dialog() === 'register'" title="Register serial numbers" (closed)="dialog.set(null)">
       <form class="space-y-3" (submit)="$event.preventDefault(); register()">
         <p class="text-sm text-ink/80">For serial-tracked items only. This records the numbers; it does not change the stock quantity (use a goods receipt for new stock, which asks for the serials itself).</p>
-        <div><label class="app-label" for="sr-item">Item</label><select id="sr-item" class="app-input" data-testid="serial-item" [ngModel]="regItem()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="regItem.set($event)"><option value="">Choose an item...</option>@for (i of serialItems(); track i.id) { <option [value]="i.id">{{ i.name }}</option> }</select>
+        <div><label class="app-label" for="sr-item">Item</label><zp-search-select inputId="sr-item" testId="serial-item" emptyLabel="Choose an item..." noun="item" placeholder="Search items" [options]="itemOptions()" [value]="regItem()" (valueChange)="regItem.set($event)" />
           @if (serialItems().length === 0) { <p class="mt-1 text-xs text-ink/70">No item has serial tracking switched on. Turn it on in Add / Modify Stock.</p> }</div>
         <div><label class="app-label" for="sr-list">Serial numbers (one per line)</label><textarea id="sr-list" rows="5" class="app-input font-mono" data-testid="serial-list" [ngModel]="regList()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="regList.set($event)"></textarea>
           <p class="mt-1 text-xs text-ink/70">{{ regCount() }} serial number(s).</p></div>
@@ -89,6 +90,7 @@ export class SerialsComponent implements OnInit {
   protected readonly canAct = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_STOCK_ADJUST));
   protected readonly canRegister = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_ITEMS_MANAGE));
   protected readonly serialItems = computed(() => this.items().filter((i) => i.tracksSerials && i.isActive));
+  protected readonly itemOptions = computed<readonly SelectOption[]>(() => this.serialItems().map((i) => ({ value: i.id, label: i.name })));
   protected readonly regCount = computed(() => this.parse().length);
 
   ngOnInit(): void {

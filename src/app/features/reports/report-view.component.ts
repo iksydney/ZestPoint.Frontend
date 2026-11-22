@@ -53,25 +53,23 @@ const PAGE_SIZES = [25, 50, 100, 200] as const;
       }
       @if (definition().branch && branches.branches().length > 0) {
         <div><label class="app-label" for="rf-branch">Branch</label>
-          <select id="rf-branch" class="app-input" data-testid="filter-branch" (change)="set('branchId', $any($event.target).value)">
-            <option value="" [selected]="!draft().branchId">{{ branches.branches().length > 1 ? 'All my branches' : branches.branches()[0].name }}</option>
-            @if (branches.branches().length > 1) { @for (b of branches.branches(); track b.id) { <option [value]="b.id" [selected]="draft().branchId === b.id">{{ b.name }}</option> } }
-          </select></div>
+          <zp-search-select inputId="rf-branch" testId="filter-branch" noun="branch" placeholder="Search branches" [emptyLabel]="branches.branches().length > 1 ? 'All my branches' : branches.branches()[0].name"
+                            [options]="branchOptions()" [value]="draft().branchId ?? null" (valueChange)="set('branchId', $event)" /></div>
       }
       @if (definition().group && groups().length > 0) {
         <div><label class="app-label" for="rf-group">Stock group</label>
-          <select id="rf-group" class="app-input" data-testid="filter-group" (change)="set('groupId', $any($event.target).value)">
-            <option value="" [selected]="!draft().groupId">All groups</option>@for (g of groups(); track g.value) { <option [value]="g.value" [selected]="draft().groupId === g.value">{{ g.label }}</option> }</select></div>
+          <zp-search-select inputId="rf-group" testId="filter-group" emptyLabel="All groups" noun="group" placeholder="Search groups"
+                            [options]="groups()" [value]="draft().groupId ?? null" (valueChange)="set('groupId', $event)" /></div>
       }
       @if (definition().supplier) {
         <div><label class="app-label" for="rf-sup">Supplier</label>
-          <select id="rf-sup" class="app-input" data-testid="filter-supplier" (change)="set('supplierId', $any($event.target).value)">
-            <option value="" [selected]="!draft().supplierId">{{ definition().supplierRequired ? 'Choose a supplier...' : 'All suppliers' }}</option>@for (s of suppliers(); track s.id) { <option [value]="s.id" [selected]="draft().supplierId === s.id">{{ s.name }}</option> }</select></div>
+          <zp-search-select inputId="rf-sup" testId="filter-supplier" [emptyLabel]="definition().supplierRequired ? 'Choose a supplier...' : 'All suppliers'" noun="supplier" placeholder="Search suppliers"
+                            [options]="supplierOptions()" [value]="draft().supplierId ?? null" (valueChange)="set('supplierId', $event)" /></div>
       }
       @if (definition().staff; as staffLabel) {
         <div><label class="app-label" for="rf-staff">{{ staffLabel }}</label>
-          <select id="rf-staff" class="app-input" data-testid="filter-staff" (change)="set('staffId', $any($event.target).value)">
-            <option value="" [selected]="!draft().staffId">Everyone</option>@for (p of staff(); track p.id) { <option [value]="p.id" [selected]="draft().staffId === p.id">{{ p.name }}</option> }</select></div>
+          <zp-search-select inputId="rf-staff" testId="filter-staff" emptyLabel="Everyone" noun="person" placeholder="Search people"
+                            [options]="staffOptions()" [value]="draft().staffId ?? null" (valueChange)="set('staffId', $event)" /></div>
       }
       @if (definition().item && itemOptions().length > 0) {
         <zp-search-select label="Item" [options]="itemOptions()" [value]="draft().itemId ?? null" placeholder="Search items" testId="filter-item" (valueChange)="set('itemId', $event)" />
@@ -257,6 +255,9 @@ export class ReportViewComponent implements OnInit {
   protected readonly suppliers = signal<readonly SupplierDto[]>([]);
   protected readonly staff = signal<readonly { id: string; name: string }[]>([]);
   protected readonly itemOptions = signal<readonly SelectOption[]>([]);
+  protected readonly branchOptions = computed<readonly SelectOption[]>(() => (this.branches.branches().length > 1 ? this.branches.branches().map((b) => ({ value: b.id, label: b.name })) : []));
+  protected readonly supplierOptions = computed<readonly SelectOption[]>(() => this.suppliers().map((x) => ({ value: x.id, label: x.name })));
+  protected readonly staffOptions = computed<readonly SelectOption[]>(() => this.staff().map((p) => ({ value: p.id, label: p.name })));
   protected readonly hidden = signal<ReadonlySet<string>>(new Set());
   private readonly selected = signal<ReadonlyMap<string, ReportRow>>(new Map());
   private seq = 0;

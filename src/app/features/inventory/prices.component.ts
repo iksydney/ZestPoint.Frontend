@@ -6,6 +6,7 @@ import { PriceBranchDto, PriceChangeDto, PriceListDto, PriceMatrixDto, PriceMode
 import { toApiError } from '../../core/services/api.util';
 import { PricesApi } from '../../core/services/prices.service';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 
 type Tab = 'prices' | 'lists' | 'pending';
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
@@ -31,7 +32,7 @@ const timeOf = (minute: number | null): string => (minute === null ? '' : `${pad
  */
 @Component({
     selector: 'zp-prices',
-    imports: [FormsModule, CurrencyPipe, DatePipe, DialogComponent],
+    imports: [FormsModule, CurrencyPipe, DatePipe, DialogComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="flex flex-col gap-4" data-testid="prices">
@@ -157,15 +158,11 @@ const timeOf = (minute: number | null): string => (minute === null ? '' : `${pad
               </select></div>
             @if (f.scope === 'branch') {
               <div><label class="app-label" for="pd-branch">Branch</label>
-                <select id="pd-branch" class="app-input" data-testid="pd-branch" [ngModel]="f.branchId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ branchId: $event })">
-                  @for (b of editableBranches(); track b.id) { <option [value]="b.id">{{ b.name }}</option> }
-                </select></div>
+                <zp-search-select inputId="pd-branch" testId="pd-branch" noun="branch" placeholder="Search branches" [options]="branchOptions()" [value]="f.branchId" (valueChange)="patch({ branchId: $event })" /></div>
             }
             @if (f.scope === 'list') {
               <div><label class="app-label" for="pd-list">Price list</label>
-                <select id="pd-list" class="app-input" data-testid="pd-list" [ngModel]="f.listId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ listId: $event })">
-                  @for (l of activeLists(); track l.id) { <option [value]="l.id">{{ l.name }}</option> }
-                </select>
+                <zp-search-select inputId="pd-list" testId="pd-list" noun="price list" placeholder="Search price lists" [options]="listOptions()" [value]="f.listId" (valueChange)="patch({ listId: $event })" />
                 @if (!activeLists().length) { <p class="mt-1 text-xs text-warning">Make a price list first (Price lists tab).</p> }</div>
             }
           </div>
@@ -198,9 +195,7 @@ const timeOf = (minute: number | null): string => (minute === null ? '' : `${pad
       <form class="space-y-3" (submit)="$event.preventDefault(); applySell()" data-testid="sell-form">
         <p class="text-sm text-ink/80">{{ selected().length }} item(s): {{ selectedNames() }}</p>
         <div><label class="app-label" for="sl-branch">Branch</label>
-          <select id="sl-branch" class="app-input" data-testid="sell-branch" [ngModel]="sellBranch()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="sellBranch.set($event)">
-            @for (b of editableBranches(); track b.id) { <option [value]="b.id">{{ b.name }}</option> }
-          </select></div>
+          <zp-search-select inputId="sl-branch" testId="sell-branch" noun="branch" placeholder="Search branches" [options]="branchOptions()" [value]="sellBranch()" (valueChange)="sellBranch.set($event)" /></div>
         <p class="text-xs text-ink/70">{{ sell() ? 'The branch will list and sell these items again.' : 'The branch will no longer list these items, and nobody can add them to a bill there. Bills already open keep them.' }}</p>
         @if (changeError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="sell-error">{{ changeError() }}</p> }
         <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="sell.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="sell-apply" [disabled]="busy()">{{ sell() ? 'Sell again' : 'Stop selling' }}</button></div>
@@ -291,6 +286,8 @@ export class PricesComponent implements OnInit {
 
   protected readonly editableBranches = computed<readonly PriceBranchDto[]>(() => (this.matrix()?.branches ?? []).filter((b) => b.mayChange));
   protected readonly activeLists = computed(() => this.lists().filter((l) => l.isActive));
+  protected readonly branchOptions = computed<readonly SelectOption[]>(() => this.editableBranches().map((b) => ({ value: b.id, label: b.name })));
+  protected readonly listOptions = computed<readonly SelectOption[]>(() => this.activeLists().map((l) => ({ value: l.id, label: l.name })));
   protected readonly selectedNames = computed(() => {
     const names = (this.matrix()?.rows ?? []).filter((r) => this.selected().includes(r.productId)).map((r) => r.name);
     return names.slice(0, 4).join(', ') + (names.length > 4 ? ` and ${names.length - 4} more` : '');

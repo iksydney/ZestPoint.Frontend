@@ -18,6 +18,7 @@ import { InventoryApi, OperationSettingsApi } from '../../core/services/ops.serv
 import { BinApi, PurchasingWorkstationApi, ReceivingApi } from '../../core/services/purchasing.services';
 import { CameraScannerComponent, type ScanFeedback } from '../../shared/ui/camera-scanner.component';
 import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { ZpIconComponent } from '../../shared/ui/zp-icon.component';
 import { ShareLinksComponent } from '../../shared/ui/share-links.component';
 import { PoPrintSheetComponent } from './po-print-sheet.component';
@@ -67,7 +68,7 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
  */
 @Component({
     selector: 'zp-po-workstation',
-    imports: [EntitledActionDirective, DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, SupplierLookupComponent, SupplierFormComponent, PoPrintSheetComponent, StockCardComponent, ShareLinksComponent, CameraScannerComponent],
+    imports: [EntitledActionDirective, DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, SupplierLookupComponent, SupplierFormComponent, PoPrintSheetComponent, StockCardComponent, ShareLinksComponent, CameraScannerComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="no-print flex flex-col gap-4 font-jakarta" data-testid="po-workstation">
@@ -87,9 +88,9 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
             <label class="flex items-center gap-2 rounded-lg bg-ink/10 px-3 py-1.5"><span class="po-cap">Type</span>
               <select class="bg-transparent font-data text-xs font-semibold focus:outline-none" data-testid="po-type" [disabled]="!!doc() || !editable() || direct()" [ngModel]="type()" (ngModelChange)="setType($event)">
                 @for (t of types; track t.value) { <option class="bg-panel text-ink" [value]="t.value" [disabled]="t.value === 'DirectConsignment' && !canDirect()">{{ t.label }}</option> }</select></label>
-            <label class="flex items-center gap-2 rounded-lg bg-ink/10 px-3 py-1.5"><zp-icon name="branch" [size]="16" class="text-success" /><span class="po-cap">{{ type() === 'VendorReturn' ? 'Returning from' : 'Target' }}</span>
-              <select class="bg-transparent font-data text-xs font-semibold text-success focus:outline-none" data-testid="po-branch" [disabled]="!!doc() || !editable()" [ngModel]="branchId()" (ngModelChange)="setBranch($event)">
-                @for (b of branches.branches(); track b.id) { <option class="bg-panel text-ink" [value]="b.id">{{ b.name }}</option> }</select></label>
+            <div class="flex items-center gap-2 rounded-lg bg-ink/10 px-3 py-1.5"><zp-icon name="branch" [size]="16" class="text-success" /><span class="po-cap">{{ type() === 'VendorReturn' ? 'Returning from' : 'Target' }}</span>
+              <zp-search-select class="w-44" [ariaLabel]="type() === 'VendorReturn' ? 'Returning from' : 'Target'" testId="po-branch" noun="branch" placeholder="Search branches" inputClass="w-full bg-transparent font-data text-xs font-semibold text-success focus:outline-none"
+                                [options]="branchOptions()" [value]="branchId()" [disabled]="!!doc() || !editable()" (valueChange)="setBranch($event)" /></div>
           </div>
         </div>
 
@@ -119,9 +120,9 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
           <div class="app-card flex flex-col gap-3 lg:col-span-7" data-testid="po-route">
             <div class="flex items-center gap-2 border-b border-ink/10 pb-2"><zp-icon name="dispatch" [size]="20" class="text-primary" /><h2 class="font-syne text-lg font-semibold">Transfer route</h2></div>
             <div class="grid gap-3 sm:grid-cols-2">
-              <label class="rounded-lg bg-ink/5 p-3"><span class="po-cap">Sending branch</span>
-                <select class="app-input mt-1" data-testid="po-source" [disabled]="!editable()" [ngModel]="sourceId()" (ngModelChange)="touch(sourceId, $event)"><option value="">Choose the branch the stock comes from</option>
-                  @for (b of otherBranches(); track b.id) { <option [value]="b.id">{{ b.name }}</option> }</select></label>
+              <div class="rounded-lg bg-ink/5 p-3"><span class="po-cap">Sending branch</span>
+                <zp-search-select class="mt-1" ariaLabel="Sending branch" testId="po-source" emptyLabel="Choose the branch the stock comes from" noun="branch" placeholder="Search branches"
+                                  [options]="sourceOptions()" [value]="sourceId()" [disabled]="!editable()" (valueChange)="touch(sourceId, $event)" /></div>
               <div class="rounded-lg bg-ink/5 p-3"><span class="po-cap">Receiving branch</span><p class="mt-2 font-semibold">{{ branchName() }}</p><p class="text-xs text-ink/70">Stock leaves the sending branch when this branch's receiver verifies it, and goes into the bins chosen on each line.</p></div>
             </div>
           </div>
@@ -215,8 +216,8 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
                   <td class="px-2 py-2 font-data text-[11px] font-bold text-primary">{{ l.sku || '-' }}</td>
                   <td class="px-2 py-2"><span class="block text-sm font-semibold">{{ l.name }}</span>
                     <span class="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-ink/70">@if (l.group) { <span class="rounded bg-ink/10 px-1.5 py-0.5 font-data text-primary">{{ l.group }}</span> }<span>{{ unit(l.unit) }}@if (l.packName && l.packSize) { &bull; {{ l.packCount ?? 0 | number: '1.0-2' }} {{ l.packName }} x {{ l.packSize | number: '1.0-4' }} }</span></span></td>
-                  <td class="px-2 py-2"><select class="w-full rounded bg-canvas px-1 py-1 font-data text-[11px] text-success focus:outline-none focus:ring-1 focus:ring-primary" [attr.aria-label]="'Bin for ' + l.name" [attr.data-testid]="'line-bin-' + i" [disabled]="!editable() || bins().length === 0" [ngModel]="l.binId" (ngModelChange)="patchLine(l.key, { binId: $event })">
-                    <option [ngValue]="null">{{ bins().length === 0 ? 'No bins set up' : 'Choose a bin' }}</option>@for (b of bins(); track b.id) { <option [ngValue]="b.id">{{ b.code }}{{ b.isHighSecurity ? ' (secure)' : '' }}</option> }</select></td>
+                  <td class="px-2 py-2"><zp-search-select [ariaLabel]="'Bin for ' + l.name" [testId]="'line-bin-' + i" [emptyLabel]="bins().length === 0 ? 'No bins set up' : 'Choose a bin'" noun="bin" placeholder="Search bins" inputClass="w-full rounded bg-canvas px-1 py-1 font-data text-[11px] text-success focus:outline-none focus:ring-1 focus:ring-primary"
+                    [options]="lineBinOptions()" [value]="l.binId" [disabled]="!editable() || bins().length === 0" (valueChange)="patchLine(l.key, { binId: $event || null })" /></td>
                   <td class="px-2 py-2"><div class="flex flex-col items-end gap-1">
                     <input type="number" min="0" step="any" class="po-cell" [attr.aria-label]="'Quantity of ' + l.name" [attr.data-testid]="'line-qty-' + i" [disabled]="!editable()" [ngModel]="l.qty" (ngModelChange)="setQty(l.key, +$event)" />
                     @if (l.packName && l.packSize && editable()) { <span class="flex items-center gap-1 text-[10px] text-ink/60"><input type="number" min="0" step="any" class="po-cell w-14 py-0.5" [attr.aria-label]="l.packName + 's of ' + l.name" [attr.data-testid]="'line-packs-' + i" [ngModel]="l.packCount" (ngModelChange)="setPacks(l.key, +$event)" /> {{ l.packName }}</span> }
@@ -361,7 +362,8 @@ interface DirectLine { key: string; name: string; qty: number; binId: string | n
       <div class="overflow-x-auto"><table class="app-table min-w-[40rem]" data-testid="po-direct-table"><thead><tr><th>Item</th><th class="text-right">Quantity</th><th>Bin</th><th>Lot</th><th>Expiry</th><th>Serial numbers</th></tr></thead>
         <tbody>@for (d of directLines(); track d.key; let i = $index) {
           <tr><td>{{ d.name }}</td><td class="text-right font-data">{{ d.qty | number: '1.0-4' }}</td>
-            <td><select class="app-input py-1" [attr.aria-label]="'Bin for ' + d.name" [attr.data-testid]="'direct-bin-' + i" [disabled]="bins().length === 0" [ngModel]="d.binId" (ngModelChange)="patchDirect(d.key, { binId: $event })"><option [ngValue]="null">{{ bins().length === 0 ? 'No bins' : 'Choose' }}</option>@for (b of bins(); track b.id) { <option [ngValue]="b.id">{{ b.code }}</option> }</select></td>
+            <td><zp-search-select [ariaLabel]="'Bin for ' + d.name" [testId]="'direct-bin-' + i" [emptyLabel]="bins().length === 0 ? 'No bins' : 'Choose'" noun="bin" placeholder="Search bins" inputClass="app-input py-1"
+                    [options]="directBinOptions()" [value]="d.binId" [disabled]="bins().length === 0" (valueChange)="patchDirect(d.key, { binId: $event || null })" /></td>
             <td>@if (d.tracksBatches) { <input class="app-input py-1" maxlength="60" [attr.aria-label]="'Lot of ' + d.name" [attr.data-testid]="'direct-lot-' + i" [ngModel]="d.lot" (ngModelChange)="patchDirect(d.key, { lot: $event })" /> } @else { <span class="text-xs text-ink/50">-</span> }</td>
             <td><input type="date" class="app-input py-1" [attr.aria-label]="'Expiry of ' + d.name" [ngModel]="d.expiry" (ngModelChange)="patchDirect(d.key, { expiry: $event })" /></td>
             <td>@if (d.tracksSerials) { <textarea rows="2" class="app-input font-data text-xs" placeholder="One per line" [attr.aria-label]="'Serials of ' + d.name" [attr.data-testid]="'direct-serials-' + i" [ngModel]="d.serials" (ngModelChange)="patchDirect(d.key, { serials: $event })"></textarea> } @else { <span class="text-xs text-ink/50">-</span> }</td></tr> }</tbody></table></div>
@@ -452,6 +454,10 @@ export class PurchaseOrderWorkstationComponent implements OnInit {
   protected readonly editable = computed(() => !this.doc() || this.doc()!.actions.canEdit);
   protected readonly branchName = computed(() => this.branches.branches().find((b) => b.id === this.branchId())?.name ?? '');
   protected readonly otherBranches = computed(() => this.branches.branches().filter((b) => b.id !== this.branchId()));
+  protected readonly branchOptions = computed<readonly SelectOption[]>(() => this.branches.branches().map((b) => ({ value: b.id, label: b.name })));
+  protected readonly sourceOptions = computed<readonly SelectOption[]>(() => this.otherBranches().map((b) => ({ value: b.id, label: b.name })));
+  protected readonly lineBinOptions = computed<readonly SelectOption[]>(() => this.bins().map((b) => ({ value: b.id, label: `${b.code}${b.isHighSecurity ? ' (secure)' : ''}` })));
+  protected readonly directBinOptions = computed<readonly SelectOption[]>(() => this.bins().map((b) => ({ value: b.id, label: b.code })));
   protected readonly currency = computed(() => this.doc()?.currencyCode || this.auth.tenant()?.currencyCode || '');
   protected readonly termOptions = computed(() => (TERMS.some((t) => t.days === this.terms()) ? TERMS : [...TERMS, { days: this.terms(), label: `Net ${this.terms()} days` }]));
 

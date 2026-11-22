@@ -50,7 +50,7 @@ const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'ea
               <p class="self-end pb-2 text-sm" data-testid="adjust-result">Resulting quantity: <strong [class.text-danger]="resulting() !== null && resulting()! < 0">{{ resulting() === null ? '-' : (resulting() | number: '1.0-4') }}</strong></p>
             }
             <div><label class="app-label" for="a-reason">Reason</label>
-              <select id="a-reason" class="app-input" data-testid="adjust-reason" [ngModel]="reasonId()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="reasonId.set($event)"><option value="">Choose a reason...</option>@for (r of activeReasons(); track r.id) { <option [value]="r.id">{{ r.name }}</option> }</select></div>
+              <zp-search-select inputId="a-reason" testId="adjust-reason" emptyLabel="Choose a reason..." noun="reason" placeholder="Search reasons" [options]="reasonOptions()" [value]="reasonId()" (valueChange)="reasonId.set($event)" /></div>
             <div><label class="app-label" for="a-note">Notes</label><input id="a-note" class="app-input" maxlength="500" data-testid="adjust-note" [ngModel]="note()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="note.set($event)" /></div>
             @if (formError()) { <p class="sys-alert sys-alert-danger sm:col-span-2" role="alert" data-testid="adjust-error">{{ formError() }}</p> }
             @if (formMessage()) { <p class="sys-alert sys-alert-success sm:col-span-2" role="status" data-testid="adjust-message">{{ formMessage() }}</p> }
@@ -141,6 +141,7 @@ export class AdjustmentsComponent implements OnInit {
   protected readonly canManageReasons = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_ITEMS_MANAGE));
   protected readonly showValue = computed(() => this.history().some((a) => a.estimatedValue !== null));
   protected readonly activeReasons = computed(() => this.allReasons().filter((r) => r.isActive));
+  protected readonly reasonOptions = computed<readonly SelectOption[]>(() => this.activeReasons().map((r) => ({ value: r.id, label: r.name })));
   protected readonly item = computed(() => this.items().find((i) => i.id === this.itemId()) ?? null);
   protected readonly itemOptions = computed<readonly SelectOption[]>(() => this.items().filter((i) => i.isActive).map((i) => ({ value: i.id, label: i.name, description: `${i.sku ?? ''} on hand ${i.onHand} ${UNIT[i.baseUnit]}`.trim() })));
   protected readonly resulting = computed(() => {

@@ -788,17 +788,6 @@ export interface AdjustStockRequest {
   idempotencyKey: string;
 }
 
-export interface ReceiveLine { inventoryItemId: string; quantity: number; unitCost: number; lotCode: string | null; expiryDate: string | null; purchaseOrderLineId: string | null; taxRatePercent?: number; serials?: string[] }
-
-export interface ReceiveGoodsRequest {
-  branchId: string;
-  supplierId: string | null;
-  purchaseOrderId: string | null;
-  reference: string | null;
-  lines: ReceiveLine[];
-  idempotencyKey: string;
-}
-
 export interface BatchDto {
   id: string;
   branchId: string;

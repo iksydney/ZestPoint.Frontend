@@ -156,7 +156,19 @@ export interface FoodCostDishDto {
   costLast: number | null;
   foodCostPercent: number | null;
   suggestedPrice: number | null;
+  /** The dish's OWN food cost target, or null when it follows the screen's. */
+  targetPercent: number | null;
+  /** The target the suggested price was worked out for: the dish's own, else the screen's. */
+  effectiveTargetPercent: number;
+  /** Price including tax per 1 of price without tax: 1 when prices carry no tax or the dish is exempt. The page uses it to follow a typed price at once; the server stays the authority. */
+  taxFactor: number;
   basis: string;
 }
 
 export interface FoodCostDto { targetPercent: number; taxInclusive: boolean; currencyCode: string; canSetPrices: boolean; dishes: FoodCostDishDto[] }
+
+/** One dish's change. It carries a price, an own target, or clearTarget (back to following the screen's target). */
+export interface FoodCostChange { productId: string; price?: number | null; targetPercent?: number | null; clearTarget?: boolean }
+/** A dish the server could not save, with its own words; the others of the same request are saved. */
+export interface FoodCostFailure { productId: string; name: string; message: string }
+export interface FoodCostSaveResult { saved: string[]; failed: FoodCostFailure[]; cost: FoodCostDto }

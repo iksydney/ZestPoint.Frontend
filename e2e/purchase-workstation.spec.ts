@@ -1,6 +1,6 @@
 import { Page, expect, test } from '@playwright/test';
 import { lineAmounts, netUnitCost, quantityFromPacks, round2, sumLines, tareWithinTolerance } from '../src/app/core/purchase-math';
-import { newContext, registerViaUi } from './helpers';
+import { choose, newContext, registerViaUi } from './helpers';
 
 /** The same worked examples the server's PurchaseMath tests use: the screen and the server must never disagree. */
 test.describe('Purchase maths on the screen matches the server', () => {
@@ -115,7 +115,7 @@ test.describe('Purchase order workstation and goods receiving', () => {
     await page.getByTestId('line-disc-0').fill('5');
     await page.getByTestId('line-tax-0').fill('10');
     await expect(page.getByTestId('line-total-0')).toHaveText('714.78');
-    await page.getByTestId('line-bin-0').selectOption({ label: 'VAULT-A1' });
+    await choose(page, 'line-bin-0', 'VAULT-A1');
 
     await page.getByTestId('po-scan').fill('5000281000028');
     await page.getByTestId('po-scan').press('Enter');
@@ -124,7 +124,7 @@ test.describe('Purchase order workstation and goods receiving', () => {
     await page.getByTestId('line-cost-1').fill('210');
     await page.getByTestId('line-tax-1').fill('10');
     await expect(page.getByTestId('line-total-1')).toHaveText('1,386.00');
-    await page.getByTestId('line-bin-1').selectOption({ label: 'LOCK-01 (secure)' });
+    await choose(page, 'line-bin-1', 'LOCK-01 (secure)');
 
     await expect(page.getByTestId('po-subtotal')).toHaveText('1,944.00');
     await expect(page.getByTestId('po-discount')).toContainText('34.20');

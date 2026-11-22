@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { registerViaUi } from './helpers';
+import { choose, registerViaUi } from './helpers';
 
 /**
  * The kitchen display (design of 2026-11-15): a station's tickets on a wall screen, with a clock that turns them amber then red, items
@@ -18,7 +18,7 @@ async function newItem(page: Page, name: string, price: string, group?: string) 
   await page.getByTestId('item-new').click();
   await page.getByTestId('item-name').fill(name);
   await page.getByTestId('item-price').fill(price);
-  if (group) await page.getByTestId('item-group').selectOption({ label: group });
+  if (group) await choose(page, 'item-group', group);
   await page.getByTestId('item-save').click();
   await expect(page.getByTestId(`item-${name}`)).toBeVisible();
 }
@@ -56,7 +56,7 @@ test.describe('Kitchen display', () => {
     await page.goto('/app/inventory/groups');
     await page.getByTestId('group-new').click();
     await page.getByTestId('group-name').fill('Food');
-    await page.getByTestId('group-station').selectOption({ label: 'Kitchen' });
+    await choose(page, 'group-station', 'Kitchen');
     await page.getByTestId('group-save').click();
     await expect(page.getByTestId('group-Food')).toBeVisible();
     await newItem(page, 'Burger', '3000', 'Food');
@@ -68,7 +68,8 @@ test.describe('Kitchen display', () => {
     await page.clock.install({ time: new Date(Date.now() + 90_000) });
     await page.goto('/app/pos/kitchen');
     await expect(page.getByTestId('main-nav').locator('[data-nav="pos.kitchen"]')).toBeVisible();
-    await page.getByTestId('kds-station').selectOption({ label: 'Kitchen' });
+    await choose(page, 'kds-station', 'Kitchen');
+    await expect(page.getByTestId('kds-station')).toHaveValue('Kitchen');
     const one = page.getByTestId('kitchen-ticket-Order 1');
     await expect(one).toBeVisible();
     await expect(page.getByTestId('allday-Burger')).toHaveText('3 x Burger');                  // 2 + 1 still to make

@@ -77,7 +77,9 @@ export const OWNER: Chapter = {
     ]),
     section('owner-branches', 'Several branches', [
       p('**Head Office** brings your branches together. **Prices and Menus** (under **Head Office**, **Set-up**) shows what each item costs at each branch and why: the branch\'s own price, a price list it uses, or the company price. You can change prices now or from a date, and take items off one branch\'s till. A price below an item\'s minimum price is refused.'),
-      p('By default only head office sets prices. In **Settings** you can tick **Branch managers may set their own branch\'s prices and what it sells**.')
+      p('By default only head office sets prices. In **Settings** you can tick **Branch managers may set their own branch\'s prices and what it sells**.'),
+      p('**Adding a branch.** Open **Admin**, **Set-up**, **Branches** and press **Add branch**. A new branch is not visible to your staff until you give it to them: the people who worked at "every branch" are switched to the branches they had (you, the owner, still see everything), and a window asks **Who works at** the new branch. Add people who already work for you, or create new people for it. A person sees only the branches they work at: the branch menu, the reports and the till show only those.'),
+      careful('Someone who works at only some branches cannot give a branch they do not work at, nor "All branches". That keeps a new branch from reaching people the person who made it cannot see.')
     ]),
     section('owner-phone', 'On your phone', [
       p('Sign in to the phone app with your e-mail and password. The **Owner** tab shows the daily summary, the branches side by side, loss-prevention alerts and what waits for your approval. All of it needs a signal. The chapter **The phone app** says more.')

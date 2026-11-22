@@ -7,6 +7,7 @@ import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { GlobalStockApi, StockGroupApi } from '../../core/services/nav-ops.services';
 import { ConfirmService, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 
 interface FieldSpec { readonly key: BulkField; readonly label: string; readonly kind: 'number' | 'bool' | 'group'; readonly help: string }
@@ -28,7 +29,7 @@ const FIELDS: readonly FieldSpec[] = [
  */
 @Component({
     selector: 'zp-global-maintenance',
-    imports: [EntitledActionDirective, FormsModule],
+    imports: [EntitledActionDirective, FormsModule, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <h1 class="text-2xl font-bold">Global Stock Maintenance</h1>
@@ -42,13 +43,13 @@ const FIELDS: readonly FieldSpec[] = [
           <p class="mt-1 text-xs text-ink/70">{{ spec().help }}</p></div>
         <div><label class="app-label" for="g-value">New value</label>
           @switch (spec().kind) {
-            @case ('group') { <select id="g-value" class="app-input" data-testid="global-value" [ngModel]="value()" (ngModelChange)="value.set($event); dirty()"><option value="">Choose a group...</option>@for (g of activeGroups(); track g.id) { <option [value]="g.id">{{ g.name }}</option> }</select> }
+            @case ('group') { <zp-search-select inputId="g-value" testId="global-value" emptyLabel="Choose a group..." noun="group" placeholder="Search groups" [options]="groupOptions()" [value]="value()" (valueChange)="value.set($event); dirty()" /> }
             @case ('bool') { <select id="g-value" class="app-input" data-testid="global-value" [ngModel]="value()" (ngModelChange)="value.set($event); dirty()"><option value="">Choose...</option><option value="true">Yes</option><option value="false">No</option></select> }
             @default { <input id="g-value" type="number" min="0" step="any" class="app-input" data-testid="global-value" [ngModel]="value()" (ngModelChange)="value.set($event === null ? '' : '' + $event); dirty()" /> }
           }</div>
       </div>
       <div class="space-y-3"><h2 class="font-semibold">2. Which items</h2>
-        <div><label class="app-label" for="g-group">In stock group</label><select id="g-group" class="app-input" data-testid="global-scope-group" [ngModel]="scopeGroup()" (ngModelChange)="scopeGroup.set($event); dirty()"><option value="">Any group</option>@for (g of groups(); track g.id) { <option [value]="g.id">{{ g.name }}</option> }</select></div>
+        <div><label class="app-label" for="g-group">In stock group</label><zp-search-select inputId="g-group" testId="global-scope-group" emptyLabel="Any group" noun="group" placeholder="Search groups" [options]="scopeGroupOptions()" [value]="scopeGroup()" (valueChange)="scopeGroup.set($event); dirty()" /></div>
         <div><label class="app-label" for="g-search">Name or SKU contains</label><input id="g-search" class="app-input" data-testid="global-scope-search" [ngModel]="scopeSearch()" (ngModelChange)="scopeSearch.set($event); dirty()" /></div>
         <div><label class="app-label" for="g-active">Status</label><select id="g-active" class="app-input" [ngModel]="scopeActive()" (ngModelChange)="scopeActive.set($event); dirty()"><option value="">Any</option><option value="true">Active only</option><option value="false">Inactive only</option></select></div>
         <p class="text-xs text-ink/70">Choose at least one of these so you never change the whole catalogue by accident.</p>
@@ -100,6 +101,8 @@ export class GlobalMaintenanceComponent implements OnInit {
   protected readonly spec = computed(() => FIELDS.find((f) => f.key === this.field())!);
   protected readonly readOnly = computed(() => this.auth.accessModeFor(FEATURES.INVENTORY) === 'readonly');
   protected readonly activeGroups = computed(() => this.groups().filter((g) => g.isActive));
+  protected readonly groupOptions = computed<readonly SelectOption[]>(() => this.activeGroups().map((g) => ({ value: g.id, label: g.name })));
+  protected readonly scopeGroupOptions = computed<readonly SelectOption[]>(() => this.groups().map((g) => ({ value: g.id, label: g.name })));
   protected readonly shown = computed(() => this.result()?.rows.slice(0, 200) ?? []);
   protected readonly canPreview = computed(() => this.value() !== '' && (this.scopeGroup() !== '' || this.scopeSearch().trim() !== '' || this.scopeActive() !== ''));
 

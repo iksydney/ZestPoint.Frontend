@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { newContext, registerViaUi } from './helpers';
+import { choose, newContext, registerViaUi } from './helpers';
 
 /** Publishes the starter brand so the owner reaches the application, then opens Staff & roles. */
 async function ownerAtStaff(page: Page) {
@@ -200,6 +200,33 @@ test.describe('Staff management and screen-level RBAC (criteria 13-17)', () => {
     await page.getByTestId('save-branch').click();
     await expect(page.getByTestId('branch-LEK-2')).toBeVisible();
     await expect(page.getByTestId('branch-MAIN')).toContainText('Head office');
+  });
+
+  test('the role and branch filters are searchable lists that start on All roles and All branches, and narrow the staff', async ({ page }) => {
+    await ownerAtStaff(page);
+    await addPinStaff(page, 'Tunde Bello', 'cashier');
+    await addPinStaff(page, 'Sade Okon', 'supervisor');
+    const table = page.getByTestId('staff-table');
+    await expect(page.getByTestId('staff-filter-role')).toHaveValue('All roles');
+    await expect(page.getByTestId('staff-filter-branch')).toHaveValue('All branches');
+
+    await choose(page, 'staff-filter-role', 'Cashier');
+    await expect(page.getByTestId('staff-filter-role')).toHaveValue('Cashier');
+    await expect(table).toContainText('Tunde Bello');
+    await expect(table).not.toContainText('Sade Okon');
+    await choose(page, 'staff-filter-role', 'All roles');
+    await expect(table).toContainText('Sade Okon');
+    await expect(table).toContainText('Tunde Bello');
+
+    // The branch list is typed into the same way; the first real branch (the box is on All branches, so Down once) keeps the people who work there.
+    await page.getByTestId('staff-filter-branch').click();
+    await expect(page.getByTestId('staff-filter-branch-list').locator('[data-value]').first()).toHaveText('All branches');
+    await page.getByTestId('staff-filter-branch').press('ArrowDown');
+    await page.getByTestId('staff-filter-branch').press('Enter');
+    await expect(page.getByTestId('staff-filter-branch')).not.toHaveValue('All branches');
+    await expect(table).toContainText('Tunde Bello');
+    await choose(page, 'staff-filter-branch', 'All branches');
+    await expect(page.getByTestId('staff-filter-branch')).toHaveValue('All branches');
   });
 
   test('the activity log records the sensitive actions an administrator just took', async ({ page }) => {

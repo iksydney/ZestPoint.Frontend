@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { newContext, pick, registerViaUi, startShiftWhenAsked } from './helpers';
+import { choose, newContext, pick, registerViaUi, startShiftWhenAsked } from './helpers';
 
 /** The menu contract: group, order, label and route of every screen (POS 9, Stock 22, Purchasing 16; Bar Orders is offered only to a company that uses the bar man method). */
 /** The menu as the owner of a new company sees it: working screens by area, in order, each area's reports behind one Reports entry. */
@@ -325,7 +325,7 @@ test.describe('Navigation', () => {
     await page.getByTestId('item-new').click();
     await page.getByTestId('item-name').fill('Whisky');
     await page.getByTestId('item-barcode').fill('4006381333931');
-    await page.getByTestId('item-group').selectOption({ label: 'Spirits' });
+    await choose(page, 'item-group', 'Spirits');
     await page.getByTestId('item-price').fill('1200');
     await page.getByTestId('item-save').click();
     await expect(page.getByTestId('item-Whisky')).toContainText('Spirits');
@@ -344,7 +344,7 @@ test.describe('Navigation', () => {
     await expect(page.getByTestId('adjust-expected')).toContainText('0');
     await page.getByTestId('adjust-qty').fill('24');
     await expect(page.getByTestId('adjust-result')).toContainText('24');
-    await page.getByTestId('adjust-reason').selectOption({ label: 'Count correction' });
+    await choose(page, 'adjust-reason', 'Count correction');
     await page.getByTestId('adjust-submit').click();
     await expect(page.getByTestId('adjust-message')).toContainText('Stock was updated');
     await expect(page.getByTestId('adjust-history')).toContainText('Approved');

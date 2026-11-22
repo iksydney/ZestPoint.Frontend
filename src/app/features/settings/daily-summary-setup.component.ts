@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ApiEnvelope } from '../../core/models/api.model';
@@ -8,6 +8,7 @@ import { toApiError, unwrap } from '../../core/services/api.util';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { DailySummaryApi } from '../../core/services/daily-summary.service';
 import { ConfirmService, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
 interface Form { id: string | null; kind: 'staff' | 'outside'; membershipId: string; name: string; email: string; phone: string; inApp: boolean; email_: boolean; sms: boolean; whatsApp: boolean; branchId: string; active: boolean }
@@ -24,7 +25,7 @@ const yesterday = (): string => { const d = new Date(Date.now() - 86_400_000); r
  */
 @Component({
     selector: 'zp-daily-summary-setup',
-    imports: [FormsModule, StatusBadgeComponent],
+    imports: [FormsModule, StatusBadgeComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="mb-3">
@@ -77,16 +78,16 @@ const yesterday = (): string => { const d = new Date(Date.now() - 86_400_000); r
             }
             @if (f.kind === 'staff') {
               <div class="sm:col-span-2"><label class="app-label" for="dss-staff">Staff member</label>
-                <select id="dss-staff" class="app-input" data-testid="dss-staff" [disabled]="!!f.id" [ngModel]="f.membershipId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ membershipId: $event })">
-                  <option value="">Choose...</option>@for (p of people(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }</select></div>
+                <zp-search-select inputId="dss-staff" testId="dss-staff" emptyLabel="Choose..." noun="person" placeholder="Search people" [disabled]="!!f.id"
+                                  [options]="peopleOptions()" [value]="f.membershipId" (valueChange)="patch({ membershipId: $event })" /></div>
             } @else {
               <div><label class="app-label" for="dss-name">Name</label><input id="dss-name" class="app-input" data-testid="dss-name" [ngModel]="f.name" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ name: $event })" /></div>
               <div><label class="app-label" for="dss-email">E-mail address</label><input id="dss-email" type="email" class="app-input" data-testid="dss-email" [ngModel]="f.email" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ email: $event })" /></div>
               <div><label class="app-label" for="dss-phone">Phone number (for SMS or WhatsApp)</label><input id="dss-phone" class="app-input" data-testid="dss-phone" [ngModel]="f.phone" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ phone: $event })" /></div>
             }
             <div><label class="app-label" for="dss-branch">Branches</label>
-              <select id="dss-branch" class="app-input" data-testid="dss-branch" [ngModel]="f.branchId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ branchId: $event })">
-                <option value="">All branches (the company's summary)</option>@for (b of branches.branches(); track b.id) { <option [value]="b.id">{{ b.name }} only</option> }</select></div>
+              <zp-search-select inputId="dss-branch" testId="dss-branch" emptyLabel="All branches (the company's summary)" noun="branch" placeholder="Search branches"
+                                [options]="branchOptions()" [value]="f.branchId" (valueChange)="patch({ branchId: $event })" /></div>
             <fieldset class="sm:col-span-2"><legend class="app-label">Send it</legend>
               <div class="flex flex-wrap gap-x-5 gap-y-1 text-sm">
                 @if (f.kind === 'staff') { <label class="flex items-center gap-2"><input type="checkbox" data-testid="dss-way-inapp" [checked]="f.inApp" (change)="patch({ inApp: !f.inApp })" /> In the app (the notices bell)</label> }
@@ -114,6 +115,8 @@ export class DailySummarySetupComponent implements OnInit {
 
   protected readonly settings = signal<DailySummarySettingsDto | null>(null);
   protected readonly people = signal<readonly { id: string; name: string }[]>([]);
+  protected readonly peopleOptions = computed<readonly SelectOption[]>(() => this.people().map((p) => ({ value: p.id, label: p.name })));
+  protected readonly branchOptions = computed<readonly SelectOption[]>(() => this.branches.branches().map((b) => ({ value: b.id, label: `${b.name} only` })));
   protected readonly enabled = signal(false);
   protected readonly time = signal('07:00');
   protected readonly form = signal<Form | null>(null);

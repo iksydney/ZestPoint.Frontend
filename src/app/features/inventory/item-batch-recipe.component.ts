@@ -9,6 +9,7 @@ import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { KitchenApi } from '../../core/services/kitchen.services';
 import { InventoryApi } from '../../core/services/ops.services';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 
 interface BatchRow { inventoryItemId: string; quantity: number; usablePercent: number }
 
@@ -19,7 +20,7 @@ interface BatchRow { inventoryItemId: string; quantity: number; usablePercent: n
  */
 @Component({
     selector: 'zp-item-batch-recipe',
-    imports: [DecimalPipe, FormsModule],
+    imports: [DecimalPipe, FormsModule, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <fieldset class="mb-4 rounded-lg border border-ink/15 p-3" data-testid="batch-editor"><legend class="px-1 text-sm font-semibold">Made in batches (what one batch takes)</legend>
@@ -34,8 +35,7 @@ interface BatchRow { inventoryItemId: string; quantity: number; usablePercent: n
         <p class="mb-2 text-xs text-ink/70">One batch gives {{ portions() }} portion{{ portions() === 1 ? '' : 's' }}. The cook records each batch on the Production screen: these ingredients leave stock and the portions are added, so selling a portion takes it from them.</p>
         @for (r of rows(); track $index) {
           <div class="mb-2 grid grid-cols-[1fr_7rem_5rem_auto] items-end gap-2">
-            <select class="app-input" aria-label="Ingredient" [attr.data-testid]="'batch-item-' + $index" [ngModel]="r.inventoryItemId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch($index, { inventoryItemId: $event })">
-              <option value="">Choose an ingredient</option>@for (i of items(); track i.id) { <option [value]="i.id">{{ i.name }} ({{ unit(i) }})</option> }</select>
+            <zp-search-select ariaLabel="Ingredient" [testId]="'batch-item-' + $index" emptyLabel="Choose an ingredient" noun="ingredient" placeholder="Search ingredients" [options]="itemOptions()" [value]="r.inventoryItemId" (valueChange)="patch($index, { inventoryItemId: $event })" />
             <input type="number" min="0" step="any" class="app-input" aria-label="Quantity per batch" [attr.data-testid]="'batch-qty-' + $index" [ngModel]="r.quantity" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch($index, { quantity: +$event })" />
             <input type="number" min="1" max="100" step="any" class="app-input" aria-label="Usable percent" title="How much of what you buy is usable once trimmed" [attr.data-testid]="'batch-usable-' + $index" [ngModel]="r.usablePercent" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch($index, { usablePercent: +$event || 100 })" />
             <button type="button" class="btn-ghost px-2" aria-label="Remove ingredient" (click)="remove($index)">x</button>
@@ -61,6 +61,7 @@ export class ItemBatchRecipeComponent {
   readonly portions = input<number | null>(null);
 
   protected readonly items = signal<readonly InventoryItemDto[]>([]);
+  protected readonly itemOptions = computed<readonly SelectOption[]>(() => this.items().map((i) => ({ value: i.id, label: `${i.name} (${this.unit(i)})` })));
   protected readonly rows = signal<BatchRow[]>([]);
   protected readonly recipe = signal<BatchRecipeDto | null>(null);
   protected readonly loaded = signal(false);

@@ -7,6 +7,7 @@ import { toApiError } from '../../core/services/api.util';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { StationsService } from '../../core/services/stations.service';
 import { BranchPickerComponent } from '../../shared/ui/ops-chrome.components';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { KitchenTicketComponent } from './kitchen-ticket.component';
 
 const STATION_KEY = 'zp.kds.station';
@@ -18,7 +19,7 @@ const STATION_KEY = 'zp.kds.station';
  */
 @Component({
     selector: 'zp-kitchen-display',
-    imports: [RouterLink, BranchPickerComponent, KitchenTicketComponent],
+    imports: [RouterLink, BranchPickerComponent, KitchenTicketComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="flex flex-col gap-4" data-testid="kitchen">
@@ -27,10 +28,8 @@ const STATION_KEY = 'zp.kds.station';
           <h1 class="text-2xl font-bold">Kitchen display</h1>
           <div>
             <label class="sr-only" for="kds-station">Station</label>
-            <select id="kds-station" class="app-input py-1 text-lg font-semibold" data-testid="kds-station" [value]="station()" (change)="choose($any($event.target).value)">
-              <option value="">All stations</option>
-              @for (s of stations.list(); track s.id) { <option [value]="s.id" [selected]="station() === s.id">{{ s.name }}</option> }
-            </select>
+            <zp-search-select class="w-64" inputId="kds-station" testId="kds-station" inputClass="app-input py-1 text-lg font-semibold" emptyLabel="All stations" noun="station" placeholder="Search stations"
+                              [options]="stationOptions()" [value]="station()" (valueChange)="choose($event)" />
           </div>
         </div>
         <div class="flex items-center gap-3">
@@ -92,6 +91,7 @@ export class KitchenDisplayComponent implements OnInit {
 
   /** The station shown on this device: an id, or '' for every station. Remembered on the device. */
   protected readonly station = signal<string>(this.saved());
+  protected readonly stationOptions = computed<readonly SelectOption[]>(() => this.stations.list().map((x) => ({ value: x.id, label: x.name })));
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly recent = signal<readonly BarOrderDto[]>([]);

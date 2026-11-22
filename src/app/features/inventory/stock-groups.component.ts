@@ -9,6 +9,7 @@ import { StationsService } from '../../core/services/stations.service';
 import { LedgerAccountOptionDto, LedgerApi } from '../../core/services/ledger.services';
 import { StockGroupApi } from '../../core/services/nav-ops.services';
 import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 
@@ -20,7 +21,7 @@ const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description:
  */
 @Component({
     selector: 'zp-stock-groups',
-    imports: [EntitledActionDirective, FormsModule, DialogComponent, StatusBadgeComponent],
+    imports: [EntitledActionDirective, FormsModule, DialogComponent, SearchSelectComponent, StatusBadgeComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -67,23 +68,19 @@ const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description:
           <div><label class="app-label" for="g-sort">Sort order</label><input id="g-sort" type="number" class="app-input" [ngModel]="form().sortOrder" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ sortOrder: +$event })" /></div>
         </div>
         <div><label class="app-label" for="g-parent">Parent group</label>
-          <select id="g-parent" class="app-input" data-testid="group-parent" [ngModel]="form().parentId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ parentId: $event || null })">
-            <option [ngValue]="null">None (top level)</option>@for (p of parents(); track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }</select>
-          @if (fe('parentId')) { <p class="app-error" role="alert">{{ fe('parentId') }}</p> }</div>
+          <zp-search-select inputId="g-parent" testId="group-parent" emptyLabel="None (top level)" noun="group" placeholder="Search groups" [options]="parentOptions()" [value]="form().parentId"
+                            [error]="fe('parentId')" (valueChange)="patch({ parentId: $event || null })" /></div>
         <div><label class="app-label" for="g-station">Prepared at</label>
-          <select id="g-station" class="app-input" data-testid="group-station" [ngModel]="form().stationId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ stationId: $event || null })">
-            <option [ngValue]="null">{{ defaultStation() ? 'The default station (' + defaultStation() + ')' : 'Nowhere: confirmed when the bill is sent' }}</option>@for (s of stations.list(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select>
-          @if (fe('stationId')) { <p class="app-error" role="alert">{{ fe('stationId') }}</p> }
+          <zp-search-select inputId="g-station" testId="group-station" [emptyLabel]="stationEmpty()" noun="station" placeholder="Search stations" [options]="stationOptions()" [value]="form().stationId"
+                            [error]="fe('stationId')" (valueChange)="patch({ stationId: $event || null })" />
           <p class="mt-1 text-xs text-ink/70">Where the items of this group are prepared when a bill is sent. An item can name its own station on its stock card.</p></div>
         <div class="grid gap-3 sm:grid-cols-2">
           <div><label class="app-label" for="g-sales-ac">Sales account</label>
-            <select id="g-sales-ac" class="app-input" data-testid="group-sales-ac" [ngModel]="form().salesAccountId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ salesAccountId: $event || null })">
-            <option [ngValue]="null">The company's Sales account</option>@for (a of salesAccounts(); track a.id) { <option [ngValue]="a.id">{{ a.code }} {{ a.name }}</option> }</select>
-            @if (fe('salesAccountId')) { <p class="app-error" role="alert">{{ fe('salesAccountId') }}</p> }</div>
+            <zp-search-select inputId="g-sales-ac" testId="group-sales-ac" emptyLabel="The company's Sales account" noun="account" placeholder="Search accounts" [options]="salesAccountOptions()" [value]="form().salesAccountId"
+                              [error]="fe('salesAccountId')" (valueChange)="patch({ salesAccountId: $event || null })" /></div>
           <div><label class="app-label" for="g-purchase-ac">Stock (purchase) account</label>
-            <select id="g-purchase-ac" class="app-input" data-testid="group-purchase-ac" [ngModel]="form().purchaseAccountId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ purchaseAccountId: $event || null })">
-            <option [ngValue]="null">The company's Stock account</option>@for (a of stockAccounts(); track a.id) { <option [ngValue]="a.id">{{ a.code }} {{ a.name }}</option> }</select>
-            @if (fe('purchaseAccountId')) { <p class="app-error" role="alert">{{ fe('purchaseAccountId') }}</p> }</div>
+            <zp-search-select inputId="g-purchase-ac" testId="group-purchase-ac" emptyLabel="The company's Stock account" noun="account" placeholder="Search accounts" [options]="stockAccountOptions()" [value]="form().purchaseAccountId"
+                              [error]="fe('purchaseAccountId')" (valueChange)="patch({ purchaseAccountId: $event || null })" /></div>
         </div>
         <p class="text-xs text-ink/70">In the ledger, the sales and the stock of every item in this group go to these accounts, unless the item's own stock card names another.</p>
         <div><label class="app-label" for="g-desc">Description</label><input id="g-desc" class="app-input" maxlength="300" [ngModel]="form().description" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ description: $event || null })" /></div>
@@ -96,8 +93,7 @@ const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description:
     <zp-dialog [open]="dialog() === 'reassign'" [title]="'Reassign members of ' + (reassigning()?.name ?? '')" (closed)="dialog.set(null)">
       <p class="mb-3 text-sm text-ink/80">Every product, stock item and sub-group in this group moves to the group you choose. Sales already made keep the group they were sold under, so past reports do not change.</p>
       <label class="app-label" for="g-target">Move them to</label>
-      <select id="g-target" class="app-input" data-testid="group-target" [ngModel]="target()" (ngModelChange)="target.set($event)">
-        <option value="">Choose a group...</option>@for (p of targets(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }</select>
+      <zp-search-select inputId="g-target" testId="group-target" emptyLabel="Choose a group..." noun="group" placeholder="Search groups" [options]="targetOptions()" [value]="target()" (valueChange)="target.set($event)" />
       @if (dialogError()) { <p class="sys-alert sys-alert-danger mt-3" role="alert">{{ dialogError() }}</p> }
       <div class="mt-4 flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="button" class="btn-primary" data-testid="group-reassign" [disabled]="saving() || !target()" (click)="reassign()">Move members</button></div>
     </zp-dialog>
@@ -133,6 +129,12 @@ export class StockGroupsComponent implements OnInit {
   protected readonly canManage = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_GROUPS_MANAGE));
   protected readonly parents = computed(() => this.groups().filter((g) => g.id !== this.editingId() && g.isActive));
   protected readonly targets = computed(() => this.groups().filter((g) => g.id !== this.reassigning()?.id && g.isActive));
+  protected readonly parentOptions = computed<readonly SelectOption[]>(() => this.parents().map((p) => ({ value: p.id, label: p.name })));
+  protected readonly targetOptions = computed<readonly SelectOption[]>(() => this.targets().map((p) => ({ value: p.id, label: p.name })));
+  protected readonly stationOptions = computed<readonly SelectOption[]>(() => this.stations.list().map((s) => ({ value: s.id, label: s.name })));
+  protected readonly stationEmpty = computed(() => (this.defaultStation() ? 'The default station (' + this.defaultStation() + ')' : 'Nowhere: confirmed when the bill is sent'));
+  protected readonly salesAccountOptions = computed<readonly SelectOption[]>(() => this.salesAccounts().map((a) => ({ value: a.id, label: `${a.code} ${a.name}` })));
+  protected readonly stockAccountOptions = computed<readonly SelectOption[]>(() => this.stockAccounts().map((a) => ({ value: a.id, label: `${a.code} ${a.name}` })));
 
   ngOnInit(): void {
     void this.load();

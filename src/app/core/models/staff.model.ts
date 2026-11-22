@@ -49,6 +49,44 @@ export interface BranchDto {
   readonly timeZoneId: string | null;
   readonly isHeadOffice: boolean;
   readonly isActive: boolean;
+  /** Only on the answer to creating a branch: the people who worked at every branch and now work only at the branches they had. */
+  readonly limitedStaff?: readonly LimitedStaffDto[] | null;
+}
+
+/** A person a new branch took away from "every branch" (owner's decision, 2026-11-22). */
+export interface LimitedStaffDto {
+  readonly membershipId: string;
+  readonly displayName: string;
+  readonly roles: readonly string[];
+}
+
+/** Who works at one branch: the "Who works at this branch?" window. */
+export interface BranchStaffDto {
+  readonly branchId: string;
+  readonly branchName: string;
+  /** Only someone who works at every branch may give a person every branch. */
+  readonly canGiveEveryBranch: boolean;
+  readonly staff: readonly BranchStaffMemberDto[];
+}
+
+export interface BranchStaffMemberDto {
+  readonly membershipId: string;
+  readonly displayName: string;
+  readonly staffCode: string;
+  readonly roles: readonly string[];
+  readonly isOwner: boolean;
+  /** Works at every branch (the owner always does). */
+  readonly hasAllBranches: boolean;
+  /** Works at this branch, by name or because they work at every branch. */
+  readonly worksHere: boolean;
+  readonly isYou: boolean;
+}
+
+export interface SetBranchStaffRequest {
+  /** The people who should work at the branch, among those who have a list of branches; anyone left out who works there now is taken off it. */
+  membershipIds: string[];
+  /** People to switch to "every branch". */
+  everyBranch: string[];
 }
 
 export interface SaveBranchRequest {

@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import {
-  BatchDto, InventoryItemDto, MovementDto, StockMovementType, StockUnit, SupplierDto
+  BatchDto, InventoryItemDto, MovementDto, StockMovementType, StockUnit
 } from '../../core/models/ops.model';
 import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
@@ -12,18 +12,19 @@ import { BranchContextService } from '../../core/services/branch-context.service
 import { InventoryApi } from '../../core/services/ops.services';
 import { SyncAgentService } from '../../core/services/sync-agent.service';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 import { ItemFollowUpService } from '../../core/services/item-follow-up.service';
 import { StockCardComponent } from './stock-card.component';
 
-type Dialog = 'adjust' | 'receive' | 'transfer' | 'history' | null;
+type Dialog = 'adjust' | 'transfer' | 'history' | null;
 
 const UNIT_LABEL: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
 
-/** Stock levels, item set-up, adjustments, goods received, transfers and batch/expiry view for the active branch. */
+/** Stock levels, item set-up, adjustments, transfers and batch/expiry view for the active branch. Goods are received only through purchasing (Purchase Orders and Goods Receiving), never from here. */
 @Component({
     selector: 'zp-stock-tab',
-    imports: [CurrencyPipe, DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent, StockCardComponent],
+    imports: [CurrencyPipe, DecimalPipe, FormsModule, DialogComponent, SearchSelectComponent, StatusBadgeComponent, StockCardComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="mb-3 flex flex-wrap items-center gap-2">
@@ -31,11 +32,11 @@ const UNIT_LABEL: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Eac
       <label class="flex items-center gap-2 text-sm"><input type="checkbox" data-testid="low-only" [checked]="lowOnly()" (change)="lowOnly.set(!lowOnly()); load()" /> Low stock only</label>
       <span class="ml-auto flex flex-wrap gap-2">
         @if (canManageItems() && !readOnly()) { <button type="button" class="btn-primary" data-testid="new-item" (click)="openItem(null)">New stock item</button> }
-        @if (canPurchase() && !readOnly()) { <button type="button" class="btn-outline" data-testid="receive-goods" (click)="openReceive()">Receive goods</button> }
         @if (canAdjust() && canTransfer() && !readOnly()) { <button type="button" class="btn-outline" (click)="openTransfer()">Transfer</button> }
       </span>
     </div>
     @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert">{{ error() }}</p> }
+    <p class="mb-3 text-xs text-ink/70" data-testid="stock-receive-hint">Stock goes up when goods are received through Purchasing (a purchase order received at Goods Receiving, goods without an order, or a market run) or by an adjustment.</p>
 
     <div class="app-card overflow-x-auto p-0">
       <table class="app-table">
@@ -98,37 +99,13 @@ const UNIT_LABEL: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Eac
       </form>
     </zp-dialog>
 
-    <!-- Receive -->
-    <zp-dialog [open]="dialog() === 'receive'" title="Receive goods" [wide]="true" (closed)="dialog.set(null)">
-      <form class="space-y-3" (submit)="$event.preventDefault(); submitReceive()">
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div><label class="app-label" for="rc-item">Item</label>
-            <select id="rc-item" class="app-input" data-testid="receive-item" [ngModel]="rc().itemId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchRc({ itemId: $event })"><option value="">Choose...</option>@for (i of items(); track i.id) { <option [value]="i.id">{{ i.name }}</option> }</select></div>
-          <div><label class="app-label" for="rc-ref">Delivery note / reference</label><input id="rc-ref" class="app-input" [ngModel]="rc().reference" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchRc({ reference: $event })" /></div>
-          <div><label class="app-label" for="rc-qty">Quantity received</label><input id="rc-qty" type="number" min="0" step="any" class="app-input" data-testid="receive-qty" [ngModel]="rc().quantity" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchRc({ quantity: +$event })" /></div>
-          <div><label class="app-label" for="rc-cost">Cost per unit</label><input id="rc-cost" type="number" min="0" step="any" class="app-input" data-testid="receive-cost" [ngModel]="rc().unitCost" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchRc({ unitCost: +$event })" /></div>
-          <div><label class="app-label" for="rc-sup">Supplier</label><select id="rc-sup" class="app-input" data-testid="receive-supplier" [ngModel]="rc().supplierId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchRc({ supplierId: $event })"><option value="">None recorded</option>@for (s of suppliers(); track s.id) { <option [value]="s.id">{{ s.name }}</option> }</select></div>
-          <div><label class="app-label" for="rc-tax">Purchase tax on this line (%)</label><input id="rc-tax" type="number" min="0" max="100" step="any" class="app-input" data-testid="receive-tax" [ngModel]="rc().tax" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchRc({ tax: +$event })" /></div>
-          @if (receiveItem()?.tracksSerials) {
-            <div class="sm:col-span-2"><label class="app-label" for="rc-serials">Serial numbers (one per line; one for each unit received)</label><textarea id="rc-serials" rows="4" class="app-input font-mono" data-testid="receive-serials" [ngModel]="rc().serials" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchRc({ serials: $event })"></textarea></div>
-          }
-          @if (receiveItem()?.tracksBatches) {
-            <div><label class="app-label" for="rc-lot">Lot code</label><input id="rc-lot" class="app-input" [ngModel]="rc().lot" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchRc({ lot: $event })" /></div>
-            <div><label class="app-label" for="rc-exp">Expiry date</label><input id="rc-exp" type="date" class="app-input" [ngModel]="rc().expiry" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchRc({ expiry: $event })" /></div>
-          }
-        </div>
-        @if (adjError()) { <p class="sys-alert sys-alert-danger" role="alert">{{ adjError() }}</p> }
-        <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="receive-save" [disabled]="saving() || !rc().itemId || rc().quantity <= 0">Record delivery</button></div>
-      </form>
-    </zp-dialog>
-
     <!-- Transfer -->
     <zp-dialog [open]="dialog() === 'transfer'" title="Transfer stock to another branch" (closed)="dialog.set(null)">
       <form class="space-y-3" (submit)="$event.preventDefault(); submitTransfer()">
         <div><label class="app-label" for="tf-to">To branch</label>
-          <select id="tf-to" class="app-input" [ngModel]="tf().toBranchId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchTf({ toBranchId: $event })"><option value="">Choose...</option>@for (b of otherBranches(); track b.id) { <option [value]="b.id">{{ b.name }}</option> }</select></div>
+          <zp-search-select inputId="tf-to" testId="transfer-to" emptyLabel="Choose..." noun="branch" placeholder="Search branches" [options]="branchOptions()" [value]="tf().toBranchId" (valueChange)="patchTf({ toBranchId: $event })" /></div>
         <div><label class="app-label" for="tf-item">Item</label>
-          <select id="tf-item" class="app-input" [ngModel]="tf().itemId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchTf({ itemId: $event })"><option value="">Choose...</option>@for (i of items(); track i.id) { <option [value]="i.id">{{ i.name }} ({{ i.onHand | number: '1.0-2' }})</option> }</select></div>
+          <zp-search-select inputId="tf-item" testId="transfer-item" emptyLabel="Choose..." noun="item" placeholder="Search items" [options]="transferItemOptions()" [value]="tf().itemId" (valueChange)="patchTf({ itemId: $event })" /></div>
         <div><label class="app-label" for="tf-qty">Quantity</label><input id="tf-qty" type="number" min="0" step="any" class="app-input" [ngModel]="tf().quantity" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchTf({ quantity: +$event })" /></div>
         @if (adjError()) { <p class="sys-alert sys-alert-danger" role="alert">{{ adjError() }}</p> }
         <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary" [disabled]="saving() || !tf().toBranchId || !tf().itemId || tf().quantity <= 0">Transfer</button></div>
@@ -153,7 +130,6 @@ export class StockTabComponent {
   protected readonly dialog = signal<Dialog>(null);
   protected readonly items = signal<readonly InventoryItemDto[]>([]);
   protected readonly batches = signal<readonly BatchDto[]>([]);
-  protected readonly suppliers = signal<readonly SupplierDto[]>([]);
   protected readonly history = signal<readonly MovementDto[]>([]);
   protected readonly loading = signal(false);
   protected readonly saving = signal(false);
@@ -179,15 +155,14 @@ export class StockTabComponent {
   protected readonly canManageItems = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_ITEMS_MANAGE));
   protected readonly target = signal<InventoryItemDto | null>(null);
   protected readonly adj = signal({ type: 'Adjustment' as StockMovementType, direction: 'up' as 'up' | 'down', quantity: 0, reason: '' });
-  protected readonly rc = signal({ itemId: '', quantity: 0, unitCost: 0, reference: '', lot: '', expiry: '', supplierId: '', tax: 0, serials: '' });
   protected readonly tf = signal({ toBranchId: '', itemId: '', quantity: 0 });
 
   protected readonly readOnly = computed(() => this.auth.accessModeFor(FEATURES.INVENTORY) === 'readonly');
   protected readonly canAdjust = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_STOCK_ADJUST));
-  protected readonly canPurchase = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_PURCHASE_MANAGE));
   protected readonly canTransfer = computed(() => this.auth.accessModeFor(FEATURES.MULTI_BRANCH_TRANSFERS) === 'full' && this.branches.branches().length > 1);
   protected readonly otherBranches = computed(() => this.branches.branches().filter((b) => b.id !== this.branches.activeId()));
-  protected readonly receiveItem = computed(() => this.items().find((i) => i.id === this.rc().itemId) ?? null);
+  protected readonly transferItemOptions = computed<readonly SelectOption[]>(() => this.items().map((i) => ({ value: i.id, label: i.name, description: `${i.onHand.toLocaleString('en-US', { maximumFractionDigits: 2 })} on hand` })));
+  protected readonly branchOptions = computed<readonly SelectOption[]>(() => this.otherBranches().map((b) => ({ value: b.id, label: b.name })));
 
   constructor() {
     effect(() => {
@@ -205,14 +180,12 @@ export class StockTabComponent {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const [items, batches, suppliers] = await Promise.all([
+      const [items, batches] = await Promise.all([
         firstValueFrom(this.api.items({ branchId, search: this.search().trim() || undefined, lowOnly: this.lowOnly() || undefined, pageSize: 200 })),
-        firstValueFrom(this.api.batches({ branchId, expiringOnly: true })),
-        firstValueFrom(this.api.suppliers())
+        firstValueFrom(this.api.batches({ branchId, expiringOnly: true }))
       ]);
       this.items.set(items.items);
       this.batches.set(batches);
-      this.suppliers.set(suppliers);
     } catch (err) {
       this.error.set(toApiError(err).message);
     } finally {
@@ -252,38 +225,6 @@ export class StockTabComponent {
       this.dialog.set(null);
       this.toast.success(this.sync.online() ? 'Stock change sent.' : 'Saved on this device; it will apply when you are back online.');
       if (this.sync.online()) { await this.sync.flush(); await this.load(); }
-    } catch (err) { this.adjError.set(toApiError(err).message); } finally { this.saving.set(false); }
-  }
-
-  // ---- receive ----
-  protected openReceive(): void {
-    this.rc.set({ itemId: '', quantity: 0, unitCost: 0, reference: '', lot: '', expiry: '', supplierId: '', tax: 0, serials: '' });
-    this.adjError.set(null);
-    this.dialog.set('receive');
-  }
-
-  protected patchRc(p: Partial<ReturnType<typeof this.rc>>): void {
-    this.rc.update((v) => ({ ...v, ...p }));
-    const it = this.receiveItem();
-    if (p.itemId && it && this.rc().unitCost === 0) this.rc.update((v) => ({ ...v, unitCost: it.averageCost ?? 0 }));
-  }
-
-  protected async submitReceive(): Promise<void> {
-    const branchId = this.branches.activeId();
-    if (!branchId) return;
-    const r = this.rc();
-    const receiveSerials = this.receiveItem()?.tracksSerials ? r.serials.split(/\r?\n/).map((x) => x.trim()).filter(Boolean) : undefined;
-    this.saving.set(true);
-    this.adjError.set(null);
-    try {
-      await firstValueFrom(this.api.receive({
-        branchId, supplierId: r.supplierId || null, purchaseOrderId: null, reference: r.reference.trim() || null, idempotencyKey: `rcv-${crypto.randomUUID()}`,
-        lines: [{ inventoryItemId: r.itemId, quantity: r.quantity, unitCost: r.unitCost, lotCode: r.lot.trim() || null, expiryDate: r.expiry ? new Date(r.expiry).toISOString() : null, purchaseOrderLineId: null, taxRatePercent: r.tax,
-          serials: receiveSerials }]
-      }));
-      this.dialog.set(null);
-      this.toast.success('Delivery recorded.');
-      await this.load();
     } catch (err) { this.adjError.set(toApiError(err).message); } finally { this.saving.set(false); }
   }
 

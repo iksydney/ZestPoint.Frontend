@@ -44,7 +44,8 @@ export const CONNECTS: Chapter = {
         'Goods that were turned away are recorded as a problem with a photo, and a claim slip with its own number can be issued for the supplier.',
         'The person who raised an order cannot receive it. The owner is the exception, and so is a direct delivery, which has no earlier order.',
         'A **bin** can be marked as secure. Goods put into a secure bin are held until a second person confirms them, and only then do they count as stock.',
-        'A person who receives goods does not see costs unless their role allows it.'
+        'A person who receives goods does not see costs unless their role allows it.',
+        'There is no quick **Receive goods** button on the Stock screens. Goods are received only at **Goods Receiving** (an order, a direct delivery, or a market run), so that a delivery cannot be put on the shelf without the checks above.'
       ),
       p('When goods are received, the stock goes up in the bin you chose. ZestPoint keeps an **average cost** for every item: when a new delivery comes in at a different price, the average moves. That average is what stock is valued at and what recipes are costed from.'),
       careful('Creating an item adds no stock. Stock comes in only through receiving, a market run, an adjustment, a stock take or an opening quantity in an import file.')

@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { registerViaUi } from './helpers';
+import { choose, registerViaUi } from './helpers';
 
 /**
  * The ledger: a ready-made list of accounts, entries worked out from what happened (never typed), and the accounts an item's sales
@@ -46,22 +46,22 @@ test.describe('Ledger', () => {
     await page.goto('/app/inventory/groups');
     await page.getByTestId('group-new').click();
     await page.getByTestId('group-name').fill('Food');
-    await page.getByTestId('group-sales-ac').selectOption({ label: '4100 Food sales' });
+    await choose(page, 'group-sales-ac', '4100 Food sales');
     await page.getByTestId('group-save').click();
     await expect(page.getByTestId('group-Food')).toBeVisible();
     await page.getByTestId('group-edit-Food').click();
-    await expect(page.getByTestId('group-sales-ac').locator('option:checked')).toHaveText('4100 Food sales');
+    await expect(page.getByTestId('group-sales-ac')).toHaveValue('4100 Food sales');
     await page.keyboard.press('Escape');
 
     await page.goto('/app/inventory/items');
     await page.getByTestId('item-new').click();
     await page.getByTestId('item-name').fill('Pie');
     await page.getByTestId('item-price').fill('500');
-    await expect(page.getByTestId('item-sales-ac').locator('option:checked')).toHaveText('As the stock group says');
-    await page.getByTestId('item-sales-ac').selectOption({ label: '4000 Bar sales' });
+    await expect(page.getByTestId('item-sales-ac')).toHaveValue('As the stock group says');
+    await choose(page, 'item-sales-ac', '4000 Bar sales');
     await page.getByTestId('item-save').click();
     await page.getByTestId('item-edit-Pie').click();
-    await expect(page.getByTestId('item-sales-ac').locator('option:checked')).toHaveText('4000 Bar sales');
+    await expect(page.getByTestId('item-sales-ac')).toHaveValue('4000 Bar sales');
     await page.getByTestId('sc-close').click();
 
     // The reports open from the menu and the trial balance is in balance (there is nothing posted yet for a new company).

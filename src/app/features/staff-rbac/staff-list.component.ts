@@ -7,9 +7,11 @@ import { SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { BranchDto, RoleDto, SessionDto, StaffDetailDto, StaffListItemDto } from '../../core/models/staff.model';
 import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
+import { BranchContextService } from '../../core/services/branch-context.service';
 import { OnboardingService } from '../../core/services/domain.services';
 import { BranchesApiService, RolesApiService, StaffApiService } from '../../core/services/staff.services';
 import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
 type Tone = 'success' | 'warning' | 'danger' | 'primary';
@@ -20,7 +22,7 @@ type Tone = 'success' | 'warning' | 'danger' | 'primary';
  */
 @Component({
     selector: 'zp-staff-list',
-    imports: [DatePipe, FormsModule, DialogComponent, StatusBadgeComponent],
+    imports: [DatePipe, FormsModule, DialogComponent, SearchSelectComponent, StatusBadgeComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="mb-3 flex flex-wrap items-end gap-2">
@@ -34,17 +36,13 @@ type Tone = 'success' | 'warning' | 'danger' | 'primary';
           <option value="">All</option><option value="Active">Active</option><option value="Invited">Invited</option><option value="Deactivated">Deactivated</option>
         </select>
       </div>
-      <div>
+      <div class="w-44">
         <label class="app-label" for="f-role">Role</label>
-        <select id="f-role" class="app-input" [ngModel]="roleId()" (ngModelChange)="roleId.set($event)">
-          <option value="">All</option>@for (r of roles(); track r.id) { <option [value]="r.id">{{ r.name }}</option> }
-        </select>
+        <zp-search-select inputId="f-role" testId="staff-filter-role" emptyLabel="All roles" noun="role" placeholder="Search roles" [options]="roleOptions()" [value]="roleId()" (valueChange)="roleId.set($event)" />
       </div>
-      <div>
+      <div class="w-44">
         <label class="app-label" for="f-branch">Branch</label>
-        <select id="f-branch" class="app-input" [ngModel]="branchId()" (ngModelChange)="branchId.set($event)">
-          <option value="">All</option>@for (b of branches(); track b.id) { <option [value]="b.id">{{ b.name }}</option> }
-        </select>
+        <zp-search-select inputId="f-branch" testId="staff-filter-branch" emptyLabel="All branches" noun="branch" placeholder="Search branches" [options]="branchOptions()" [value]="branchId()" (valueChange)="branchId.set($event)" />
       </div>
       @if (canManage()) { <button type="button" class="btn-primary" (click)="openCreate()" data-testid="add-staff">Add staff</button> }
     </div>
@@ -123,7 +121,8 @@ type Tone = 'success' | 'warning' | 'danger' | 'primary';
         </fieldset>
         <fieldset>
           <legend class="app-label">Branches</legend>
-          <label class="mb-1 flex items-center gap-2 text-sm"><input type="checkbox" [checked]="c().hasAllBranches" (change)="patchC({ hasAllBranches: !c().hasAllBranches })" /> All branches</label>
+          <label class="mb-1 flex items-center gap-2 text-sm"><input type="checkbox" [checked]="c().hasAllBranches" [disabled]="!canGiveEveryBranch()" (change)="patchC({ hasAllBranches: !c().hasAllBranches })" data-testid="new-all-branches" /> All branches, including any you add later</label>
+          @if (!canGiveEveryBranch()) { <p class="app-hint mb-1">Only someone who works at every branch can give every branch. You can give the branches you work at.</p> }
           @if (!c().hasAllBranches) {
             <div class="grid gap-1 sm:grid-cols-2">
               @for (b of activeBranches(); track b.id) { <label class="flex items-center gap-2 text-sm"><input type="checkbox" [checked]="c().branchIds.includes(b.id)" (change)="toggleCBranch(b.id)" /> {{ b.name }}</label> }
@@ -191,7 +190,7 @@ type Tone = 'success' | 'warning' | 'danger' | 'primary';
             </fieldset>
             <fieldset [disabled]="!canManage() || d.isOwner">
               <legend class="app-label">Branches</legend>
-              <label class="mb-1 flex items-center gap-2 text-sm"><input type="checkbox" [checked]="e().hasAllBranches" (change)="patchE({ hasAllBranches: !e().hasAllBranches })" /> All branches</label>
+              <label class="mb-1 flex items-center gap-2 text-sm"><input type="checkbox" [checked]="e().hasAllBranches" [disabled]="!canGiveEveryBranch() && !d.hasAllBranches" (change)="patchE({ hasAllBranches: !e().hasAllBranches })" data-testid="edit-all-branches" /> All branches, including any added later</label>
               @if (!e().hasAllBranches) { @for (b of activeBranches(); track b.id) { <label class="flex items-center gap-2 text-sm"><input type="checkbox" [checked]="e().branchIds.includes(b.id)" (change)="toggleEBranch(b.id)" /> {{ b.name }}</label> } }
             </fieldset>
             @if (canManage()) { <button type="button" class="btn-primary" (click)="saveProfile()" [disabled]="saving()" data-testid="save-staff">Save changes</button> }
@@ -278,6 +277,11 @@ export class StaffListComponent {
   protected readonly roles = signal<RoleDto[]>([]);
   protected readonly branches = signal<BranchDto[]>([]);
   protected readonly activeBranches = computed(() => this.branches().filter((b) => b.isActive));
+  protected readonly roleOptions = computed<readonly SelectOption[]>(() => this.roles().map((r) => ({ value: r.id, label: r.name })));
+  protected readonly branchOptions = computed<readonly SelectOption[]>(() => this.branches().map((b) => ({ value: b.id, label: b.name })));
+  private readonly branchContext = inject(BranchContextService);
+  /** Only someone who works at every branch can give every branch (the server enforces it; this only keeps the box from inviting a refusal). */
+  protected readonly canGiveEveryBranch = computed(() => this.auth.session()?.hasAllBranches === true);
   protected readonly assignableRoles = computed(() => this.roles().filter((r) => !r.isSuperAdmin));
   protected readonly rfidAvailable = signal(true);
 
@@ -339,8 +343,12 @@ export class StaffListComponent {
     catch { this.toast.error('Could not copy. Write the code down instead.'); }
   }
 
-  protected openCreate(): void {
-    this.c.set(emptyCreate());
+  protected async openCreate(): Promise<void> {
+    // A new person starts with the branch you are working at, not with every branch: "All branches" is a deliberate tick, so a branch added later does not reach them by itself.
+    // The branch you are working at is known only once the branch list has been read, and this screen does not otherwise read it: wait for it, so the form never opens with no branch ticked.
+    await this.branchContext.load();
+    const here = this.branchContext.activeId();
+    this.c.set({ ...emptyCreate(), branchIds: here ? [here] : [] });
     this.cErrors.set({});
     this.cError.set(null);
     this.createOpen.set(true);
@@ -515,7 +523,7 @@ export class StaffListComponent {
 }
 
 function emptyCreate() {
-  return { displayName: '', email: '', pin: '', roleIds: [] as string[], hasAllBranches: true, branchIds: [] as string[], sendInvitation: false };
+  return { displayName: '', email: '', pin: '', roleIds: [] as string[], hasAllBranches: false, branchIds: [] as string[], sendInvitation: false };
 }
 
 function toggle(list: readonly string[], id: string): string[] {

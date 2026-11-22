@@ -2,17 +2,18 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
-import { BranchDto } from '../../core/models/staff.model';
+import { BranchDto, LimitedStaffDto } from '../../core/models/staff.model';
 import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { BranchesApiService } from '../../core/services/staff.services';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
+import { BranchPeopleComponent } from './branch-people.component';
 
 /** Settings -> Branches and outlets. Staff access is granted per branch, so branches exist before staff are assigned. */
 @Component({
     selector: 'zp-branches',
-    imports: [FormsModule, DialogComponent, StatusBadgeComponent],
+    imports: [FormsModule, DialogComponent, StatusBadgeComponent, BranchPeopleComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="mb-4 flex items-center justify-between gap-2">
@@ -30,7 +31,10 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
               <td class="font-medium">{{ b.name }} @if (b.isHeadOffice) { <zp-status-badge tone="primary">Head office</zp-status-badge> }</td>
               <td class="font-mono text-xs">{{ b.code }}</td><td>{{ b.address }}</td>
               <td><zp-status-badge [tone]="b.isActive ? 'success' : 'danger'">{{ b.isActive ? 'Active' : 'Inactive' }}</zp-status-badge></td>
-              <td class="text-right">@if (canManage()) { <button type="button" class="btn-outline px-2 py-1 text-sm" (click)="openEdit(b)">Edit</button> }</td>
+              <td class="whitespace-nowrap text-right">
+                @if (b.isActive) { <button type="button" class="btn-ghost px-2 py-1 text-sm" [attr.data-testid]="'branch-staff-' + b.code" (click)="openPeople(b, [])">Staff of this branch</button> }
+                @if (canManage()) { <button type="button" class="btn-outline px-2 py-1 text-sm" (click)="openEdit(b)">Edit</button> }
+              </td>
             </tr>
           } @empty { <tr><td colspan="5" class="py-8 text-center text-ink/70">{{ loading() ? 'Loading...' : 'No branches yet.' }}</td></tr> }
         </tbody>
@@ -53,6 +57,8 @@ import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
           <button type="submit" class="btn-primary" [disabled]="saving()" data-testid="save-branch">{{ saving() ? 'Saving...' : 'Save' }}</button></div>
       </form>
     </zp-dialog>
+
+    <zp-branch-people [open]="peopleOpen()" [branchId]="peopleBranch()?.id ?? null" [branchName]="peopleBranch()?.name ?? ''" [limited]="peopleLimited()" (closed)="peopleOpen.set(false)" (changed)="load()" />
   `
 })
 export class BranchesComponent {
@@ -72,9 +78,20 @@ export class BranchesComponent {
   protected readonly formError = signal<string | null>(null);
   protected readonly saving = signal(false);
 
+  /** The "Who works at this branch?" window: right after a branch is created, and from a branch's own row. */
+  protected readonly peopleOpen = signal(false);
+  protected readonly peopleBranch = signal<BranchDto | null>(null);
+  protected readonly peopleLimited = signal<readonly LimitedStaffDto[]>([]);
+
   constructor() { this.load(); }
 
-  private load(): void {
+  protected openPeople(b: BranchDto, limited: readonly LimitedStaffDto[]): void {
+    this.peopleBranch.set(b);
+    this.peopleLimited.set(limited);
+    this.peopleOpen.set(true);
+  }
+
+  protected load(): void {
     this.api.list().subscribe({
       next: (b) => { this.branches.set(b); this.loading.set(false); },
       error: (e: unknown) => { this.error.set(toApiError(e).message); this.loading.set(false); }
@@ -107,10 +124,12 @@ export class BranchesComponent {
     const body = { name: v.name.trim(), code: v.code.trim(), address: v.address.trim() || null, timeZoneId: null, isActive: v.isActive };
     try {
       const id = this.editingId();
-      await firstValueFrom(id ? this.api.update(id, body) : this.api.create(body));
+      const saved = await firstValueFrom(id ? this.api.update(id, body) : this.api.create(body));
       this.toast.success('Branch saved.');
       this.open.set(false);
       this.load();
+      // A new branch is not visible to anyone it was not given to: ask who works there right away (owner's decision, 2026-11-22).
+      if (!id && saved.isActive) this.openPeople(saved, saved.limitedStaff ?? []);
     } catch (err) {
       const e = toApiError(err);
       const map: Record<string, string> = {};

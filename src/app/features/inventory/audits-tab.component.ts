@@ -11,6 +11,7 @@ import { BranchContextService } from '../../core/services/branch-context.service
 import { AuditsApi, InventoryApi } from '../../core/services/ops.services';
 import { SyncAgentService } from '../../core/services/sync-agent.service';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
 type Method = 'manual' | 'scale' | 'demo';
@@ -23,7 +24,7 @@ const TONE = { None: 'success', Warning: 'warning', Investigate: 'warning', Esca
  */
 @Component({
     selector: 'zp-audits-tab',
-    imports: [DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent],
+    imports: [DecimalPipe, FormsModule, DialogComponent, SearchSelectComponent, StatusBadgeComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert">{{ error() }}</p> }
@@ -49,8 +50,7 @@ const TONE = { None: 'success', Warning: 'warning', Investigate: 'warning', Esca
             @if (!sync.online()) { <p class="sys-alert sys-alert-info mb-3" role="status">You are offline. Measurements are saved on this device and sent when you reconnect.</p> }
             <div class="grid gap-3 sm:grid-cols-2">
               <div><label class="app-label" for="m-item">Item</label>
-                <select id="m-item" class="app-input" data-testid="measure-item" [ngModel]="itemId()" (ngModelChange)="itemId.set($event)">
-                  <option value="">Choose...</option>@for (i of items(); track i.id) { <option [value]="i.id">{{ i.name }}</option> }</select></div>
+                <zp-search-select inputId="m-item" testId="measure-item" emptyLabel="Choose..." noun="item" placeholder="Search items" [options]="itemOptions()" [value]="itemId()" (valueChange)="itemId.set($event)" /></div>
               <div><label class="app-label" for="m-method">How is it measured?</label>
                 <select id="m-method" class="app-input" data-testid="measure-method" [ngModel]="method()" (ngModelChange)="setMethod($event)">
                   <option value="manual">Counted / estimated by hand (Manual)</option>
@@ -151,6 +151,7 @@ export class AuditsTabComponent {
   protected readonly readOnly = computed(() => this.auth.accessModeFor(FEATURES.INVENTORY) === 'readonly');
   protected readonly canWeigh = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_WEIGH_AUDIT_PERFORM) && this.auth.accessModeFor(FEATURES.BULK_WEIGHED_AUDIT) === 'full');
   protected readonly canCorrect = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_STOCK_ADJUST));
+  protected readonly itemOptions = computed<readonly SelectOption[]>(() => this.items().map((i) => ({ value: i.id, label: i.name })));
   protected readonly selected = computed(() => this.items().find((i) => i.id === this.itemId()) ?? null);
   protected readonly unitOf = computed(() => ({ Milliliter: 'ml', Gram: 'g', Each: 'each' })[this.selected()?.baseUnit ?? 'Each']);
   protected readonly tareOf = computed(() => this.selected()?.tareGrams ?? null);

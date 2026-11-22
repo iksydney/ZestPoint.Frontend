@@ -1,5 +1,5 @@
 import { Page, expect } from '@playwright/test';
-import { pick, registerViaUi } from './helpers';
+import { choose, pick, registerViaUi } from './helpers';
 
 /** What the installable-app and phone specs share: a company to work in, items, stock, a stock take, and "nothing is wider than the screen". */
 
@@ -28,7 +28,7 @@ export async function stockUp(page: Page, item: string, quantity: string) {
   await pick(page, 'adjust-item', item);
   await expect(page.getByTestId('adjust-expected')).toContainText('0');
   await page.getByTestId('adjust-qty').fill(quantity);
-  await page.getByTestId('adjust-reason').selectOption({ label: 'Count correction' });
+  await choose(page, 'adjust-reason', 'Count correction');
   await page.getByTestId('adjust-submit').click();
   await expect(page.getByTestId('adjust-message')).toContainText('Stock was updated');
 }

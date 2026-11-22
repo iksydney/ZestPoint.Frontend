@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { PNG, registerViaUi } from './helpers';
+import { choose, PNG, registerViaUi } from './helpers';
 
 /**
  * The Stock Card: the one card to add or change a stock item, opened from Add / Modify Stock and from "Add SKU" on a purchase order.
@@ -68,8 +68,8 @@ test.describe('Stock card', () => {
     await page.getByTestId('item-block-discount').check();
     await page.getByTestId('item-tax').selectOption('exempt');
     await page.getByTestId('item-points').fill('5');
-    await page.getByTestId('item-sales-ac').selectOption({ label: '4000 Sales' });      // accounts come from the ledger's list now
-    await page.getByTestId('item-purchase-ac').selectOption({ label: '1200 Stock' });
+    await choose(page, 'item-sales-ac', '4000 Sales');      // accounts come from the ledger's list now
+    await choose(page, 'item-purchase-ac', '1200 Stock');
     await page.getByTestId('item-srp').fill('1200');
     await page.getByTestId('item-prompt').fill('Offer the cable too');
     await page.getByTestId('item-notes').fill('Shelf B2');
@@ -95,7 +95,7 @@ test.describe('Stock card', () => {
     await expect(page.getByTestId('item-edit-qty')).toHaveCount(0);                      // every item has a quantity box at the till now
     await expect(page.getByTestId('item-tax')).toHaveValue('exempt');
     await expect(page.getByTestId('item-points')).toHaveValue('5');
-    await expect(page.getByTestId('item-sales-ac').locator('option:checked')).toHaveText('4000 Sales');
+    await expect(page.getByTestId('item-sales-ac')).toHaveValue('4000 Sales');
     await expect(page.getByTestId('item-prompt')).toHaveValue('Offer the cable too');
     await expect(page.getByTestId('item-notes')).toHaveValue('Shelf B2');
     await expect(page.getByTestId('special-live')).toBeVisible();
@@ -353,5 +353,73 @@ test.describe('Stock card', () => {
     await expect(page.getByTestId('sync-pending')).toHaveCount(0, { timeout: 30_000 });
     await expect(page.getByTestId('bill-total')).toContainText('4,300.00');             // the server agrees with the till's own sum
     await expect(page.getByTestId('contents-Gift hamper')).toContainText('2 x Chocolate');
+  });
+
+  test('a tab that needs a saved item says so on the tab, and when the new item cannot be saved it says why right under the tabs; the notice goes when the item saves or a field is edited', async ({ page }) => {
+    test.slow();
+    await ownerInApp(page);
+    await page.goto('/app/inventory/items');
+    await page.getByTestId('item-new').click();
+    const notice = page.getByTestId('sc-tab-notice');
+    const keys = ['aliases', 'units', 'package', 'recipe', 'picture', 'activity'] as const;
+
+    // Phones have no hover: the tabs that need the item to exist say so in words.
+    for (const key of keys) await expect(page.getByTestId(`sc-tab-locked-${key}`)).toHaveText('Save first');
+    await expect(page.getByTestId('sc-tab-locked-details')).toHaveCount(0);
+    await expect(notice).toHaveCount(0);
+
+    // Nothing typed: the click does not look dead. The card stays on Details and, directly under the tab strip, says which tab and what is missing.
+    await page.getByTestId('sc-tab-recipe').click();
+    await expect(notice).toBeVisible();
+    await expect(notice).toHaveAttribute('role', 'alert');
+    await expect(notice).toContainText('The Recipe and options tab opens once the item is saved');
+    await expect(notice).toContainText('Item details (name)');
+    await expect(page.getByTestId('sc-tab-details')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('sc-tab-recipe')).toHaveAttribute('aria-selected', 'false');
+    await expect(page.getByTestId('stock-card-title')).toHaveText('Stock card: new item');
+    await expect(page.getByTestId('item-problems')).toContainText('Item details (name)');       // still listed above the Save button too
+    await expect(notice).toBeInViewport();
+    const gap = await page.evaluate(() => {
+      const tabs = document.querySelector('[role="tablist"][aria-label="Stock card sections"]')!.getBoundingClientRect();
+      const n = document.querySelector('[data-testid="sc-tab-notice"]')!.getBoundingClientRect();
+      return n.top - tabs.bottom;
+    });
+    expect(gap, 'the notice sits directly under the tab strip').toBeGreaterThanOrEqual(0);
+    expect(gap, 'the notice sits directly under the tab strip').toBeLessThan(40);
+
+    // Another tab replaces the notice; typing in the card takes it away.
+    await page.getByTestId('sc-tab-picture').click();
+    await expect(notice).toContainText('The Picture tab opens once the item is saved');
+    await page.getByTestId('item-name').fill('Enamel mug');
+    await expect(notice).toHaveCount(0);
+
+    // A name, and a price: pressing the tab again saves the item and opens the tab.
+    await page.getByTestId('item-price').fill('1500');
+    await page.getByTestId('sc-tab-recipe').click();
+    await expect(page.getByTestId('stock-card-title')).toHaveText('Stock card: Enamel mug');
+    await expect(page.getByTestId('sc-tab-recipe')).toHaveAttribute('aria-selected', 'true');
+    await expect(notice).toHaveCount(0);
+    await expect(page.getByTestId('sc-tab-locked-recipe')).toHaveCount(0);                     // the item exists: the tabs no longer say Save first
+    await expect(page.getByTestId('item-problems')).toHaveCount(0);
+    await page.getByTestId('sc-close').click();
+
+    // What the server refuses is listed in its own words, under the tabs, with the tab still closed.
+    await page.getByTestId('item-new').click();
+    await page.getByTestId('item-name').fill('Tin plate');
+    await page.getByTestId('item-price').fill('1000');
+    await page.getByTestId('item-special').fill('750');
+    await page.getByTestId('item-minimum-price').fill('760');
+    await page.getByTestId('item-special-from').fill(localDateTime(-1));
+    await page.getByTestId('item-special-to').fill(localDateTime(1));
+    await page.getByTestId('sc-tab-picture').click();
+    await expect(notice).toContainText('The Picture tab opens once the item is saved');
+    await expect(notice).toContainText('Minimum price');
+    await expect(page.getByTestId('no-picture')).toHaveCount(0);
+    await expect(page.getByTestId('stock-card-title')).toHaveText('Stock card: new item');
+    await page.getByTestId('item-minimum-price').fill('700');
+    await expect(notice).toHaveCount(0);
+    await page.getByTestId('sc-tab-picture').click();
+    await expect(page.getByTestId('no-picture')).toBeVisible();
+    await expect(page.getByTestId('stock-card-title')).toHaveText('Stock card: Tin plate');
   });
 });

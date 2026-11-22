@@ -119,7 +119,7 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
   'pos.report.giftcards': 'Every gift card sold and what is left on it, what the business owes the holders, cards that expired, and a lost card cancelled and issued again.',
   'pos.report.loyalty': 'Loyalty points: what customers earned and spent, what is still owed to them, and who took points as payment.',
 
-  'inventory': 'Stock levels at this branch, receiving, transfers, counts and weigh checks.',
+  'inventory': 'Stock levels at this branch, transfers, counts and weigh checks. Goods are received under Purchasing.',
   'stock.items': 'Add an item or change one: prices, discount, units, package content, recipe and options, picture and sale rules.',
   'stock.groups': 'The groups items belong to, and the ledger accounts each group posts to.',
   'stock.adjust': 'Correct a quantity or record waste, spillage and breakage, with a reason.',
@@ -181,7 +181,7 @@ export const NAV_HELP: Readonly<Record<string, string>> = {
   'ledger.report.journal': 'Every ledger entry, newest first.',
 
   'staff': 'The people who work here, their roles and their sign-in.',
-  'branches': 'Your branches and their details.',
+  'branches': 'Your branches and their details. A new branch is shown only to the people you add to it.',
   'pos.tables': 'The tables at each branch. The till offers them and shows which have a bill running.',
   'pos.stations': 'The bar, the kitchen and other places orders are prepared: which items go where, and whether payment and stock wait for them. Who works at each is set on their role.',
   'pos.printers': 'The printers your phones print to: receipts and gift card slips, shift reports, labels, and kitchen and bar tickets for the stations you choose, for each branch or all of them.',

@@ -81,12 +81,14 @@ export const TOURS: readonly TourDefinition[] = [
     ]
   },
   {
-    key: 'stock.items', nav: 'stock.items', title: 'Items', version: 4,
+    key: 'stock.items', nav: 'stock.items', title: 'Items', version: 6,
     changes: [{ version: 2, steps: [{ id: 'discount', target: '[data-testid="items-table"]', title: 'A discount on the item', body: 'The stock card now has Discount %, under the prices. The till takes it off that item by itself on every sale, always or only between the dates you give, and never below the minimum price.' }, { id: 'recipe', target: '[data-testid="items-table"]', title: 'Recipes moved here', body: 'The Catalogue screen is gone. A drink or dish made from ingredients is now an item like any other: open its stock card and use the Recipe and options tab. Everything about an item is on its card.' }] }, { version: 3, steps: [{ id: 'import', target: '[data-testid="item-import"]', optional: true, title: 'Add many items from a file', body: 'Download the template, fill it in a spreadsheet and choose the file. It is checked first: every problem is listed by row, and nothing is added until the file is right.' }, { id: 'after-save', target: '[data-testid="items-table"]', title: 'Saving an item', body: 'Save tells you what is missing instead of staying grey. After a new item the card closes and offers to add another. The card has an Activity tab now, in place of History, Sales and Purchases.' }] },
-      { version: 4, steps: [{ id: 'kitchen', target: '[data-testid="items-table"]', title: 'For the kitchen', body: 'The stock card has a shelf life and a warning time for things that go off, and portions per batch for a cake baked once and sold by the slice (its recipe tab then says what a batch takes). Each recipe line has a usable percent: tomato at 85 means 850 g usable takes 1,000 g off the shelf.' }] }],
+      { version: 4, steps: [{ id: 'kitchen', target: '[data-testid="items-table"]', title: 'For the kitchen', body: 'The stock card has a shelf life and a warning time for things that go off, and portions per batch for something baked once and sold in portions, such as a cake cut into 8 slices, or 1 for a cake baked whole (its recipe tab then says what a batch takes). Each recipe line has a usable percent: tomato at 85 means 850 g usable takes 1,000 g off the shelf.' }] },
+      { version: 5, steps: [{ id: 'group', target: '[data-testid="items-table"]', title: 'Stock group: search it, or make it', body: 'On the stock card the stock group is now a box you can type in. If the group you want is not there, press Create a new stock group under the box (or choose the last entry of the list): give it a name, and it is chosen for the item at once. A name that is the same as, or looks the same as, a group you already have is not made: you are shown that group and can use it. Other long lists in ZestPoint, such as items, suppliers, bins, staff and branches, can be searched the same way.' }] },
+      { version: 6, steps: [{ id: 'tabs-after-save', target: '[data-testid="items-table"]', title: 'Tabs that open once the item is saved', body: 'On the stock card of a new item, the tabs after Details (part numbers, unit of measure, package content, recipe and options, picture, activity) say Save first: they need the item to exist. Press one and the card saves the item for you and opens it. If the item cannot be saved yet, the card stays on Details and shows, right under the tabs, what to fix.' }] }],
     steps: [
       { id: 'search', target: '[data-testid="items-search"]', title: 'Find an item', body: 'Search by name, part number or barcode, or narrow the list to one stock group.' },
-      { id: 'new', target: '[data-testid="item-new"]', optional: true, title: 'Add an item', body: 'Opens the stock card: name, prices, the special price and its dates, the discount percentage, tax, loyalty points and the rules the till follows. Creating an item adds no stock; stock comes in through purchasing and adjustments.' },
+      { id: 'new', target: '[data-testid="item-new"]', optional: true, title: 'Add an item', body: 'Opens the stock card: name, prices, the special price and its dates, the discount percentage, tax, loyalty points and the rules the till follows. Creating an item adds no stock; stock comes in through purchasing (goods received at Goods Receiving) and adjustments. The tabs after Details open once the item is saved.' },
       { id: 'list', target: '[data-testid="items-table"]', title: 'Your items', body: 'Edit opens the same stock card, where you also set selling units (a case of 12), package content, the recipe and options, the picture and the ledger accounts.' }
     ]
   },
@@ -207,7 +209,7 @@ export const TOURS: readonly TourDefinition[] = [
   {
     key: 'inventory.production', nav: 'inventory.production', title: 'Production', version: 1,
     steps: [
-      { id: 'what', title: 'Batches the kitchen made', body: 'A cake is baked once and sold by the slice; a pot of stew by the plate. When a batch is finished, record it here: the ingredients leave stock, the portions you got are added, and a portion\'s cost is worked out.' },
+      { id: 'what', title: 'Batches the kitchen made', body: 'A cake is baked once and sold by the slice (or baked whole and sold whole, as a batch of one); a pot of stew by the plate. When a batch is finished, record it here: the ingredients leave stock, the portions you got are added, and a portion\'s cost is worked out.' },
       { id: 'form', target: '[data-testid="production-form"]', optional: true, title: 'Record a batch', body: 'Choose what was made, how many batches, and how many portions actually came out. If fewer came out than the recipe says, the difference is kept and reported. Nobody has to approve it.' },
       { id: 'runs', target: '[data-testid="production-runs"]', title: 'Recent batches', body: 'Each batch with what was expected, what was made and what a portion cost. A batch you send twice is recorded once. Which items are made in batches, and what a batch takes, is set on the stock card.' }
     ]
@@ -221,11 +223,17 @@ export const TOURS: readonly TourDefinition[] = [
     ]
   },
   {
-    key: 'inventory.foodcost', nav: 'inventory.foodcost', title: 'Food cost', version: 1,
+    key: 'inventory.foodcost', nav: 'inventory.foodcost', title: 'Food cost', version: 2,
+    changes: [{ version: 2, steps: [
+      { id: 'edit', target: '[data-testid="foodcost-table"]', optional: true, title: 'Type a price, or a target for one dish', body: 'If you may set prices, each dish now has a price box and a box for a food cost of its own. As you type, its food cost % and its price for the target follow at once. Leave the box for its own target empty and the dish follows the food cost you want above. A dish you have changed is marked Changed.' },
+      { id: 'save', target: '[data-testid="foodcost-bar"]', optional: true, title: 'Save one dish, or all of them at once', body: 'Save on a dish saves just that dish. Save changes saves every dish you changed together, after asking you to confirm what will change; Discard throws the changes away. A dish that cannot be saved, for example a price under its minimum, is named with the reason and the others are still saved.' }
+    ] }],
     steps: [
       { id: 'what', title: 'What each dish costs', body: 'The cost of one portion from what its ingredients cost, allowing for what is lost in trimming, against the price without tax. The food cost % shows red when it is above what you want.' },
       { id: 'target', target: '[data-testid="foodcost-target"]', title: 'The food cost you want', body: 'Type the food cost you aim for, for example 30, and press Work it out. Each dish then shows the price that would reach it.' },
-      { id: 'table', target: '[data-testid="foodcost-table"]', title: 'Cost now, and last bought', body: 'The average cost is what stock is valued at; the last-bought cost beside it shows a price rise early. Use this price sets the company price in one click, if you may set prices.' }
+      { id: 'table', target: '[data-testid="foodcost-table"]', title: 'Cost now, and last bought', body: 'The average cost is what stock is valued at; the last-bought cost beside it shows a price rise early. Use this price sets the company price in one click, if you may set prices.' },
+      { id: 'edit', target: '[data-testid="foodcost-table"]', optional: true, title: 'Type a price, or a target for one dish', body: 'If you may set prices, each dish has a price box and a box for a food cost of its own. As you type, its food cost % and its price for the target follow at once. Leave the box for its own target empty and the dish follows the food cost you want above. A dish you have changed is marked Changed.' },
+      { id: 'save', target: '[data-testid="foodcost-bar"]', optional: true, title: 'Save one dish, or all of them at once', body: 'Save on a dish saves just that dish. Save changes saves every dish you changed together, after asking you to confirm what will change; Discard throws the changes away. A dish that cannot be saved, for example a price under its minimum, is named with the reason and the others are still saved.' }
     ]
   },
   {

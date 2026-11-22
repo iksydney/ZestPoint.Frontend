@@ -7,6 +7,7 @@ import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { LossPreventionApi } from '../../core/services/loss-prevention.service';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
 type Tab = 'overview' | 'alerts' | 'rules';
@@ -19,7 +20,7 @@ const PAGE = 25;
  */
 @Component({
     selector: 'zp-loss-prevention',
-    imports: [DatePipe, DecimalPipe, FormsModule, StatusBadgeComponent],
+    imports: [DatePipe, DecimalPipe, FormsModule, StatusBadgeComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="mb-3">
@@ -42,7 +43,8 @@ const PAGE = 25;
           <div><label class="app-label" for="lp-to">To</label><input id="lp-to" type="date" class="app-input" data-testid="lp-to" [value]="to()" (input)="to.set($any($event.target).value)" /></div>
           @if (branches.branches().length > 1) {
             <div><label class="app-label" for="lp-branch">Branch</label>
-              <select id="lp-branch" class="app-input" data-testid="lp-branch" (change)="branchId.set($any($event.target).value)"><option value="" [selected]="!branchId()">All my branches</option>@for (b of branches.branches(); track b.id) { <option [value]="b.id" [selected]="branchId() === b.id">{{ b.name }}</option> }</select></div>
+              <zp-search-select inputId="lp-branch" testId="lp-branch" emptyLabel="All my branches" noun="branch" placeholder="Search branches"
+                                [options]="branchOptions()" [value]="branchId()" (valueChange)="branchId.set($event)" /></div>
           }
           <button type="submit" class="btn-primary" data-testid="lp-apply" [disabled]="loading()">Apply</button>
         </form>
@@ -158,6 +160,7 @@ export class LossPreventionComponent implements OnInit {
   protected readonly from = signal('');
   protected readonly to = signal('');
   protected readonly branchId = signal('');
+  protected readonly branchOptions = computed<readonly SelectOption[]>(() => this.branches.branches().map((b) => ({ value: b.id, label: b.name })));
   protected readonly state = signal<RiskAlertState | ''>('Open');
   protected readonly ruleKey = signal('');
   protected readonly personId = signal('');

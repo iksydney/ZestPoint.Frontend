@@ -76,6 +76,20 @@ export const TROUBLESHOOTING: Chapter = {
       ),
       p('Negative stock is allowed and shown, so a sale is never blocked because the shelf in ZestPoint says zero. A minus figure means something was sold that ZestPoint did not know had arrived.')
     ]),
+    section('ts-group', 'A new stock group is not made', [
+      p('This is the window that opens over the stock card when you press **Create a new stock group**. ZestPoint checks the name against every group you have, switched-off ones too, before it makes anything.'),
+      table(['What it says', 'What it means', 'What to do'], [
+        ['Type a name.', 'The name box is empty, or has only marks and spaces in it', 'Type the name of the group'],
+        ['A stock group called \'Soft Drinks\' already exists.', 'There is already a group with that name', 'Press **Use** to choose that group for the item, or type a clearly different name'],
+        ['\'Soft Drink\' looks the same as the existing group \'Soft Drinks\'.', 'The name differs only in capitals, spacing, dashes, an accent, a missing s or a one-letter slip', 'Press **Use** to choose the group that exists, or type a clearly different name'],
+        ['... exists but is switched off.', 'A group with this name was made and then switched off', 'A manager switches it on under **Stock**, **Stock Groups**, or you type a different name'],
+        ['A stock group called "Mixers" already exists. Choose it from the list, or give the new group a different name.', 'The group was made a moment ago by someone else, so the card did not know it yet and the server refused the name', 'Close the card and open it again: the group is then in the list']
+      ])
+    ]),
+    section('ts-tabs', 'A tab on a new item will not open', [
+      p('On the stock card of a **new** item, the tabs after **Details** (equivalent part numbers, unit of measure, package content, recipe and options, picture and activity) need the item to exist. Each says **Save first**. Pressing one saves the item for you and then opens the tab.'),
+      p('If the item cannot be saved yet, nothing is saved and the tab does not open. The card goes back to **Details** and shows a red notice right under the tabs, naming the tab and listing what to fix, for example the item\'s name. Fix it and press the tab again. The notice goes when the item is saved or when you change a field.')
+    ]),
     section('ts-store', 'Receiving and store issues are refused', [
       table(['What it says', 'What it means', 'What to do'], [
         ['The Kitchen has no stock place at this branch yet. Set one up on Bin Locations (choose the station on the bin) and ask again.', 'The station has no bin of its own', 'A manager sets one on **Stock**, **Bin Locations**'],

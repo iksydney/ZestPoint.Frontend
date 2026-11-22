@@ -1,21 +1,22 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { SyncAgentService } from '../../core/services/sync-agent.service';
 import { DialogComponent } from './feedback';
+import { SearchSelectComponent, SelectOption } from './search-select.component';
 
 /** Which branch the person is working at. Hidden when only one is available. */
 @Component({
   selector: 'zp-branch-picker',
   standalone: true,
+  imports: [SearchSelectComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (ctx.branches().length > 1) {
-      <label class="flex items-center gap-2 text-sm">
+      <div class="flex items-center gap-2 text-sm">
         <span class="font-medium">Branch</span>
-        <select class="app-input w-auto py-1" data-testid="branch-picker" [value]="ctx.activeId() ?? ''" (change)="ctx.select($any($event.target).value)">
-          @for (b of ctx.branches(); track b.id) { <option [value]="b.id">{{ b.name }}</option> }
-        </select>
-      </label>
+        <zp-search-select class="w-44" testId="branch-picker" ariaLabel="Branch" inputClass="app-input py-1" noun="branch" placeholder="Search branches"
+                          [options]="options()" [value]="ctx.activeId()" (valueChange)="ctx.select($event)" />
+      </div>
     } @else if (ctx.active()) {
       <span class="text-sm font-medium" data-testid="branch-name">{{ ctx.active()!.name }}</span>
     }
@@ -23,6 +24,7 @@ import { DialogComponent } from './feedback';
 })
 export class BranchPickerComponent {
   protected readonly ctx = inject(BranchContextService);
+  protected readonly options = computed<readonly SelectOption[]>(() => this.ctx.branches().map((b) => ({ value: b.id, label: b.name })));
 }
 
 /**

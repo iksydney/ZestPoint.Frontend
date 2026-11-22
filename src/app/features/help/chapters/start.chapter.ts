@@ -49,6 +49,11 @@ export const START: Chapter = {
       ]),
       shot('dashboard', 'The Dashboard, with the menu on the left. The speech-bubble button at the top is the bell, where ZestPoint tells you things.', 'The ZestPoint dashboard for a demonstration lounge: the menu of areas on the left, the bell and Help at the top, and shortcut tiles for what the person uses most.')
     ]),
+    section('search-lists', 'Lists you can search', [
+      p('A list of the things your own business has made (items and ingredients, suppliers, stock groups, bins, staff, stations, branches and the like) is a box you can type in, so you never scroll a long list. Click it, or tab to it and press the Down key, and the list opens. Type a few letters of the name and the list narrows to what fits: any part of the name will do, in capital or small letters, and some lists match a second line as well, such as the group an entry sits in. Press **Enter** or click an entry to choose it. **Up** and **Down** move through the list, and **Escape** closes it without choosing.'),
+      p('A short list that is always the same, such as a status or a way of paying, stays an ordinary drop-down.'),
+      tip('When nothing fits, the list says so plainly, for example "No group called \'Wines\'." On the stock card the last entry of the stock group list is **+ Create a new stock group...**, for people who may manage stock groups: see **Items** in the chapter **Your first day**.')
+    ]),
     section('notes', 'How the notes are marked', [
       p('Three kinds of note appear in this manual. Each is labelled with a word as well as a colour, so you never need the colour to tell them apart.'),
       tip('A **Tip** is a shortcut or a good habit.'),

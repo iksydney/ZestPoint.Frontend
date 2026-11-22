@@ -179,7 +179,7 @@ export const APP_NAV: readonly NavDefinition[] = [
 
   // ---- The rest of the application ---------------------------------------------------------------
   { key: 'inventory', label: 'Inventory', route: '/app/inventory', icon: 'box', permission: P.INVENTORY_VIEW, feature: FEATURES.INVENTORY, kind: 'screen', needsBranch: true,
-    description: 'Stock levels, receiving, transfers, purchasing, audits and weigh-scale checks.' },
+    description: 'Stock levels, transfers, purchasing, audits and weigh-scale checks. Goods are received under Purchasing.' },
   { key: 'customers', label: 'Customers', route: '/app/customers', icon: 'users', permission: P.CUSTOMERS_USE, feature: FEATURES.CORE_POS, kind: 'screen',
     load: () => import('../../features/customers/customers.component').then((m) => m.CustomersComponent), description: 'Customer records and their loyalty points.' },
   { key: 'subscription', label: 'Subscription', route: '/app/subscription', icon: 'card', permission: P.SUBSCRIPTIONS_VIEW, kind: 'screen' },

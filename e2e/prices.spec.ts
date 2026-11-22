@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { registerViaUi } from './helpers';
+import { choose, registerViaUi } from './helpers';
 
 /**
  * Prices and menus (design of 2026-11-15, head office): a price per branch with its source, bulk changes now or from a date, price lists with
@@ -53,7 +53,7 @@ test.describe('Prices and menus', () => {
     await page.getByTestId('price-select-Lager').check();
     await page.getByTestId('prices-change').click();
     await page.getByTestId('pd-scope').selectOption('branch');
-    await page.getByTestId('pd-branch').selectOption({ label: 'Annex' });
+    await choose(page, 'pd-branch', 'Annex');
     await page.getByTestId('pd-value').fill('900');
     await page.getByTestId('pd-apply').click();
     const annexLager = page.getByTestId('price-cell-Lager-Annex');
@@ -75,7 +75,7 @@ test.describe('Prices and menus', () => {
     await page.getByTestId('price-select-Cola').check();
     await page.getByTestId('prices-change').click();
     await page.getByTestId('pd-scope').selectOption('branch');
-    await page.getByTestId('pd-branch').selectOption({ label: 'Annex' });
+    await choose(page, 'pd-branch', 'Annex');
     await page.getByTestId('pd-value').fill('-5');
     await page.getByTestId('pd-apply').click();
     await expect(page.getByTestId('pd-error')).toContainText('less than nothing');
@@ -93,7 +93,7 @@ test.describe('Prices and menus', () => {
     await page.getByTestId('price-select-Cola').check();
     await page.getByTestId('prices-change').click();
     await page.getByTestId('pd-scope').selectOption('list');
-    await page.getByTestId('pd-list').selectOption({ label: 'Happy hour' });
+    await choose(page, 'pd-list', 'Happy hour');
     await page.getByTestId('pd-value').fill('400');
     await page.getByTestId('pd-apply').click();
     await expect(page.getByTestId('price-cell-Cola-Annex')).toContainText('550.00');             // not used by the Annex yet
@@ -111,14 +111,14 @@ test.describe('Prices and menus', () => {
     // The Annex stops selling Lager: marked in the grid, and sold again when switched back.
     await page.getByTestId('price-select-Lager').check();
     await page.getByTestId('prices-off').click();
-    await page.getByTestId('sell-branch').selectOption({ label: 'Annex' });
+    await choose(page, 'sell-branch', 'Annex');
     await page.getByTestId('sell-apply').click();
     await expect(page.getByTestId('price-cell-Lager-Annex')).toHaveAttribute('data-off', 'true');
     await expect(page.getByTestId('price-cell-Lager-Annex').getByTestId('price-off')).toHaveText('not sold');
     await expect(page.getByTestId(`price-cell-Lager-${main}`)).toHaveAttribute('data-off', 'false');
     await page.getByTestId('price-select-Lager').check();
     await page.getByTestId('prices-on').click();
-    await page.getByTestId('sell-branch').selectOption({ label: 'Annex' });
+    await choose(page, 'sell-branch', 'Annex');
     await page.getByTestId('sell-apply').click();
     await expect(page.getByTestId('price-cell-Lager-Annex')).toHaveAttribute('data-off', 'false');
 
@@ -128,7 +128,7 @@ test.describe('Prices and menus', () => {
     await page.getByTestId('price-select-Lager').check();
     await page.getByTestId('prices-change').click();
     await page.getByTestId('pd-scope').selectOption('branch');
-    await page.getByTestId('pd-branch').selectOption({ label: 'Annex' });
+    await choose(page, 'pd-branch', 'Annex');
     await page.getByTestId('pd-value').fill('950');
     await page.getByTestId('pd-from').fill(local);
     await page.getByTestId('pd-reason').fill('Weekend menu');

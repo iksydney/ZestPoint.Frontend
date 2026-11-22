@@ -8,6 +8,7 @@ import { ApiEnvelope } from '../../core/models/api.model';
 import { AuditLogDto } from '../../core/models/staff.model';
 import { toApiError, unwrap } from '../../core/services/api.util';
 import { AuditApiService } from '../../core/services/staff.services';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 
 /** What each kind of activity starts with. The server matches the start of the action's name. */
 const AREAS: readonly [string, string][] = [
@@ -23,7 +24,7 @@ const AREAS: readonly [string, string][] = [
  */
 @Component({
     selector: 'zp-audit-log',
-    imports: [DatePipe, FormsModule],
+    imports: [DatePipe, FormsModule, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <form class="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" aria-label="Filter the activity log" (submit)="$event.preventDefault()" data-testid="audit-filters">
@@ -35,9 +36,8 @@ const AREAS: readonly [string, string][] = [
       </div>
       <div>
         <label class="app-label" for="a-who">Person</label>
-        <select id="a-who" class="app-input" [ngModel]="actor()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="actor.set($event); page.set(1)" data-testid="audit-who">
-          <option value="">Anyone</option>@for (p of people(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
-        </select>
+        <zp-search-select inputId="a-who" testId="audit-who" emptyLabel="Anyone" noun="person" placeholder="Search people"
+                          [options]="peopleOptions()" [value]="actor()" (valueChange)="actor.set($event); page.set(1)" />
       </div>
       <div><label class="app-label" for="a-from">From</label><input id="a-from" type="date" class="app-input" [ngModel]="from()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="from.set($event); page.set(1)" data-testid="audit-from" /></div>
       <div><label class="app-label" for="a-to">To</label><input id="a-to" type="date" class="app-input" [ngModel]="to()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="to.set($event); page.set(1)" data-testid="audit-to" /></div>
@@ -78,6 +78,7 @@ export class AuditLogComponent implements OnInit {
   protected readonly pageSize = 25;
   protected readonly action = signal('');
   protected readonly actor = signal('');
+  protected readonly peopleOptions = computed<readonly SelectOption[]>(() => this.people().map((p) => ({ value: p.id, label: p.name })));
   protected readonly from = signal('');
   protected readonly to = signal('');
   protected readonly search = signal('');

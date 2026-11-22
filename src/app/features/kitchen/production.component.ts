@@ -9,6 +9,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { KitchenApi } from '../../core/services/kitchen.services';
 import { ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 
 /**
  * Production (owner's decisions, 2026-11-21): the kitchen records a batch it made (a cake baked once, a pot of stew) and says how many portions actually came out. The ingredients leave
@@ -18,7 +19,7 @@ import { ToastService } from '../../shared/ui/feedback';
  */
 @Component({
     selector: 'zp-production',
-    imports: [DatePipe, DecimalPipe, FormsModule],
+    imports: [DatePipe, DecimalPipe, FormsModule, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="flex flex-col gap-4" data-testid="production">
@@ -37,8 +38,7 @@ import { ToastService } from '../../shared/ui/feedback';
         } @else {
           <form class="grid gap-3 sm:grid-cols-2" (submit)="$event.preventDefault(); record()" data-testid="production-fields">
             <div class="sm:col-span-2"><label class="app-label" for="pr-item">What was made</label>
-              <select id="pr-item" class="app-input" data-testid="production-item" [ngModel]="itemId()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="pick($event)">
-                <option value="">Choose an item</option>@for (i of items(); track i.itemId) { <option [value]="i.itemId">{{ i.name }}</option> }</select></div>
+              <zp-search-select inputId="pr-item" testId="production-item" emptyLabel="Choose an item" noun="item" placeholder="Search items" [options]="itemOptions()" [value]="itemId()" (valueChange)="pick($event)" /></div>
             @if (picked(); as p) {
               <p class="text-sm text-ink/80 sm:col-span-2" data-testid="production-summary">One batch gives {{ p.portionsPerBatch | number: '1.0-3' }} portion{{ p.portionsPerBatch === 1 ? '' : 's' }} and takes {{ p.ingredientCount }} ingredient{{ p.ingredientCount === 1 ? '' : 's' }}.
                 {{ p.onHand | number: '1.0-3' }} on hand now.@if (p.costPerPortion !== null) { A portion costs {{ p.costPerPortion | number: '1.2-2' }}. }@if (p.stationName) { Made at the {{ p.stationName }}. }@if (p.shelfLifeDays) { Keeps {{ p.shelfLifeDays }} days. }</p>
@@ -94,6 +94,7 @@ export class ProductionComponent {
   private pendingId: string | null = null;
 
   protected readonly readOnly = computed(() => this.auth.accessModeFor(FEATURES.INVENTORY) === 'readonly');
+  protected readonly itemOptions = computed<readonly SelectOption[]>(() => this.items().map((i) => ({ value: i.itemId, label: i.name })));
   protected readonly picked = computed(() => this.items().find((i) => i.itemId === this.itemId()) ?? null);
   protected readonly expected = computed(() => Math.round((this.picked()?.portionsPerBatch ?? 0) * this.batches() * 10000) / 10000);
   protected readonly actual = computed(() => this.typed() ?? this.expected());

@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { ApiEnvelope } from '../models/api.model';
 import {
   AddMeasurementRequest, AdjustStockRequest, AuditDto, BatchDto, CategoryDto, CompanySettingsDto, InventoryItemDto, MeasurementDto,
-  MovementDto, OrderDto, OrderSummaryDto, PagedResult, PayRequest, ProductDto, PurchaseOrderDto, ReceiptDto, ReceiveGoodsRequest, RecipeDto,
+  MovementDto, OrderDto, OrderSummaryDto, PagedResult, PayRequest, ProductDto, PurchaseOrderDto, ReceiptDto, RecipeDto,
   SaveInventoryItemRequest, SaveSellingUnitRequest, SellingUnitDto, PackageDto, SavePackageRequest, SavePurchaseOrderRequest, SaveProductRequest, SaveRecipeRequest, SaveSupplierRequest, SplitPreviewDto, SuggestedOrderDto,
   SupplierDto, SyncOperationDto, SyncOperationResultDto, TransferStockRequest, UpdateCompanySettingsRequest, UsageRowDto, VarianceDto,
   VarianceSummaryRowDto, VoidAuthorizer, VoidRequestDto, TableDto
@@ -242,10 +242,6 @@ export class InventoryApi {
 
   adjust(body: AdjustStockRequest): Observable<MovementDto> {
     return this.http.post<ApiEnvelope<MovementDto>>('/api/v1/inventory/adjustments', body).pipe(unwrap());
-  }
-
-  receive(body: ReceiveGoodsRequest): Observable<MovementDto[]> {
-    return this.http.post<ApiEnvelope<MovementDto[]>>('/api/v1/inventory/receipts', body).pipe(unwrap());
   }
 
   transfer(body: TransferStockRequest): Observable<unknown> {

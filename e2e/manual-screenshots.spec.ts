@@ -3,7 +3,7 @@ import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, statSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { screenshotIds } from '../src/app/features/help/manual.content';
-import { registerViaUi } from './helpers';
+import { choose, registerViaUi } from './helpers';
 
 /**
  * Takes the pictures the manual shows, from the real application with demonstration data: a lounge that cooks, in the light theme, at 1280 x 800.
@@ -48,9 +48,22 @@ async function shoot(page: Page, id: string, ready?: () => Promise<void>): Promi
   });
 }
 
-/** Chooses the first option of a select whose words contain the text. */
+/**
+ * Chooses the first entry whose words contain the text, in a native select or in a searchable list (zp-search-select, which lists an exact
+ * name first, then the names that start with the words). The entries of a list read from the server arrive a moment after the box is drawn,
+ * so the words are typed again until the list shows an entry.
+ */
 async function chooseContaining(page: Page, testId: string, text: string): Promise<void> {
   const select = page.getByTestId(testId);
+  if (await select.evaluate((el) => el.tagName !== 'SELECT')) {
+    for (let waited = 0; waited < 15_000; waited += 300) {
+      await select.click();
+      await select.fill(text);
+      if (await page.getByTestId(`${testId}-list`).locator('[role="option"][data-value]').count()) { await select.press('Enter'); return; }
+      await page.waitForTimeout(300);
+    }
+    throw new Error(`No choice containing "${text}" in ${testId}`);
+  }
   // An exact name (or the name followed by its unit) is preferred, so "Rice" is not the dish "Jollof rice with chicken".
   const find = (): Promise<string | null> => select.evaluate((el, t) => {
     const want = String(t).toLowerCase();
@@ -90,7 +103,7 @@ async function newItem(page: Page, i: ItemSpec): Promise<void> {
   if (i.price) await page.getByTestId('item-price').fill(i.price);
   if (i.cost) await page.getByTestId('item-cost').fill(i.cost);
   if (i.barcode) await page.getByTestId('item-barcode').fill(i.barcode);
-  if (i.group) await page.getByTestId('item-group').selectOption({ label: i.group });
+  if (i.group) await choose(page, 'item-group', i.group);
   if (i.shelf) await page.getByTestId('item-shelf-life').fill(i.shelf);
   if (i.warn) await page.getByTestId('item-expiry-alert').fill(i.warn);
   if (i.portions) await page.getByTestId('item-portions').fill(i.portions);
@@ -192,7 +205,7 @@ test.describe('The manual\'s pictures', () => {
       for (const [name, station] of [['Food', 'Kitchen'], ['Drinks', ''], ['Ingredients', 'Kitchen']] as const) {
         await page.getByTestId('group-new').click();
         await page.getByTestId('group-name').fill(name);
-        if (station) await page.getByTestId('group-station').selectOption({ label: station });
+        if (station) await choose(page, 'group-station', station);
         await page.getByTestId('group-save').click();
         await expect(page.getByTestId(`group-${name}`)).toBeVisible();
       }
@@ -250,7 +263,7 @@ test.describe('The manual\'s pictures', () => {
         await page.getByTestId('bin-code').fill(code);
         await page.getByTestId('bin-name').fill(name);
         if (secure) await page.getByTestId('bin-secure').check();
-        if (station) await page.getByTestId('bin-station').selectOption({ label: station });
+        if (station) await choose(page, 'bin-station', station);
         await page.getByTestId('bin-save').click();
         await expect(page.getByTestId(`bin-row-${code}`)).toBeVisible();
       }
@@ -381,7 +394,13 @@ test.describe('The manual\'s pictures', () => {
       await page.getByRole('button', { name: 'Work it out' }).click();
       await expect(page.getByTestId('foodcost-table')).toBeVisible();
     });
-    await shoot(page, 'food-cost', async () => { await expect(page.getByTestId('foodcost-table')).toContainText('Chocolate cake'); });
+    await shoot(page, 'food-cost', async () => {
+      await expect(page.getByTestId('foodcost-table')).toContainText('Chocolate cake');
+      // A price and a target of its own are typed, not saved, so the picture shows the dish marked Changed and the bar above the table counting it.
+      await page.getByTestId('dish-price-Chocolate cake').fill('1400');
+      await page.getByTestId('dish-target-Chocolate cake').fill('25');
+      await expect(page.getByTestId('dish-changed-Chocolate cake')).toBeVisible();
+    });
 
     await shoot(page, 'prep-list', async () => {
       await page.goto('/app/inventory/reports/prep-list');
@@ -444,7 +463,7 @@ test.describe('The manual\'s pictures', () => {
 
     await shoot(page, 'kitchen-display', async () => {
       await page.goto('/app/pos/kitchen');
-      await page.getByTestId('kds-station').selectOption({ label: 'Kitchen' });
+      await chooseContaining(page, 'kds-station', 'Kitchen');
       await expect(page.getByTestId('kitchen-tickets')).toBeVisible();
     });
 
@@ -473,6 +492,9 @@ test.describe('The manual\'s pictures', () => {
       await page.getByTestId('branch-code').fill('LKT');
       await page.getByRole('textbox', { name: 'Address' }).fill('14 Admiralty Way, Lekki, Lagos').catch(() => undefined);
       await page.getByTestId('save-branch').click();
+      // Saving a branch opens "Who works at Lekki Terrace?": skip it, the picture is of the branches list.
+      await page.getByTestId('bp-done').click();
+      await expect(page.getByTestId('branch-people')).toHaveCount(0);
     });
     await shoot(page, 'branches', async () => { await page.goto('/app/settings/branches'); await expect(page.getByText('Lekki Terrace')).toBeVisible(); });
 

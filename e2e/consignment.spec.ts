@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { registerViaUi } from './helpers';
+import { choose, registerViaUi } from './helpers';
 
 /**
  * Consignment out: goods are sent from a branch to an agent at agreed prices; what the agent reports sold goes on a bill for them
@@ -31,7 +31,7 @@ test.describe('Consignment out', () => {
 
     // Send six tins at an agreed price; more than the branch has is refused by the server.
     await page.getByTestId('cons-new').click();
-    await page.getByTestId('cn-agent').selectOption({ label: 'Corner Boutique' });
+    await choose(page, 'cn-agent', 'Corner Boutique');
     await page.getByTestId('cn-item-search').fill('Canned Beans');
     await page.getByTestId('cn-item-Demo Canned Beans 400g').click();
     await page.getByTestId('cn-qty-Demo Canned Beans 400g').fill('500');

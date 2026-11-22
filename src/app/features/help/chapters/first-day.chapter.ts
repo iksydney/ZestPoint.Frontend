@@ -72,6 +72,8 @@ export const FIRST_DAY: Chapter = {
     ]),
     section('fd-branches', '4. Branches', [
       p('A branch is a place you trade from: a bar, a restaurant, a shop. Open **Admin**, **Set-up**, **Branches**, press **Add branch**, and give it a name, a code and an address. Staff are given the branches they work at, and what they see follows. Registration made your first one for you, called **Main branch**, at the main location you typed. If you have only one branch, you only need to rename it if you wish.'),
+      p('**A new branch is not visible to your staff until you give it to them.** The moment you save a new branch, everyone who worked at "every branch" (except you, the owner, and the person who made the branch) is switched to the branches they had, so they do not see the new one. A window then asks **Who works at** the new branch: you can **add people who already work for you**, or **create a new person for this branch**, as many times as you like, and press **Done**. You can skip it and come back later with the **Staff of this branch** button on the branch\'s row.'),
+      careful('Paying suppliers and setting up printers need a person who works at **every branch**. If an accountant or a regional manager should keep seeing every branch, tick them in the first step of that window, or give them "All branches" later on the Staff screen.'),
       shot('branches', 'Branches and outlets.', 'The Branches and outlets screen listing the demonstration company\'s branches, each with a code and an address, and an Add branch button.')
     ]),
     section('fd-stations', '5. Stations and printers', [
@@ -101,18 +103,21 @@ export const FIRST_DAY: Chapter = {
     section('fd-groups', '7. Stock groups', [
       p('Open **Stock**, **Stock Groups**. A group is a heading your items sit under, such as Starters, Mains, Spirits, Beer or Cleaning. Press **New group**, give it a name, and choose **Prepared at**: the station that makes what is in the group. A group with no station goes to the default station.'),
       p('A group can also name the ledger accounts its sales and stock post to. Leave them empty and ZestPoint uses the company\'s standard accounts.'),
+      p('You do not have to come here first: a group can be made while you add an item, from the stock card (see **Items** below). ZestPoint refuses a group name that is the same as, or looks the same as, one you already have (Soft Drink next to Soft Drinks), here and in that window.'),
       shot('stock-groups', 'Stock groups, each with the station that prepares it.', 'The Stock Group Maintenance screen listing the groups Food, Drinks and Ingredients, each with its station, and a New group button.')
     ]),
     section('fd-items', '8. Items', [
       p('Open **Stock**, **Items** and press **New stock item**. This opens the **stock card**: the one place for everything about an item. You need an item for what you sell and for what you cook with.'),
       list(
-        '**Name, group, unit and prices.** The retail price is what the till charges. Nobody can type a different price at the till. The card also has a special price with its dates, an item discount, tax, loyalty points and the rules the till follows.',
+        '**Stock group.** A box you can type in: type part of a group\'s name to find it, or choose **No group**. If the group you want does not exist yet, press **Create a new stock group** under the box (or choose the last entry of the list). A window opens over the card: type the name, choose a **Parent group** and **Prepared at** if you want, and press **Create group**. The new group is chosen for the item at once, and you can pick another afterwards. Only people who may manage stock groups are offered this.',
+        '**Name, group, unit and prices.** The retail price is what the till charges. Nobody can type a different price at the till. The card also has a special price with its dates, an item discount, tax, loyalty points, the ledger accounts and the rules the till follows.',
         '**Last cost per unit.** What you last paid for one unit. Only people who may see costs see this.',
         '**Prepared at.** Leave it as the stock group says, or pick a station for this one item.',
         '**For things that go off:** **Shelf life (days)** fills the expiry date when stock arrives, and **Warn before expiry (days)** says how early to warn.',
-        '**Portions per batch:** for a cake baked once and sold by the slice. See **A day in the kitchen**.',
-        '**Other tabs:** selling units (a case of 12), package content (a hamper), equivalent part numbers, the recipe and options, the picture and the ledger accounts. The **Activity** tab shows everything that ever happened to the item.'
+        '**Portions per batch:** for a cake baked once and sold by the slice (8), or baked whole for one customer (1). See **A day in the kitchen**.',
+        '**Other tabs:** selling units (a case of 12), package content (a hamper), equivalent part numbers, the recipe and options and the picture. The **Activity** tab shows everything that ever happened to the item. These tabs need the item to exist, so on a new item each says **Save first**. Press one and the card saves the item for you and opens the tab. If the item cannot be saved yet, the card stays on **Details** and shows a red notice right under the tabs that lists what to fix.'
       ),
+      careful('A group name that is the same as, or looks the same as, a group you already have (Soft Drink next to Soft Drinks, soft-drinks, Softdrinks) is not made. The window names the group that exists and offers to use that group instead. If that group has been switched off, a manager has to switch it on under **Stock**, **Stock Groups**, or you type a clearly different name. Beer and Beef count as different.'),
       careful('Creating an item adds no stock. A new item starts with none. Stock comes in through receiving, an adjustment, a stock take or an opening quantity.'),
       tip('Adding many items? Press **Add many from a file**, download the template, fill it in a spreadsheet and choose the file. It is checked first: every problem is listed by row, and nothing is added until the file is right. The file can carry an **Opening quantity** for each item.'),
       shot('items-list', 'Items: search, add, import and edit.', 'The Items screen listing demonstration items with their groups, prices and units, with a search box, a New stock item button and an Add many from a file button.'),
@@ -122,7 +127,7 @@ export const FIRST_DAY: Chapter = {
       p('A dish that is made from ingredients has a **recipe**: what one sale uses. With a recipe, selling the dish takes the ingredients off the shelf and the dish itself holds no stock.'),
       steps(
         'Make the ingredients as items first (type **ingredient**, in grams, millilitres or each).',
-        'Make the dish as an item with a retail price, and save it. The recipe tab opens once the dish is saved and priced.',
+        'Make the dish as an item with a retail price, and save it. The **Recipe and options** tab opens once the dish is saved: pressing it on a new dish saves the dish for you, or tells you what is missing.',
         'Open the dish\'s stock card and the **Recipe and options** tab. Press **Add ingredient**, choose the ingredient and type the quantity.',
         'Type the **usable percent** for each ingredient. It says how much of what you buy is usable once trimmed: 100 when all of it is, 85 for tomato. The quantity you type is the usable amount, so 850 g of usable tomato takes 1,000 g off the shelf.',
         'Press **Save recipe**. Saving makes a new version, and past sales keep what they used then.'
@@ -144,7 +149,7 @@ export const FIRST_DAY: Chapter = {
       p('Open **Admin**, **Staff**. There are tabs for the **Staff**, their **Roles & permissions**, and an **Activity log** for those who may see it. A role is a named set of rights. ZestPoint starts you with ready-made roles, and you can change them, copy them and make your own.'),
       steps(
         'Open the **Roles & permissions** tab. Look at the ready-made roles and change any that do not fit. For a cook or a bar hand, a role that holds the right to **act as a bar man** shows a section **Stations this role works at**. Tick the station (Kitchen or Bar) and the people with that role are told only about that station\'s orders. A role with no station ticked works at every station.',
-        'Press **Add staff**. Type their name, choose how they sign in, pick their role and the branches they work at.',
+        'Press **Add staff**. Type their name, choose how they sign in, pick their role and the branches they work at. The form starts with the branch you are working at; **All branches** is a tick you make on purpose, because it also gives the person every branch you add later. Only someone who works at every branch can give every branch.',
         '**PIN set by me:** type a PIN of 4 to 12 digits, not a run or a repeat such as 1234 or 1111. ZestPoint makes their **staff code**, which looks like BHL-007, and shows it to you at once; it stays in the Staff list. Give them the code and the PIN.',
         '**Email invitation:** they get an e-mail with a link and a default PIN. Opening the link asks for that PIN once, then they choose their own.'
       ),

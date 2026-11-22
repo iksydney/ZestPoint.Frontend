@@ -9,6 +9,7 @@ import { ModeName } from '../../../core/models/subscription.model';
 import { toApiError } from '../../../core/services/api.util';
 import { PlatformApi } from '../../../core/services/subscription.services';
 import { DialogComponent, ToastService } from '../../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../../shared/ui/search-select.component';
 import { StatusBadgeComponent } from '../../../shared/ui/ui-kit.components';
 
 type DialogKind = 'rule' | 'override' | 'clear-override' | 'grant-module' | 'revert-module' | 'grant-app' | 'revert-app' | 'revoke-rule';
@@ -32,7 +33,7 @@ const addDays = (d: Date, n: number): Date => new Date(d.getTime() + n * 86_400_
  */
 @Component({
     selector: 'zp-access-tree',
-    imports: [DatePipe, NgTemplateOutlet, FormsModule, DialogComponent, StatusBadgeComponent],
+    imports: [DatePipe, NgTemplateOutlet, FormsModule, DialogComponent, StatusBadgeComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <section class="app-card mb-4" data-testid="access-tree" aria-labelledby="access-heading">
@@ -56,8 +57,8 @@ const addDays = (d: Date, n: number): Date => new Date(d.getTime() + n * 86_400_
           <div class="min-w-[12rem] flex-1"><label class="app-label" for="access-search">Find a screen or button</label>
             <input id="access-search" type="search" class="app-input" data-testid="access-search" placeholder="e.g. bins, void, report" [ngModel]="search()" (ngModelChange)="search.set($event)" /></div>
           <div><label class="app-label" for="access-branch">Showing</label>
-            <select id="access-branch" class="app-input" data-testid="access-branch" [ngModel]="branchId()" (ngModelChange)="selectBranch($event)">
-              <option value="">Whole company</option>@for (b of t.branches; track b.id) { <option [value]="b.id">{{ b.name }}</option> }</select></div>
+            <zp-search-select class="w-56" inputId="access-branch" testId="access-branch" emptyLabel="Whole company" noun="branch" placeholder="Search branches"
+                              [options]="branchOptions()" [value]="branchId()" (valueChange)="selectBranch($event)" /></div>
           <label class="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" data-testid="access-changes-only" [ngModel]="changesOnly()" (ngModelChange)="changesOnly.set($event)" /> Only what differs from the default</label>
         </div>
 
@@ -217,6 +218,7 @@ export class AccessTreeComponent implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly search = signal('');
   protected readonly branchId = signal('');
+  protected readonly branchOptions = computed<readonly SelectOption[]>(() => (this.tree()?.branches ?? []).map((b) => ({ value: b.id, label: b.name })));
   protected readonly changesOnly = signal(false);
   private readonly openKeys = signal<ReadonlySet<string>>(new Set());
 

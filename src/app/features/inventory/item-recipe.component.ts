@@ -7,6 +7,7 @@ import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogApi, InventoryApi } from '../../core/services/ops.services';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 
 interface IngredientRow { inventoryItemId: string; quantity: number; usablePercent: number; substituteItemId: string | null; substituteRatio: number | null }
 type OptionRow = SaveProductRequest['modifiers'][number];
@@ -23,7 +24,7 @@ type OptionRow = SaveProductRequest['modifiers'][number];
  */
 @Component({
     selector: 'zp-item-recipe',
-    imports: [DecimalPipe, FormsModule],
+    imports: [DecimalPipe, FormsModule, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="space-y-4" data-testid="recipe-tab">
@@ -42,10 +43,10 @@ type OptionRow = SaveProductRequest['modifiers'][number];
               @if (current(); as c) { <span data-testid="recipe-current">Current: version {{ c.version }}, cost per sale {{ c.costPerUnit | number: '1.2-2' }}.</span> } @else { No recipe yet: the item is sold as it is. }</p>
             @for (r of rows(); track $index) {
               <div class="mb-2 grid grid-cols-[1fr_6rem_5rem_1fr_5rem_auto] items-end gap-2">
-                <select class="app-input" aria-label="Ingredient" [attr.data-testid]="'ing-item-' + $index" [ngModel]="r.inventoryItemId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchIng($index, { inventoryItemId: $event })"><option value="">Ingredient...</option>@for (i of items(); track i.id) { <option [value]="i.id">{{ i.name }}</option> }</select>
+                <zp-search-select ariaLabel="Ingredient" [testId]="'ing-item-' + $index" emptyLabel="Ingredient..." noun="item" placeholder="Search items" [options]="itemOptions()" [value]="r.inventoryItemId" (valueChange)="patchIng($index, { inventoryItemId: $event })" />
                 <input type="number" min="0" step="any" class="app-input" aria-label="Quantity per sale" [attr.data-testid]="'ing-qty-' + $index" [ngModel]="r.quantity" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchIng($index, { quantity: +$event })" />
                 <input type="number" min="1" max="100" step="any" class="app-input" aria-label="Usable percent" title="How much of what you buy is usable once trimmed (tomato 85). The quantity is the usable amount; the shelf gives up more." [attr.data-testid]="'ing-usable-' + $index" [ngModel]="r.usablePercent" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchIng($index, { usablePercent: +$event || 100 })" />
-                <select class="app-input" aria-label="Allowed substitute" [ngModel]="r.substituteItemId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchIng($index, { substituteItemId: $event || null, substituteRatio: $event ? 1 : null })"><option [ngValue]="null">No substitute</option>@for (i of items(); track i.id) { <option [ngValue]="i.id">{{ i.name }}</option> }</select>
+                <zp-search-select ariaLabel="Allowed substitute" [testId]="'ing-sub-' + $index" emptyLabel="No substitute" noun="item" placeholder="Search items" [options]="itemOptions()" [value]="r.substituteItemId" (valueChange)="patchIng($index, { substituteItemId: $event || null, substituteRatio: $event ? 1 : null })" />
                 <input type="number" min="0" step="any" class="app-input" aria-label="Substitute ratio" [disabled]="!r.substituteItemId" [ngModel]="r.substituteRatio" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchIng($index, { substituteRatio: $event ? +$event : null })" />
                 <button type="button" class="btn-ghost px-2" aria-label="Remove ingredient" (click)="removeIng($index)">x</button>
               </div>
@@ -63,7 +64,7 @@ type OptionRow = SaveProductRequest['modifiers'][number];
             <div class="mb-2 grid grid-cols-[1fr_6rem_1fr_6rem_auto] items-end gap-2">
               <input class="app-input" aria-label="Option name" placeholder="e.g. Double shot" [attr.data-testid]="'mod-name-' + $index" [ngModel]="m.name" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchOpt($index, { name: $event })" />
               <input type="number" step="0.01" class="app-input" aria-label="Extra price" [attr.data-testid]="'mod-price-' + $index" [ngModel]="m.priceDelta" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchOpt($index, { priceDelta: +$event })" />
-              <select class="app-input" aria-label="Uses stock item" [ngModel]="m.inventoryItemId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchOpt($index, { inventoryItemId: $event || null })"><option [ngValue]="null">No stock</option>@for (i of items(); track i.id) { <option [ngValue]="i.id">{{ i.name }}</option> }</select>
+              <zp-search-select ariaLabel="Uses stock item" [testId]="'mod-item-' + $index" emptyLabel="No stock" noun="item" placeholder="Search items" [options]="itemOptions()" [value]="m.inventoryItemId" (valueChange)="patchOpt($index, { inventoryItemId: $event || null })" />
               <input type="number" min="0" step="any" class="app-input" aria-label="Stock used" [ngModel]="m.quantity" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchOpt($index, { quantity: +$event })" />
               <button type="button" class="btn-ghost px-2" aria-label="Remove option" (click)="removeOpt($index)">x</button>
             </div>
@@ -89,6 +90,7 @@ export class ItemRecipeComponent {
 
   protected readonly product = signal<ProductDto | null>(null);
   protected readonly items = signal<readonly InventoryItemDto[]>([]);
+  protected readonly itemOptions = computed<readonly SelectOption[]>(() => this.items().map((i) => ({ value: i.id, label: i.name })));
   protected readonly current = signal<RecipeDto | null>(null);
   protected readonly rows = signal<readonly IngredientRow[]>([]);
   protected readonly options = signal<readonly OptionRow[]>([]);

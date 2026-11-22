@@ -14,6 +14,7 @@ import { InventoryApi } from '../../core/services/ops.services';
 import { BinApi } from '../../core/services/purchasing.services';
 import { StationsService } from '../../core/services/stations.service';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 
 interface AskLine { inventoryItemId: string; quantity: number }
 interface IssueLine { lineId: string; itemName: string; requested: number; issued: number; fromBinId: string | null }
@@ -26,7 +27,7 @@ interface ReceiveLine { lineId: string; itemName: string; issued: number; receiv
  */
 @Component({
     selector: 'zp-store-issues',
-    imports: [DatePipe, DecimalPipe, FormsModule, DialogComponent],
+    imports: [DatePipe, DecimalPipe, FormsModule, DialogComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="flex flex-col gap-4" data-testid="store-issues">
@@ -74,10 +75,10 @@ interface ReceiveLine { lineId: string; itemName: string; issued: number; receiv
       @if (ask(); as a) {
         <form class="space-y-3" (submit)="$event.preventDefault(); sendAsk()" data-testid="ask-form">
           <div><label class="app-label" for="ask-station">For which station</label>
-            <select id="ask-station" class="app-input" data-testid="ask-station" [ngModel]="a.stationId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchAsk({ stationId: $event })">@for (s of stationOptions(); track s.id) { <option [value]="s.id">{{ s.name }}</option> }</select></div>
+            <zp-search-select inputId="ask-station" testId="ask-station" noun="station" placeholder="Search stations" [options]="stationChoices()" [value]="a.stationId" (valueChange)="patchAsk({ stationId: $event })" /></div>
           @for (l of a.lines; track $index) {
             <div class="grid grid-cols-[1fr_6rem_auto] items-end gap-2">
-              <select class="app-input" aria-label="Item" [attr.data-testid]="'ask-item-' + $index" [ngModel]="l.inventoryItemId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchAskLine($index, { inventoryItemId: $event })"><option value="">Choose an item</option>@for (i of items(); track i.id) { <option [value]="i.id">{{ i.name }}</option> }</select>
+              <zp-search-select ariaLabel="Item" [testId]="'ask-item-' + $index" emptyLabel="Choose an item" noun="item" placeholder="Search items" [options]="itemOptions()" [value]="l.inventoryItemId" (valueChange)="patchAskLine($index, { inventoryItemId: $event })" />
               <input type="number" min="0" step="any" class="app-input" aria-label="Quantity" [attr.data-testid]="'ask-qty-' + $index" [ngModel]="l.quantity" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchAskLine($index, { quantity: +$event })" />
               <button type="button" class="btn-ghost px-2" aria-label="Remove" (click)="removeAskLine($index)">x</button>
             </div>
@@ -98,7 +99,7 @@ interface ReceiveLine { lineId: string; itemName: string; issued: number; receiv
             <div class="grid grid-cols-[1fr_6rem_9rem] items-end gap-2">
               <div class="text-sm"><strong>{{ l.itemName }}</strong><span class="block text-xs text-ink/70">asked for {{ l.requested | number: '1.0-3' }}</span></div>
               <input type="number" min="0" step="any" class="app-input" aria-label="Issued" [attr.data-testid]="'issue-qty-' + n" [ngModel]="l.issued" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchIssue(n, { issued: +$event })" />
-              <select class="app-input" aria-label="From bin" [attr.data-testid]="'issue-bin-' + n" [ngModel]="l.fromBinId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchIssue(n, { fromBinId: $event || null })"><option [ngValue]="null">Not in a bin</option>@for (b of storeBins(); track b.id) { <option [ngValue]="b.id">{{ b.code }}</option> }</select>
+              <zp-search-select ariaLabel="From bin" [testId]="'issue-bin-' + n" emptyLabel="Not in a bin" noun="bin" placeholder="Search bins" [options]="binOptions()" [value]="l.fromBinId" (valueChange)="patchIssue(n, { fromBinId: $event || null })" />
             </div>
           }
           @if (dialogError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="issue-error">{{ dialogError() }}</p> }
@@ -160,6 +161,9 @@ export class StoreIssuesComponent {
 
   protected readonly readOnly = computed(() => this.auth.accessModeFor(FEATURES.INVENTORY) === 'readonly');
   protected readonly stationOptions = computed(() => this.stationsService.list().filter((s) => s.isActive && s.worksHere));
+  protected readonly stationChoices = computed<readonly SelectOption[]>(() => this.stationOptions().map((s) => ({ value: s.id, label: s.name })));
+  protected readonly itemOptions = computed<readonly SelectOption[]>(() => this.items().map((i) => ({ value: i.id, label: i.name })));
+  protected readonly binOptions = computed<readonly SelectOption[]>(() => this.storeBins().map((b) => ({ value: b.id, label: b.code })));
   protected readonly validAsk = computed(() => (this.ask()?.lines ?? []).filter((l) => l.inventoryItemId && l.quantity > 0));
 
   constructor() {

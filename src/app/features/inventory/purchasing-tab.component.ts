@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { FEATURES, SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { InventoryItemDto, PurchaseOrderDto, SuggestedOrderDto, SupplierDto } from '../../core/models/ops.model';
@@ -8,16 +9,18 @@ import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { InventoryApi } from '../../core/services/ops.services';
+import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 
 type Dialog = 'po' | 'supplier' | null;
 interface PoLine { inventoryItemId: string; quantity: number; unitCost: number }
 
-/** Suppliers, purchase orders (draft, submit, approve, receive) and explainable reorder suggestions. Nothing is sent or paid automatically. */
+/** Suppliers, purchase orders (draft, submit, approve) and explainable reorder suggestions. Nothing is sent or paid automatically. Goods are received at Goods Receiving, where a second person checks them in: the order here only links to it. */
 @Component({
     selector: 'zp-purchasing-tab',
-    imports: [DecimalPipe, FormsModule, DialogComponent, StatusBadgeComponent],
+    imports: [DecimalPipe, FormsModule, RouterLink, DialogComponent, EntitledActionDirective, SearchSelectComponent, StatusBadgeComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     @if (error()) { <p class="sys-alert sys-alert-danger mb-3" role="alert">{{ error() }}</p> }
@@ -58,7 +61,7 @@ interface PoLine { inventoryItemId: string; quantity: number; unitCost: number }
                 <td class="whitespace-nowrap text-right">
                   @if (canManage() && !readOnly() && p.status === 'Draft') { <button type="button" class="btn-outline px-2 py-1 text-sm" [attr.data-testid]="'submit-po-' + p.number" (click)="act(p, 'submit')">Submit</button> }
                   @if (canApprove() && !readOnly() && p.status === 'Submitted') { <button type="button" class="btn-primary px-2 py-1 text-sm" [attr.data-testid]="'approve-po-' + p.number" (click)="act(p, 'approve')">Approve</button> }
-                  @if (canManage() && !readOnly() && (p.status === 'Approved' || p.status === 'PartiallyReceived')) { <button type="button" class="btn-outline px-2 py-1 text-sm" [attr.data-testid]="'receive-po-' + p.number" (click)="receiveAll(p)">Receive all</button> }
+                  @if (canReceive() && !readOnly() && (p.status === 'Approved' || p.status === 'PartiallyReceived')) { <a class="btn-outline px-2 py-1 text-sm" [attr.data-testid]="'receive-po-' + p.number" zpAction="purchasing.receive" [routerLink]="['/app/purchasing/orders', p.id, 'receive']">Receive at Goods Receiving</a> }
                   @if (canManage() && !readOnly() && (p.status === 'Draft' || p.status === 'Submitted' || p.status === 'Approved')) { <button type="button" class="btn-ghost px-2 py-1 text-sm" (click)="act(p, 'cancel')">Cancel</button> }
                 </td>
               </tr>
@@ -78,11 +81,11 @@ interface PoLine { inventoryItemId: string; quantity: number; unitCost: number }
     <zp-dialog [open]="dialog() === 'po'" title="New purchase order" [wide]="true" (closed)="dialog.set(null)">
       <form class="space-y-3" (submit)="$event.preventDefault(); savePo()">
         <div><label class="app-label" for="po-sup">Supplier</label>
-          <select id="po-sup" class="app-input" data-testid="po-supplier" [ngModel]="poSupplier()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="poSupplier.set($event)"><option value="">Choose...</option>@for (s of suppliers(); track s.id) { @if (s.isActive) { <option [value]="s.id">{{ s.name }}</option> } }</select></div>
+          <zp-search-select inputId="po-sup" testId="po-supplier" emptyLabel="Choose..." noun="supplier" placeholder="Search suppliers" [options]="supplierOptions()" [value]="poSupplier()" (valueChange)="poSupplier.set($event)" /></div>
         <div class="space-y-2">
           @for (l of poLines(); track $index) {
             <div class="grid grid-cols-[1fr_6rem_6rem_auto] items-end gap-2">
-              <select class="app-input" aria-label="Item" [attr.data-testid]="'po-item-' + $index" [ngModel]="l.inventoryItemId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setLine($index, { inventoryItemId: $event })"><option value="">Item...</option>@for (i of items(); track i.id) { <option [value]="i.id">{{ i.name }}</option> }</select>
+              <zp-search-select ariaLabel="Item" [testId]="'po-item-' + $index" emptyLabel="Item..." noun="item" placeholder="Search items" [options]="itemOptions()" [value]="l.inventoryItemId" (valueChange)="setLine($index, { inventoryItemId: $event })" />
               <input type="number" min="0" step="any" class="app-input" aria-label="Quantity" [attr.data-testid]="'po-qty-' + $index" [ngModel]="l.quantity" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setLine($index, { quantity: +$event })" />
               <input type="number" min="0" step="any" class="app-input" aria-label="Unit cost" [ngModel]="l.unitCost" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setLine($index, { unitCost: +$event })" />
               <button type="button" class="btn-ghost px-2" aria-label="Remove line" (click)="removeLine($index)">x</button>
@@ -115,6 +118,8 @@ export class PurchasingTabComponent {
   protected readonly orders = signal<readonly PurchaseOrderDto[]>([]);
   protected readonly suppliers = signal<readonly SupplierDto[]>([]);
   protected readonly items = signal<readonly InventoryItemDto[]>([]);
+  protected readonly itemOptions = computed<readonly SelectOption[]>(() => this.items().map((i) => ({ value: i.id, label: i.name })));
+  protected readonly supplierOptions = computed<readonly SelectOption[]>(() => this.suppliers().filter((s) => s.isActive).map((s) => ({ value: s.id, label: s.name })));
   protected readonly suggestions = signal<readonly SuggestedOrderDto[]>([]);
   protected readonly checked = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -128,6 +133,7 @@ export class PurchasingTabComponent {
   protected readonly readOnly = computed(() => this.auth.accessModeFor(FEATURES.INVENTORY) === 'readonly');
   protected readonly canManage = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_PURCHASE_MANAGE));
   protected readonly canApprove = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_PURCHASE_APPROVE));
+  protected readonly canReceive = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.PURCHASING_RECEIVE));
 
   constructor() {
     effect(() => {
@@ -175,22 +181,6 @@ export class PurchasingTabComponent {
     this.error.set(null);
     try {
       await firstValueFrom(this.api.purchaseOrderAction(p.id, action));
-      await this.load();
-    } catch (err) { this.error.set(toApiError(err).message); }
-  }
-
-  protected async receiveAll(p: PurchaseOrderDto): Promise<void> {
-    const branchId = this.branches.activeId();
-    if (!branchId) return;
-    this.error.set(null);
-    try {
-      await firstValueFrom(this.api.receive({
-        branchId, supplierId: p.supplierId, purchaseOrderId: p.id, reference: `PO ${p.number}`, idempotencyKey: `po-rcv-${crypto.randomUUID()}`,
-        lines: p.lines.filter((l) => l.quantityOrdered > l.quantityReceived).map((l) => ({
-          inventoryItemId: l.inventoryItemId, quantity: l.quantityOrdered - l.quantityReceived, unitCost: l.unitCost, lotCode: null, expiryDate: null, purchaseOrderLineId: l.id
-        }))
-      }));
-      this.toast.success('Goods received against the order.');
       await this.load();
     } catch (err) { this.error.set(toApiError(err).message); }
   }

@@ -1,11 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ApiEnvelope } from '../../core/models/api.model';
 import { toApiError, unwrap } from '../../core/services/api.util';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { DialogComponent } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 
 /** The columns of an items file: the heading people see, the field it fills, and the other headings that mean the same. */
 const COLUMNS: readonly { head: string; field: string; also: readonly string[]; hint: string }[] = [
@@ -64,7 +64,7 @@ export function parseCsv(text: string): string[][] {
  */
 @Component({
     selector: 'zp-item-import',
-    imports: [FormsModule, DialogComponent],
+    imports: [DialogComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <zp-dialog [open]="true" title="Add many items from a file" [wide]="true" (closed)="closed.emit()">
@@ -84,9 +84,7 @@ export function parseCsv(text: string): string[][] {
           @if (hasOpening()) {
             <li>
               <label class="app-label" for="imp-branch">Opening stock is at</label>
-              <select id="imp-branch" class="app-input max-w-xs" data-testid="import-branch" [ngModel]="branchId()" (ngModelChange)="branchId.set($event); check()">
-                @for (b of branches.branches(); track b.id) { <option [value]="b.id">{{ b.name }}</option> }
-              </select>
+              <zp-search-select class="max-w-xs" inputId="imp-branch" testId="import-branch" noun="branch" placeholder="Search branches" [options]="branchOptions()" [value]="branchId()" (valueChange)="branchId.set($event); check()" />
             </li>
           }
         </ol>
@@ -142,6 +140,7 @@ export class ItemImportComponent {
   protected readonly columns = COLUMNS;
   protected readonly rows = signal<readonly Row[]>([]);
   protected readonly branchId = signal<string>(this.branches.activeId() ?? '');
+  protected readonly branchOptions = computed<readonly SelectOption[]>(() => this.branches.branches().map((b) => ({ value: b.id, label: b.name })));
   protected readonly fileError = signal<string | null>(null);
   protected readonly checking = signal(false);
   protected readonly importing = signal(false);

@@ -3,8 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiEnvelope, AuthSessionDto } from '../models/api.model';
 import {
-  AuditLogDto, BranchDto, CreateStaffRequest, InviteInfoDto, PagedResult, PermissionDto, RoleDto, SaveBranchRequest,
-  SaveRoleRequest, SessionDto, StaffCreatedDto, StaffDetailDto, StaffListItemDto, UpdateStaffRequest
+  AuditLogDto, BranchDto, BranchStaffDto, CreateStaffRequest, InviteInfoDto, PagedResult, PermissionDto, RoleDto, SaveBranchRequest,
+  SaveRoleRequest, SessionDto, SetBranchStaffRequest, StaffCreatedDto, StaffDetailDto, StaffListItemDto, UpdateStaffRequest
 } from '../models/staff.model';
 import { unwrap } from './api.util';
 
@@ -41,6 +41,16 @@ export class StaffApiService {
 
   update(id: string, request: UpdateStaffRequest): Observable<StaffDetailDto> {
     return this.http.put<ApiEnvelope<StaffDetailDto>>(`/api/v1/staff/${id}`, request).pipe(unwrap());
+  }
+
+  /** Who works at one branch (the person asking must work there too). */
+  branchStaff(branchId: string): Observable<BranchStaffDto> {
+    return this.http.get<ApiEnvelope<BranchStaffDto>>(`/api/v1/staff/branch/${branchId}`).pipe(unwrap());
+  }
+
+  /** Sets who works at one branch: people added, taken off, or switched to every branch, in one step. */
+  setBranchStaff(branchId: string, request: SetBranchStaffRequest): Observable<BranchStaffDto> {
+    return this.http.put<ApiEnvelope<BranchStaffDto>>(`/api/v1/staff/branch/${branchId}`, request).pipe(unwrap());
   }
 
   deactivate(id: string): Observable<StaffDetailDto> {

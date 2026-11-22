@@ -16,6 +16,7 @@ import {
 import { relativeLuminance } from '../../core/theme/color';
 import { FONT_OPTIONS, auditTheme, computeInitials, statusColors } from '../../core/theme/theme-tokens';
 import { BrandMarkComponent } from '../../shared/ui/brand-mark.component';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { BrandPreviewComponent, PreviewTheme } from './brand-preview.component';
 import { ColorFieldComponent } from './color-field.component';
 
@@ -59,7 +60,7 @@ type ColorKey = 'primaryColor' | 'secondaryColor' | 'backgroundColor' | 'surface
  */
 @Component({
     selector: 'zp-branding-editor',
-    imports: [FormsModule, ColorFieldComponent, BrandPreviewComponent, BrandMarkComponent],
+    imports: [FormsModule, ColorFieldComponent, BrandPreviewComponent, BrandMarkComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     @if (loading()) {
@@ -93,9 +94,8 @@ type ColorKey = 'primaryColor' | 'secondaryColor' | 'backgroundColor' | 'surface
                 </div>
                 <div>
                   <label class="app-label" for="b-type">Enterprise type</label>
-                  <select id="b-type" class="app-input" [ngModel]="v().enterpriseType" (ngModelChange)="set('enterpriseType', $event)">
-                    @for (t of enterpriseTypes(); track t.code) { <option [value]="t.code">{{ t.name }}</option> }
-                  </select>
+                  <zp-search-select inputId="b-type" testId="branding-type" noun="business type" placeholder="Search: supermarket, bar, hotel..."
+                                    [options]="typeOptions()" [value]="v().enterpriseType" (valueChange)="set('enterpriseType', $event)" />
                 </div>
                 @if (v().enterpriseType === 'Other') {
                   <div>
@@ -304,6 +304,9 @@ export class BrandingEditorComponent {
   protected readonly published = signal<BrandingDto | null>(null);
   protected readonly presets = signal<ThemePresetDto[]>([]);
   protected readonly enterpriseTypes = signal<EnterpriseTypeDto[]>([]);
+  /** The same words and groups as the registration page's list of business types. */
+  protected readonly typeOptions = computed<SelectOption<EnterpriseTypeCode>[]>(() =>
+    this.enterpriseTypes().map((t) => ({ value: t.code, label: t.name, description: t.description, group: t.category === 'Group' ? 'Groups' : t.category })));
   protected readonly suggestion = signal<ThemeSuggestionDto | null>(null);
   protected readonly suggesting = signal(false);
   protected readonly harmony = signal('complementary');

@@ -13,10 +13,13 @@ import { StationsService } from '../../core/services/stations.service';
 import { BinApi } from '../../core/services/purchasing.services';
 import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { BranchPickerComponent } from '../../shared/ui/ops-chrome.components';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { ZpIconComponent } from '../../shared/ui/zp-icon.component';
 import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 
 const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
+/** What the server's stock list takes as the bin filter for stock that sits in no bin. */
+const NO_BIN = '00000000-0000-0000-0000-000000000000';
 
 interface BinForm { id: string | null; code: string; name: string; isHighSecurity: boolean; isActive: boolean; sortOrder: number; stationId: string | null; rowVersion: string | null }
 
@@ -26,7 +29,7 @@ interface BinForm { id: string | null; code: string; name: string; isHighSecurit
  */
 @Component({
     selector: 'zp-bins',
-    imports: [EntitledActionDirective, DecimalPipe, FormsModule, BranchPickerComponent, DialogComponent, ZpIconComponent],
+    imports: [EntitledActionDirective, DecimalPipe, FormsModule, BranchPickerComponent, DialogComponent, SearchSelectComponent, ZpIconComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="flex flex-col gap-4 font-jakarta" data-testid="bins">
@@ -49,7 +52,7 @@ interface BinForm { id: string | null; code: string; name: string; isHighSecurit
         <div class="flex flex-wrap items-end justify-between gap-3 bg-ink/5 px-4 py-2">
           <h2 class="font-syne text-lg font-semibold">Stock by bin</h2>
           <div class="flex flex-wrap items-end gap-2">
-            <div><label class="app-label" for="bs-bin">Bin</label><select id="bs-bin" class="app-input py-1" data-testid="stock-bin" [ngModel]="stockBin()" (ngModelChange)="stockBin.set($event); loadStock()"><option value="">All bins</option><option value="00000000-0000-0000-0000-000000000000">Not in any bin</option>@for (b of bins(); track b.id) { <option [value]="b.id">{{ b.code }}</option> }</select></div>
+            <div><label class="app-label" for="bs-bin">Bin</label><zp-search-select class="w-44" inputId="bs-bin" testId="stock-bin" emptyLabel="All bins" noun="bin" placeholder="Search bins" inputClass="app-input py-1" [options]="stockBinOptions()" [value]="stockBin()" (valueChange)="stockBin.set($event); loadStock()" /></div>
             <div><label class="app-label" for="bs-search">Item</label><input id="bs-search" type="search" class="app-input py-1" placeholder="Name, SKU or barcode" data-testid="stock-search" [ngModel]="stockSearch()" (ngModelChange)="stockSearch.set($event)" (keydown.enter)="loadStock()" /></div>
             <button type="button" class="btn-outline" data-testid="stock-find" (click)="loadStock()">Find</button>
           </div>
@@ -67,8 +70,8 @@ interface BinForm { id: string | null; code: string; name: string; isHighSecurit
           <h2 class="font-syne text-lg font-semibold">Where each item normally goes</h2>
           <p class="text-sm text-ink/70">Receiving pre-selects the default bin, so the receiver only changes it when something is different.</p>
           <div class="grid items-end gap-2 sm:grid-cols-[1fr_1fr_auto]">
-            <div><label class="app-label" for="df-item">Item</label><select id="df-item" class="app-input" data-testid="default-item" [ngModel]="defaultItem()" (ngModelChange)="defaultItem.set($event)"><option value="">Choose an item</option>@for (i of items(); track i.id) { <option [value]="i.id">{{ i.name }}</option> }</select></div>
-            <div><label class="app-label" for="df-bin">Bin</label><select id="df-bin" class="app-input" data-testid="default-bin" [ngModel]="defaultBin()" (ngModelChange)="defaultBin.set($event)"><option value="">Choose a bin</option>@for (b of activeBins(); track b.id) { <option [value]="b.id">{{ b.code }}</option> }</select></div>
+            <div><label class="app-label" for="df-item">Item</label><zp-search-select inputId="df-item" testId="default-item" emptyLabel="Choose an item" noun="item" placeholder="Search items" [options]="itemOptions()" [value]="defaultItem()" (valueChange)="defaultItem.set($event)" /></div>
+            <div><label class="app-label" for="df-bin">Bin</label><zp-search-select inputId="df-bin" testId="default-bin" emptyLabel="Choose a bin" noun="bin" placeholder="Search bins" [options]="binOptions()" [value]="defaultBin()" (valueChange)="defaultBin.set($event)" /></div>
             <button type="button" class="btn-primary" data-testid="default-save" [disabled]="!defaultItem() || !defaultBin() || busy()" (click)="saveDefault()">Set default</button>
           </div>
           <ul class="divide-y divide-ink/10 text-sm" data-testid="default-list">@for (d of defaults(); track d.inventoryItemId) {
@@ -85,8 +88,7 @@ interface BinForm { id: string | null; code: string; name: string; isHighSecurit
           <div><label class="app-label" for="bf-name">Name</label><input id="bf-name" class="app-input" maxlength="120" data-testid="bin-name" [ngModel]="f.name" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchForm({ name: $event })" /></div>
           <label class="flex items-start gap-2 text-sm"><input type="checkbox" class="mt-1" data-testid="bin-secure" [ngModel]="f.isHighSecurity" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchForm({ isHighSecurity: $event })" /> <span><strong>High security</strong><span class="block text-ink/70">Goods going in need a second person, signed in on their own device, to confirm them before they count as stock.</span></span></label>
           @if (stations().length > 0) {
-            <div><label class="app-label" for="bin-station">A station's own stock place</label><select id="bin-station" class="app-input" data-testid="bin-station" [ngModel]="f.stationId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchForm({ stationId: $event || null })" [disabled]="f.isHighSecurity">
-              <option [ngValue]="null">No: an ordinary store bin</option>@for (s of stations(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select>
+            <div><label class="app-label" for="bin-station">A station's own stock place</label><zp-search-select inputId="bin-station" testId="bin-station" emptyLabel="No: an ordinary store bin" noun="station" placeholder="Search stations" [options]="stationOptions()" [value]="f.stationId" [disabled]="f.isHighSecurity" (valueChange)="patchForm({ stationId: $event || null })" />
               <p class="app-hint">Make this the kitchen's (or the bar's) own place at this branch: what the store issues to it lands here, and its sales and batches take from it first. One for each station at a branch.</p></div>
           }
           @if (f.id) { <label class="flex items-center gap-2 text-sm"><input type="checkbox" [ngModel]="f.isActive" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchForm({ isActive: $event })" /> In use</label> }
@@ -100,7 +102,7 @@ interface BinForm { id: string | null; code: string; name: string; isHighSecurit
       @if (move(); as mv) {
         <form class="space-y-3" (submit)="$event.preventDefault(); doMove()">
           <p class="text-sm"><strong>{{ mv.row.itemName }}</strong> from <span class="font-data">{{ mv.row.binCode }}</span> ({{ mv.row.quantity | number: '1.0-4' }} {{ unit(mv.row.unit) }} here). The branch total does not change.</p>
-          <div><label class="app-label" for="mv-to">Move to</label><select id="mv-to" class="app-input" data-testid="move-to" [ngModel]="mv.to" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchMove({ to: $event })"><option value="">Choose a bin</option>@if (mv.row.binId) { <option value="none">Not in any bin</option> }@for (b of activeBins(); track b.id) { @if (b.id !== mv.row.binId) { <option [value]="b.id">{{ b.code }}{{ b.isHighSecurity ? ' (secure)' : '' }}</option> } }</select></div>
+          <div><label class="app-label" for="mv-to">Move to</label><zp-search-select inputId="mv-to" testId="move-to" emptyLabel="Choose a bin" noun="bin" placeholder="Search bins" [options]="moveToOptions()" [value]="mv.to" (valueChange)="patchMove({ to: $event })" /></div>
           <div><label class="app-label" for="mv-qty">Quantity</label><input id="mv-qty" type="number" min="0" step="any" class="app-input font-data" data-testid="move-qty" [ngModel]="mv.qty" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchMove({ qty: +$event })" /></div>
           <div><label class="app-label" for="mv-why">Reason (optional)</label><input id="mv-why" class="app-input" maxlength="300" data-testid="move-reason" [ngModel]="mv.reason" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchMove({ reason: $event })" /></div>
           @if (moveError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="move-error">{{ moveError() }}</p> }
@@ -140,6 +142,22 @@ export class BinsComponent implements OnInit {
   protected readonly canManage = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_BINS_MANAGE));
   protected readonly canMove = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_STOCK_ADJUST));
   protected readonly activeBins = computed(() => this.bins().filter((b) => b.isActive));
+  protected readonly itemOptions = computed<readonly SelectOption[]>(() => this.items().map((i) => ({ value: i.id, label: i.name })));
+  protected readonly binOptions = computed<readonly SelectOption[]>(() => this.activeBins().map((b) => ({ value: b.id, label: b.code, description: b.name })));
+  protected readonly stationOptions = computed<readonly SelectOption[]>(() => this.stations().map((s) => ({ value: s.id, label: s.name })));
+  /** The bin filter: the bins, and the stock that sits in none. Switched-off bins stay listed, as stock may still be in them. */
+  protected readonly stockBinOptions = computed<readonly SelectOption[]>(() => [
+    { value: NO_BIN, label: 'Not in any bin' },
+    ...this.bins().map((b) => ({ value: b.id, label: b.code, description: b.name }))
+  ]);
+  /** Where a quantity can be moved to: every other bin in use, and out of its bin altogether when it is in one. */
+  protected readonly moveToOptions = computed<readonly SelectOption[]>(() => {
+    const from = this.move()?.row.binId ?? null;
+    return [
+      ...(from ? [{ value: 'none', label: 'Not in any bin' }] : []),
+      ...this.activeBins().filter((b) => b.id !== from).map((b) => ({ value: b.id, label: `${b.code}${b.isHighSecurity ? ' (secure)' : ''}`, description: b.name }))
+    ];
+  });
 
   constructor() {
     void this.stationsService.load();

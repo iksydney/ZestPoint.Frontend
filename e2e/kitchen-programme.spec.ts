@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { registerViaUi } from './helpers';
+import { choose, registerViaUi } from './helpers';
 
 /**
  * The kitchen programme (owner's decisions, 2026-11-21): a cake made in batches from the stock card to the Production screen and the food cost, cash buying at a market with its
@@ -40,7 +40,7 @@ test.describe('The kitchen programme', () => {
     await page.getByTestId('sc-tab-recipe').click();
     await expect(page.getByTestId('batch-editor')).toBeVisible();
     await page.getByTestId('batch-add').click();
-    await page.getByTestId('batch-item-0').selectOption({ index: 1 });
+    await choose(page, 'batch-item-0', 'Flour');
     await page.getByTestId('batch-qty-0').fill('500');
     await page.getByTestId('batch-save').click();
     await expect(page.getByTestId('batch-msg')).toHaveText('Batch recipe saved.');
@@ -49,7 +49,7 @@ test.describe('The kitchen programme', () => {
 
     // Production: one batch expected to give 8 slices gave 7; the difference is shown before and kept after.
     await page.goto('/app/inventory/production');
-    await page.getByTestId('production-item').selectOption({ label: 'Chocolate cake' });
+    await choose(page, 'production-item', 'Chocolate cake');
     await expect(page.getByTestId('production-summary')).toContainText('One batch gives 8 portions and takes 1 ingredient');
     await page.getByTestId('production-actual').fill('7');
     await expect(page.getByTestId('production-variance')).toContainText('1 fewer');
@@ -80,7 +80,7 @@ test.describe('The kitchen programme', () => {
     await page.getByTestId('run-market').fill('Mile 12');
     await page.getByTestId('run-given').fill('20000');
     await page.getByTestId('run-change').fill('500');
-    await page.getByTestId('run-item-0').selectOption({ index: 1 });
+    await choose(page, 'run-item-0', 'Tomato');
     await page.getByTestId('run-qty-0').fill('5000');
     await page.getByTestId('run-paid-0').fill('9000');
     await page.getByTestId('run-add-expense').click();
@@ -119,7 +119,7 @@ test.describe('The kitchen programme', () => {
 
     const ask = async () => {
       await page.getByTestId('issue-new').click();
-      await page.getByTestId('ask-item-0').selectOption({ index: 1 });
+      await choose(page, 'ask-item-0', 'Flour');
       await page.getByTestId('ask-qty-0').fill('1000');
       await page.getByTestId('ask-send').click();
     };
@@ -134,7 +134,7 @@ test.describe('The kitchen programme', () => {
     await page.getByTestId('bin-new').click();
     await page.getByTestId('bin-code').fill('BAR-1');
     await page.getByTestId('bin-name').fill('Bar shelf');
-    await page.getByTestId('bin-station').selectOption({ label: 'Bar' });
+    await choose(page, 'bin-station', 'Bar');
     await page.getByTestId('bin-save').click();
     await expect(page.getByTestId('bin-row-BAR-1')).toBeVisible();
     await page.goto('/app/inventory/issues');

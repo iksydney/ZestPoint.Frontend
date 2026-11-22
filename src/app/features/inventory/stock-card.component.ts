@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, HostListener, OnDestroy, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, Injector, OnDestroy, afterNextRender, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -11,6 +11,7 @@ import { TenantTimePipe } from '../../core/pipes/tenant-time.pipe';
 import { ApiError, toApiError } from '../../core/services/api.util';
 import { StationsService } from '../../core/services/stations.service';
 import { LedgerAccountOptionDto, LedgerApi } from '../../core/services/ledger.services';
+import { AccessService } from '../../core/services/access.service';
 import { AuthService } from '../../core/services/auth.service';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { StockExtrasApi, StockGroupApi } from '../../core/services/nav-ops.services';
@@ -18,9 +19,12 @@ import { InventoryApi } from '../../core/services/ops.services';
 import { BinApi } from '../../core/services/purchasing.services';
 import { utcToZoned, zonedToUtc } from '../../core/time-zone';
 import { ItemFollowUpService } from '../../core/services/item-follow-up.service';
+import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 import { ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { ItemBatchRecipeComponent } from './item-batch-recipe.component';
 import { ItemRecipeComponent } from './item-recipe.component';
+import { NewStockGroupComponent } from './new-stock-group.component';
 
 const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'each' };
 type Tab = 'details' | 'aliases' | 'units' | 'package' | 'recipe' | 'picture' | 'activity';
@@ -52,10 +56,10 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
  */
 @Component({
     selector: 'zp-stock-card',
-    imports: [DecimalPipe, FormsModule, RouterLink, TenantTimePipe, ItemRecipeComponent, ItemBatchRecipeComponent],
+    imports: [DecimalPipe, FormsModule, RouterLink, TenantTimePipe, ItemRecipeComponent, ItemBatchRecipeComponent, SearchSelectComponent, EntitledActionDirective, NewStockGroupComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
-    <div class="fixed inset-0 z-50 grid place-items-start overflow-auto bg-black/60 p-2 sm:p-4 print:static print:bg-transparent print:p-0" (mousedown)="onBackdrop($event)">
+    <div class="fixed inset-0 z-50 grid grid-cols-[minmax(0,1fr)] place-items-start overflow-auto bg-black/60 p-2 sm:p-4 print:static print:bg-transparent print:p-0" (mousedown)="onBackdrop($event)">
       <div class="app-card mx-auto w-full max-w-6xl shadow-2xl print:max-w-none print:border-0 print:shadow-none" role="dialog" aria-modal="true" [attr.aria-label]="title()" data-testid="stock-card">
         <div class="mb-3 flex items-start justify-between gap-3">
           <div>
@@ -77,7 +81,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
               <div><label class="app-label" for="sc-desc">Other details</label><input id="sc-desc" class="app-input" maxlength="500" data-testid="item-description" [ngModel]="f().description" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ description: $event || null })" /></div>
               <div class="grid gap-2 sm:grid-cols-2">
                 <div><label class="app-label" for="sc-barcode">Barcode</label><input id="sc-barcode" class="app-input font-mono" data-testid="item-barcode" maxlength="60" [ngModel]="f().barcode" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ barcode: $event || null })" />@if (fe('barcode')) { <p class="app-error" role="alert">{{ fe('barcode') }}</p> }</div>
-                <div><label class="app-label" for="sc-sup">Default supplier</label><select id="sc-sup" class="app-input" data-testid="item-supplier" [ngModel]="f().supplierId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ supplierId: $event || null })"><option [ngValue]="null">None</option>@for (s of suppliers(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select>@if (fe('supplierId')) { <p class="app-error" role="alert">{{ fe('supplierId') }}</p> }</div>
+                <div><label class="app-label" for="sc-sup">Default supplier</label><zp-search-select inputId="sc-sup" testId="item-supplier" emptyLabel="None" noun="supplier" placeholder="Search suppliers" [options]="supplierOptions()" [value]="f().supplierId" [error]="fe('supplierId')" (valueChange)="patch({ supplierId: $event || null })" /></div>
               </div>
             </div>
 
@@ -97,7 +101,12 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
 
             <div class="space-y-2">
               <div><label class="app-label" for="sc-kind">Item type</label><select id="sc-kind" class="app-input" data-testid="item-kind" [ngModel]="f().kind" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ kind: $event })"><option value="FinishedGood">Stock item (sold as is)</option><option value="Ingredient">Ingredient (used in recipes)</option></select></div>
-              <div><label class="app-label" for="sc-group">Stock group</label><select id="sc-group" class="app-input" data-testid="item-group" [ngModel]="f().groupId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ groupId: $event || null })"><option [ngValue]="null">No group</option>@for (g of activeGroups(); track g.id) { <option [ngValue]="g.id">{{ g.name }}</option> }</select>@if (fe('groupId')) { <p class="app-error" role="alert">{{ fe('groupId') }}</p> }</div>
+              <div>
+                <zp-search-select label="Stock group" inputId="sc-group" testId="item-group" emptyLabel="No group" noun="group" placeholder="Search groups"
+                                  [options]="groupOptions()" [value]="f().groupId" [error]="fe('groupId')" [createLabel]="createInList() ? '+ Create a new stock group...' : null"
+                                  (valueChange)="patch({ groupId: $event || null })" (createRequested)="openCreate($event)" />
+                @if (createOffered()) { <button type="button" class="mt-1 inline-flex min-h-9 items-center rounded text-sm font-semibold text-ink underline underline-offset-2 hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60" data-testid="item-group-new" zpAction="inventory.groups.manage" (click)="openCreate('')">Create a new stock group</button> }
+              </div>
               <p class="text-xs text-ink/70">The price is never typed at the till: staff sell at the price set here, or at the special while it runs.</p>
             </div>
           </div>
@@ -106,9 +115,18 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
           <div class="flex flex-wrap gap-1 border-b border-ink/15 print:hidden" role="tablist" aria-label="Stock card sections">
             @for (t of tabs; track t.key) {
               <button type="button" role="tab" class="rounded-t-lg px-3 py-2 text-sm font-semibold" [class]="tab() === t.key ? 'bg-primary/15 text-ink' : 'text-ink/70 hover:bg-ink/10'" [attr.aria-selected]="tab() === t.key"
-                      [attr.title]="t.needsItem && !saved() ? 'Opens once the item is saved: clicking saves it for you' : null" [attr.data-testid]="'sc-tab-' + t.key" (click)="pickTab(t.key, t.needsItem)">{{ t.label }}</button>
+                      [attr.title]="t.needsItem && !saved() ? 'Opens once the item is saved: clicking saves it for you' : null" [attr.data-testid]="'sc-tab-' + t.key" (click)="pickTab(t.key, t.needsItem)">{{ t.label }}@if (t.needsItem && !saved()) { <span class="block text-[11px] font-normal leading-tight text-ink/70" [attr.data-testid]="'sc-tab-locked-' + t.key">Save first</span> }</button>
             }
           </div>
+          @if (tabNotice(); as n) {
+            <div class="sys-alert sys-alert-danger" role="alert" id="sc-tab-notice" data-testid="sc-tab-notice">
+              <p class="font-semibold">The {{ n.label }} tab opens once the item is saved, and this item cannot be saved yet.</p>
+              @if (noticeLines().length) {
+                <p>Fix this, then press the tab again:</p>
+                <ul class="ml-5 list-disc">@for (x of noticeLines(); track x) { <li>{{ x }}</li> }</ul>
+              }
+            </div>
+          }
 
           @switch (tab()) {
             @case ('details') {
@@ -155,23 +173,17 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
                   <div class="grid gap-2 sm:grid-cols-2">
                     <div><label class="app-label" for="sc-points">Points value</label><input id="sc-points" type="number" min="0" step="0.01" class="app-input" data-testid="item-points" [ngModel]="f().pointsValue" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ pointsValue: n($event) ?? 0 })" /><p class="app-hint">Loyalty points a customer earns per unit when their bill is paid.</p></div>
                     <div><label class="app-label" for="sc-tax">Tax</label><select id="sc-tax" class="app-input" data-testid="item-tax" [ngModel]="f().taxExempt ? 'exempt' : 'taxable'" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ taxExempt: $event === 'exempt' })"><option value="taxable">Taxable (company rate)</option><option value="exempt">Tax exempt</option></select></div>
-                    <div><label class="app-label" for="sc-station">Prepared at</label><select id="sc-station" class="app-input" data-testid="item-station" [ngModel]="f().stationId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ stationId: $event || null })">
-            <option [ngValue]="null">As the stock group says</option>@for (s of stations.list(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select>
-                      @if (fe('stationId')) { <p class="app-error" role="alert">{{ fe('stationId') }}</p> }</div>
+                    <div><label class="app-label" for="sc-station">Prepared at</label><zp-search-select inputId="sc-station" testId="item-station" emptyLabel="As the stock group says" noun="station" placeholder="Search stations" [options]="stationOptions()" [value]="f().stationId" [error]="fe('stationId')" (valueChange)="patch({ stationId: $event || null })" /></div>
                     <div><label class="app-label" for="sc-shelf">Shelf life (days)</label><input id="sc-shelf" type="number" min="1" max="3650" step="1" class="app-input" data-testid="item-shelf-life" [ngModel]="f().shelfLifeDays" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ shelfLifeDays: n($event) })" />
                       <p class="app-hint">How long it keeps once it arrives or is made. Receiving fills the expiry date from this, and the item keeps batches. Leave empty if it has none.</p>
                       @if (fe('shelfLifeDays')) { <p class="app-error" role="alert">{{ fe('shelfLifeDays') }}</p> }</div>
                     <div><label class="app-label" for="sc-warn">Warn before expiry (days)</label><input id="sc-warn" type="number" min="0" max="3650" step="1" class="app-input" data-testid="item-expiry-alert" [ngModel]="f().expiryAlertDays" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ expiryAlertDays: n($event) })" />
                       <p class="app-hint">The alert comes this many days before a batch expires. Empty: a day for an item with a shelf life, otherwise the company's own warning days.</p></div>
                     <div><label class="app-label" for="sc-portions">Portions per batch</label><input id="sc-portions" type="number" min="0" step="any" class="app-input" data-testid="item-portions" [ngModel]="f().portionsPerBatch" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ portionsPerBatch: n($event) })" />
-                      <p class="app-hint">For something made in batches (a cake baked once and sold by the slice): how many portions one batch gives. Then say what a batch takes on the Recipe and options tab. Leave empty if it is made to order.</p>
+                      <p class="app-hint">For something made in batches: how many portions one batch gives, such as 8 for a cake baked once and sold by the slice, or 1 for a cake baked whole and sold whole. Then say what a batch takes on the Recipe and options tab. Leave empty if it is made to order.</p>
                       @if (fe('portionsPerBatch')) { <p class="app-error" role="alert">{{ fe('portionsPerBatch') }}</p> }</div>
-                    <div><label class="app-label" for="sc-sales-ac">Sales A/C</label><select id="sc-sales-ac" class="app-input" data-testid="item-sales-ac" [ngModel]="f().salesAccountId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ salesAccountId: $event || null })">
-            <option [ngValue]="null">As the stock group says</option>@for (a of salesAccounts(); track a.id) { <option [ngValue]="a.id">{{ a.code }} {{ a.name }}</option> }</select>
-                      @if (fe('salesAccountId')) { <p class="app-error" role="alert">{{ fe('salesAccountId') }}</p> }</div>
-                    <div><label class="app-label" for="sc-purchase-ac">Purchase A/C</label><select id="sc-purchase-ac" class="app-input" data-testid="item-purchase-ac" [ngModel]="f().purchaseAccountId ?? null" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ purchaseAccountId: $event || null })">
-            <option [ngValue]="null">As the stock group says</option>@for (a of stockAccounts(); track a.id) { <option [ngValue]="a.id">{{ a.code }} {{ a.name }}</option> }</select>
-                      @if (fe('purchaseAccountId')) { <p class="app-error" role="alert">{{ fe('purchaseAccountId') }}</p> }</div>
+                    <div><label class="app-label" for="sc-sales-ac">Sales A/C</label><zp-search-select inputId="sc-sales-ac" testId="item-sales-ac" emptyLabel="As the stock group says" noun="account" placeholder="Search accounts" [options]="salesAccountOptions()" [value]="f().salesAccountId" [error]="fe('salesAccountId')" (valueChange)="patch({ salesAccountId: $event || null })" /></div>
+                    <div><label class="app-label" for="sc-purchase-ac">Purchase A/C</label><zp-search-select inputId="sc-purchase-ac" testId="item-purchase-ac" emptyLabel="As the stock group says" noun="account" placeholder="Search accounts" [options]="purchaseAccountOptions()" [value]="f().purchaseAccountId" [error]="fe('purchaseAccountId')" (valueChange)="patch({ purchaseAccountId: $event || null })" /></div>
                   </div>
                   <p class="app-hint -mt-1">Account codes are kept as typed until the accounts list is set up.</p>
 
@@ -195,7 +207,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
                   }
 
                   <div class="grid gap-2 sm:grid-cols-3">
-                    <div><label class="app-label" for="sc-bin">Bin location</label><select id="sc-bin" class="app-input" data-testid="item-bin" [disabled]="!branches.activeId() || bins().length === 0" [ngModel]="binId()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="binId.set($event || null)"><option [ngValue]="null">{{ bins().length ? 'No default bin' : 'No bins at this branch' }}</option>@for (b of bins(); track b.id) { <option [ngValue]="b.id">{{ b.code }} {{ b.name }}</option> }</select><p class="app-hint">Default bin at {{ branches.active()?.name ?? 'the chosen branch' }}.</p></div>
+                    <div><label class="app-label" for="sc-bin">Bin location</label><zp-search-select inputId="sc-bin" testId="item-bin" [emptyLabel]="bins().length ? 'No default bin' : 'No bins at this branch'" noun="bin" placeholder="Search bins" [options]="binOptions()" [value]="binId()" [disabled]="!branches.activeId() || bins().length === 0" (valueChange)="binId.set($event || null)" /><p class="app-hint">Default bin at {{ branches.active()?.name ?? 'the chosen branch' }}.</p></div>
                     <div><label class="app-label" for="sc-ts">Target stock</label><input id="sc-ts" type="number" min="0" class="app-input" placeholder="optional" [ngModel]="f().targetStock" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ targetStock: n($event) })" />@if (fe('targetStock')) { <p class="app-error" role="alert">{{ fe('targetStock') }}</p> }</div>
                     <div><label class="app-label" for="sc-days">Days of cover</label><input id="sc-days" type="number" min="1" max="365" class="app-input" [ngModel]="f().targetDaysOfStock" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ targetDaysOfStock: n($event) ?? 14 })" /></div>
                   </div>
@@ -239,7 +251,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
                 <div class="grid gap-2 sm:grid-cols-[10rem_1fr_12rem_auto]">
                   <select class="app-input" aria-label="Code type" [ngModel]="aliasKind()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="aliasKind.set($event)"><option value="Equivalent">Equivalent</option><option value="SupplierPartNumber">Supplier part no.</option></select>
                   <input class="app-input" aria-label="Part number" placeholder="Part number" maxlength="80" data-testid="alias-code" [ngModel]="aliasCode()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="aliasCode.set($event)" />
-                  @if (aliasKind() === 'SupplierPartNumber') { <select class="app-input" aria-label="Supplier" [ngModel]="aliasSupplier()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="aliasSupplier.set($event)"><option value="">Supplier...</option>@for (s of suppliers(); track s.id) { <option [value]="s.id">{{ s.name }}</option> }</select> } @else { <span></span> }
+                  @if (aliasKind() === 'SupplierPartNumber') { <zp-search-select ariaLabel="Supplier" testId="alias-supplier" emptyLabel="Supplier..." noun="supplier" placeholder="Search suppliers" [options]="supplierOptions()" [value]="aliasSupplier()" (valueChange)="aliasSupplier.set($event)" /> } @else { <span></span> }
                   <button type="button" class="btn-outline" data-testid="alias-add" [disabled]="!aliasCode().trim()" (click)="addAlias()">Add</button>
                 </div>
                 @if (aliasError()) { <p class="app-error" role="alert">{{ aliasError() }}</p> }
@@ -391,6 +403,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
         }
       </div>
     </div>
+    <zp-new-stock-group [open]="createOpen()" [groups]="groups()" [startName]="createStart()" (created)="groupCreated($event)" (existingChosen)="groupExisting($event)" (closed)="closeCreate()" />
   `
 })
 export class StockCardComponent implements OnDestroy {
@@ -476,6 +489,20 @@ export class StockCardComponent implements OnDestroy {
   protected readonly canCost = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_COSTS_MANAGE));
   protected readonly canPrice = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.PRODUCTS_MANAGE));
   protected readonly activeGroups = computed(() => this.groups().filter((g) => g.isActive || g.id === this.f().groupId));
+  /** The group list as the searchable box offers it: the parent's name is part of what can be searched. */
+  protected readonly groupOptions = computed<readonly SelectOption[]>(() => this.activeGroups().map((g) => ({ value: g.id, label: g.name, description: g.parentName ? `in ${g.parentName}` : undefined })));
+  protected readonly supplierOptions = computed<readonly SelectOption[]>(() => this.suppliers().map((s) => ({ value: s.id, label: s.name })));
+  protected readonly stationOptions = computed<readonly SelectOption[]>(() => this.stations.list().map((s) => ({ value: s.id, label: s.name })));
+  protected readonly salesAccountOptions = computed<readonly SelectOption[]>(() => this.salesAccounts().map((a) => ({ value: a.id, label: `${a.code} ${a.name}` })));
+  protected readonly purchaseAccountOptions = computed<readonly SelectOption[]>(() => this.stockAccounts().map((a) => ({ value: a.id, label: `${a.code} ${a.name}` })));
+  protected readonly binOptions = computed<readonly SelectOption[]>(() => this.bins().map((b) => ({ value: b.id, label: `${b.code} ${b.name}` })));
+  private readonly access = inject(AccessService);
+  /** Making a group is for people who may manage stock groups, and never in read-only mode; UX only: the server checks it again. */
+  protected readonly createOffered = computed(() => !this.readOnly() && this.auth.hasPermission(SCREEN_PERMISSIONS.INVENTORY_GROUPS_MANAGE));
+  /** The entry at the foot of the list cannot be shown greyed out, so it is left off when the plan withholds the button. */
+  protected readonly createInList = computed(() => this.createOffered() && this.access.actionAllowed(SCREEN_PERMISSIONS.INVENTORY_GROUPS_MANAGE));
+  protected readonly createOpen = signal(false);
+  protected readonly createStart = signal('');
   /** Tried to save: what is missing or was refused, in words, listed above the button. */
   protected readonly attempted = signal(false);
   private static readonly FIELD_NAMES: Readonly<Record<string, string>> = {
@@ -483,6 +510,9 @@ export class StockCardComponent implements OnDestroy {
     minimumPrice: 'Minimum price', reorderLevel: 'Reorder level', targetStock: 'Target stock', groupId: 'Stock group', supplierId: 'Default supplier', baseUnit: 'Units', kind: 'Item type',
     tracksSerials: 'Track serial numbers', blockQtyFractions: 'Block qty fractions', purchaseUnitSize: 'Bought by the', stationId: 'Prepared at', shelfLifeDays: 'Shelf life', expiryAlertDays: 'Warn before expiry', portionsPerBatch: 'Portions per batch', specialCost: 'Special cost', salesAccountId: 'Sales A/C', purchaseAccountId: 'Purchase A/C'
   };
+  /** Set when a tab that needs a saved item was pressed and the new item could not be saved: the tab it was, shown under the tab strip until the item saves or a field is edited. */
+  protected readonly tabNotice = signal<{ readonly label: string } | null>(null);
+  private readonly injector = inject(Injector);
   protected readonly problems = computed<readonly string[]>(() => {
     if (!this.attempted()) return [];
     const list: string[] = [];
@@ -502,13 +532,23 @@ export class StockCardComponent implements OnDestroy {
       TransferIn: 'Transfer in', TransferOut: 'Transfer out', ConsignmentOut: 'Sent on consignment', ConsignmentReturn: 'Back from consignment' } as Record<string, string>)[type] ?? type;
   }
 
+  /** What the notice under the tabs lists: the same reasons as above the Save button, or the server's own sentence when it gave no field. */
+  protected readonly noticeLines = computed<readonly string[]>(() => (this.problems().length ? this.problems() : this.formError() ? [this.formError()!] : []));
+
   /** A tab that belongs to a saved item: on a new item it saves first (when it can), then opens. */
   protected async pickTab(key: Tab, needsItem: boolean): Promise<void> {
     if (needsItem && !this.saved()) {
-      if (this.readOnly()) return;
+      if (this.readOnly() || this.saving()) return;
       await this.save(true);
-      if (!this.saved()) return;   // could not be saved: the reasons are listed above the Save button
+      if (!this.saved()) {
+        // Could not be saved. A click that seems to do nothing is the worst answer, so say why right under the tabs, where the person is looking.
+        this.tab.set('details');
+        this.tabNotice.set({ label: this.tabs.find((t) => t.key === key)?.label ?? '' });
+        afterNextRender(() => document.getElementById('sc-tab-notice')?.scrollIntoView({ block: 'nearest' }), { injector: this.injector });
+        return;
+      }
     }
+    this.tabNotice.set(null);
     this.tab.set(key);
     if (key === 'activity') void this.loadActivity();
   }
@@ -552,7 +592,10 @@ export class StockCardComponent implements OnDestroy {
 
   protected n = num;
   protected fe = (name: string): string | null => this.fieldErrors()[name]?.[0] ?? null;
-  protected patch(p: Partial<SaveInventoryItemRequest>): void { this.f.update((v) => ({ ...v, ...p })); }
+  protected patch(p: Partial<SaveInventoryItemRequest>): void {
+    this.f.update((v) => ({ ...v, ...p }));
+    if (this.tabNotice()) this.tabNotice.set(null);   // the person is fixing it: the notice has done its job
+  }
   protected toUtc(local: string): string | null { return zonedToUtc(local, this.zone()); }
 
   // ---- Markup: one percentage on last cost, two-way with the price above it ------------------------
@@ -579,6 +622,7 @@ export class StockCardComponent implements OnDestroy {
     if (!this.accountOptions().length) void firstValueFrom(this.ledgerApi.options()).then((o) => this.accountOptions.set(o)).catch(() => undefined);
     void this.stations.load();
     this.tab.set('details');
+    this.tabNotice.set(null);
     this.fieldErrors.set({});
     this.formError.set(null);
     this.loadError.set(null);
@@ -615,6 +659,7 @@ export class StockCardComponent implements OnDestroy {
   }
 
   private adopt(i: InventoryItemDto): void {
+    this.tabNotice.set(null);
     this.item.set(i);
     this.saved.set(i.id);
     this.f.set({
@@ -881,6 +926,36 @@ export class StockCardComponent implements OnDestroy {
 
   protected onBackdrop(event: MouseEvent): void { if (event.target === event.currentTarget) this.closed.emit(); }
 
+  // ---- A new stock group, made without leaving the card ----
+
+  protected openCreate(typed: string): void {
+    this.createStart.set(typed);
+    this.createOpen.set(true);
+  }
+
+  /**
+   * Escape reaches the dialog and this card as two listeners on the document, in no order this code should depend on: the window closes a
+   * moment later, so the card never sees it closed while the same key press is still being delivered and closes with it.
+   */
+  protected closeCreate(): void { setTimeout(() => this.createOpen.set(false)); }
+
+  /** The new group joins the list and is chosen for this item at once; the person may pick another afterwards. */
+  protected groupCreated(group: StockGroupDto): void {
+    this.groups.update((l) => [...l.filter((g) => g.id !== group.id), group]);
+    this.patch({ groupId: group.id });
+    this.createOpen.set(false);
+    this.toast.success(`Group '${group.name}' created and chosen.`);
+  }
+
+  /** The typed name was the same as a group that already exists: that one is chosen instead of making another. */
+  protected groupExisting(group: StockGroupDto): void {
+    this.patch({ groupId: group.id });
+    this.createOpen.set(false);
+  }
+
   @HostListener('document:keydown.escape')
-  protected onEscape(): void { this.closed.emit(); }
+  protected onEscape(): void {
+    if (this.createOpen()) return;   // the window over the card has its own Escape: it closes alone
+    this.closed.emit();
+  }
 }

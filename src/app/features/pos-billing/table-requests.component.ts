@@ -22,7 +22,7 @@ import { DialogComponent, ToastService } from '../../shared/ui/feedback';
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     @if (on()) {
-      <button type="button" class="btn-outline px-3 py-1.5 text-sm" data-testid="table-requests-btn" [class.ring-2]="requests().length > 0" (click)="show()">
+      <button type="button" class="btn-outline whitespace-nowrap px-3 py-1.5 text-sm" data-testid="table-requests-btn" [class.ring-2]="requests().length > 0" (click)="show()">
         Table requests@if (requests().length) { <span class="app-badge app-badge-warning ml-1" data-testid="table-requests-count">{{ requests().length }}</span> }
       </button>
       <zp-dialog [open]="open()" title="From the tables" [wide]="true" (closed)="open.set(false)">

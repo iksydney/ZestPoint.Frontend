@@ -1,4 +1,4 @@
-import { Browser, BrowserContext, Page, expect } from '@playwright/test';
+import { Browser, BrowserContext, Locator, Page, expect } from '@playwright/test';
 
 export const PASSWORD = 'Str0ngPassw0rd!';
 
@@ -24,6 +24,22 @@ export async function pick(page: Page, testId: string, text: string): Promise<vo
   await box.press('Enter');
 }
 
+/**
+ * Chooses an entry of a searchable list (`zp-search-select`) the way a person does: click the box, type the words, press Enter. The first
+ * entry that fits the words is taken, an exact name before a partial one, so type enough of the name to be the first fit. `scope` is the
+ * page or any part of it. It takes the place of `selectOption` wherever a native select was made searchable.
+ */
+export async function choose(scope: Page | Locator, testId: string, text: string): Promise<void> {
+  const box = scope.getByTestId(testId);
+  const list = scope.getByTestId(`${testId}-list`);
+  await box.click();
+  await box.fill(text);
+  // Entries read from the server can arrive a moment after the box is drawn: wait until one fits the words, then take it.
+  await expect(list.locator('[data-value]').first()).toBeVisible();
+  await box.press('Enter');
+  await expect(list).toHaveCount(0);
+}
+
 /** A bar-type business must answer "Will you use the bar man method?" before it can continue. Fails when the question is not asked. */
 export async function answerBarManQuestion(page: Page, use = false): Promise<void> {
   await expect(page.getByTestId('bar-man-question')).toBeVisible();
@@ -31,8 +47,9 @@ export async function answerBarManQuestion(page: Page, use = false): Promise<voi
 }
 
 /**
- * Answers the bar man question when the chosen type is asked it, and does nothing otherwise. Typing a type name picks the first match,
- * which is not always the type typed ("Bar" finds Retail Store through "barcode": FND-076), so this looks at what the page asks.
+ * Answers the bar man question when the chosen type is asked it, and does nothing otherwise. Typing a type name picks the first entry that fits
+ * (the search lists an exact name first since 2026-11-22; before that "Bar" found Retail Store through "barcode": FND-076), so this looks at what
+ * the page asks instead of trusting which type was picked.
  */
 export async function answerBarManQuestionIfAsked(page: Page, use = false): Promise<void> {
   await expect(page.getByTestId('setup-summary')).not.toContainText('Pick your business type'); // the chosen type has been applied

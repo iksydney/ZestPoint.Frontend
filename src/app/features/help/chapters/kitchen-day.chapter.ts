@@ -55,6 +55,7 @@ export const KITCHEN_DAY: Chapter = {
     ]),
     section('kd-batches', 'Batches made and recorded', [
       p('A cake is baked once and sold by the slice. A pot of stew is made once and sold by the plate. For things like these, record each **batch**. It keeps stock right: the ingredients leave, the portions are added.'),
+      p('**A cake is not always sold by the slice.** A cake baked whole for one customer, such as a birthday cake, is a batch of **one** portion: put **Portions per batch** as 1, so one batch gives one cake and it is sold whole at its own price. A cake that you cut into slices can be sold whole as well: on its **Unit of Measure** tab add a selling unit, **Whole cake**, that holds its slices. A unit has no price of its own, so a whole cake costs the slice price times the number of slices it holds. And a cake that is baked only when someone orders it needs no batch at all: give it a recipe on its **Recipe and options** tab, and the ingredients leave when it is sold.'),
       p('**First, on the stock card.** On the cake\'s **Details** tab set **Portions per batch** (8 slices). On its **Recipe and options** tab, in **Made in batches**, say what one batch takes: each ingredient, its quantity and its usable percent. ZestPoint shows what one batch costs and what one portion costs. A batch recipe cannot name the item itself or loop back through another batch recipe.'),
       shot('batch-recipe', 'What one batch takes, with the cost of a batch and of a portion.', 'The Made in batches part of a cake\'s stock card listing the ingredients of one batch with quantities and usable percents, and the cost of one batch and of one portion.'),
       p('**Then, each time you bake.** Open **Kitchen**, **Production**.'),
@@ -114,9 +115,16 @@ export const KITCHEN_DAY: Chapter = {
       steps(
         'Type the food cost you aim for, for example 30, and press **Work it out**. Each dish now shows the price that would reach it.',
         'Look at the two costs side by side. **Cost (average)** is what the stock is valued at. **Cost (last bought)** shows a price rise early.',
-        'To take a suggested price, press **Use this price** and confirm. It sets the company price for that item at once, and the change is recorded with a reason. You need the right to set prices.'
+        'To take a suggested price as it is, press **Use this price** and confirm. It sets the company price for that item at once, and the change is recorded with a reason. You need the right to set prices.'
       ),
-      shot('food-cost', 'Food cost: what each dish costs, and the price that reaches your target.', 'The Food cost screen with a target of 30 percent and a table of dishes showing their price, average cost, last bought cost, food cost percent, the price for the target and a Use this price button.'),
+      p('**Typing a price, or a target for one dish.** If you may set prices, each dish has a **Price** box, and beside it a box for **Its own target**. As you type, that dish\'s **Food cost** and its **Price for target** change at once, so you can try a number before anything is kept. Leave **Its own target** empty and the dish follows the **Food cost I want** above. Type a number from 1 to 99 and that dish is worked out against its own target instead, and still is tomorrow. The small **x** beside the box empties it again. A price must be above zero.'),
+      steps(
+        'Change what you like, in as many dishes as you like. Each dish you have changed is marked **Changed**, and the bar above the table counts them ("3 changes").',
+        'Press **Save** on a dish to save just that dish, or **Save changes** in the bar to save all the changed dishes together. ZestPoint first lists what will change, each price from and to and each target, and asks you to confirm.',
+        'If a dish cannot be saved, for example because its price is below the minimum price on its stock card, ZestPoint names the dish and says why. The other dishes are still saved, and what you typed for the dish that failed stays in the table so that you can put it right. **Discard** throws away everything you have not saved.'
+      ),
+      p('A price you save is set for the whole company, as **Use this price** does, and is recorded with who changed it. Price lists and branch prices are on the **Prices and Menus** screen.'),
+      shot('food-cost', 'Food cost: what each dish costs, and the price that reaches your target.', 'The Food cost screen with a target of 30 percent, a bar saying one change is not saved with Save changes and Discard buttons, and a table of dishes with their price in a box that can be typed in, average cost, last bought cost, food cost percent, a box for the dish\'s own target and the price for the target. The chocolate cake is marked Changed, with a new price and a target of 25 typed in and a Save button; the other dishes can have a Use this price button.'),
       notYet('A dish\'s food cost does **not** include its options or add-ons. For a dish that is a portion of a batch, the cost used is the cost per portion of its latest batch.')
     ]),
     section('kd-reports', 'The kitchen\'s reports', [

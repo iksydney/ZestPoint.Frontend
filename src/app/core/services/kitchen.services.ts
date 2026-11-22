@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiEnvelope } from '../models/api.model';
 import {
-  BatchRecipeDto, FoodCostDishDto, FoodCostDto, MarketRunDto, MarketRunStatus, ProductionItemDto, ProductionRunDto, RecordMarketRunRequest, RecordRunRequest, SaveBatchRecipeRequest, StockIssueDto
+  BatchRecipeDto, FoodCostChange, FoodCostDishDto, FoodCostDto, FoodCostSaveResult, MarketRunDto, MarketRunStatus, ProductionItemDto, ProductionRunDto, RecordMarketRunRequest, RecordRunRequest, SaveBatchRecipeRequest, StockIssueDto
 } from '../models/kitchen.model';
 import { unwrap } from './api.util';
 
@@ -55,6 +55,10 @@ export class KitchenApi {
 
   // ---- food cost
   foodCost(targetPercent: number): Observable<FoodCostDto> { return this.http.get<ApiEnvelope<FoodCostDto>>('/api/v1/food-cost', { params: new HttpParams().set('targetPercent', targetPercent) }).pipe(unwrap()); }
+  /** Several dishes' prices and own targets in one request: a dish that cannot be saved is named in `failed`, the rest are saved. */
+  saveFoodCost(changes: FoodCostChange[], targetPercent: number): Observable<FoodCostSaveResult> {
+    return this.http.post<ApiEnvelope<FoodCostSaveResult>>('/api/v1/food-cost/save', { changes }, { params: new HttpParams().set('targetPercent', targetPercent) }).pipe(unwrap());
+  }
   applyPrice(productId: string, price: number, targetPercent: number): Observable<FoodCostDishDto> {
     return this.http.post<ApiEnvelope<FoodCostDishDto>>('/api/v1/food-cost/apply-price', { productId, price }, { params: new HttpParams().set('targetPercent', targetPercent) }).pipe(unwrap());
   }

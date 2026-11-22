@@ -1,6 +1,6 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, formatCurrency, getCurrencySymbol } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, Injectable, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Injectable, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
@@ -9,6 +9,7 @@ import { toApiError, unwrap } from '../../core/services/api.util';
 import { BranchContextService } from '../../core/services/branch-context.service';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { BranchPickerComponent } from '../../shared/ui/ops-chrome.components';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 
 export interface TipStaffBalance { membershipId: string; name: string; bills: number; collected: number; paidOut: number; donated: number; held: number }
 export interface TipSummary { currencyCode: string; collected: number; paidToStaff: number; donated: number; held: number; staff: TipStaffBalance[] }
@@ -42,7 +43,7 @@ const today = (): string => { const d = new Date(); return `${d.getFullYear()}-$
  */
 @Component({
     selector: 'zp-tips',
-    imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, DialogComponent, BranchPickerComponent],
+    imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, DialogComponent, BranchPickerComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -106,15 +107,13 @@ const today = (): string => { const d = new Date(); return `${d.getFullYear()}-$
       <form class="space-y-3" (submit)="$event.preventDefault(); save()" data-testid="tip-dialog">
         @if (form().kind === 'Staff') {
           <div><label class="app-label" for="tp-staff">Staff member</label>
-            <select id="tp-staff" class="app-input" data-testid="tip-staff" [ngModel]="form().membershipId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ membershipId: $event })">
-              <option value="">Choose...</option>@for (r of summary()?.staff ?? []; track r.membershipId) { @if (r.held > 0) { <option [value]="r.membershipId">{{ r.name }} (holding {{ r.held | currency: summary()?.currencyCode : 'symbol-narrow' : '1.2-2' }})</option> } }
-            </select></div>
+            <zp-search-select inputId="tp-staff" testId="tip-staff" emptyLabel="Choose..." noun="person" placeholder="Search people"
+                              [options]="heldOptions()" [value]="form().membershipId" (valueChange)="patch({ membershipId: $event })" /></div>
         } @else {
           <div><label class="app-label" for="tp-ben">Given to</label><input id="tp-ben" class="app-input" maxlength="120" placeholder="Name of the organisation or person" data-testid="tip-beneficiary" [ngModel]="form().beneficiary" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ beneficiary: $event })" /></div>
           <div><label class="app-label" for="tp-from">From whose tips</label>
-            <select id="tp-from" class="app-input" data-testid="tip-from" [ngModel]="form().membershipId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ membershipId: $event })">
-              <option value="">Tips held in general</option>@for (r of summary()?.staff ?? []; track r.membershipId) { @if (r.held > 0) { <option [value]="r.membershipId">{{ r.name }} (holding {{ r.held | currency: summary()?.currencyCode : 'symbol-narrow' : '1.2-2' }})</option> } }
-            </select></div>
+            <zp-search-select inputId="tp-from" testId="tip-from" emptyLabel="Tips held in general" noun="person" placeholder="Search people"
+                              [options]="heldOptions()" [value]="form().membershipId" (valueChange)="patch({ membershipId: $event })" /></div>
         }
         <div class="grid gap-3 sm:grid-cols-2">
           <div><label class="app-label" for="tp-amount">Amount</label><input id="tp-amount" type="number" min="0" step="0.01" class="app-input" data-testid="tip-amount" [ngModel]="form().amount" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ amount: +$event })" />
@@ -144,8 +143,16 @@ export class TipsComponent implements OnInit {
   private readonly api = inject(TipsApi);
   private readonly toast = inject(ToastService);
   protected readonly branches = inject(BranchContextService);
+  private readonly locale = inject(LOCALE_ID);
 
   protected readonly summary = signal<TipSummary | null>(null);
+  /** The people who hold tips, each with what they hold (written as the currency pipe writes it). */
+  protected readonly heldOptions = computed<readonly SelectOption[]>(() => {
+    const s = this.summary();
+    const code = s?.currencyCode ?? '';
+    const money = (v: number): string => formatCurrency(v, this.locale, getCurrencySymbol(code, 'narrow', this.locale), code, '1.2-2');
+    return (s?.staff ?? []).filter((r) => r.held > 0).map((r) => ({ value: r.membershipId, label: `${r.name} (holding ${money(r.held)})` }));
+  });
   protected readonly payouts = signal<readonly TipPayout[]>([]);
   protected readonly error = signal<string | null>(null);
   protected readonly dialog = signal<'entry' | 'reverse' | null>(null);

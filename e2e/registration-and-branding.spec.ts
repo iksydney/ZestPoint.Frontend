@@ -258,7 +258,9 @@ test.describe('Branding wizard and live preview (criteria 5-12)', () => {
   });
 
   test('unreadable colour combinations warn and block publishing', async ({ page }) => {
-    await registerViaUi(page);
+    // The text colour below is near-white, so the test needs a business type whose theme has a LIGHT background. It used to get one by accident
+    // (typing "Bar" chose Retail Store, FND-076); the type search now ranks the exact name first, so the type is named.
+    await registerViaUi(page, { type: 'Restaurant' });
     await page.getByTestId('tab-colors').click();
     await setHex(page, 'text', '#EEEEEE'); // near-white text on the light background
     await expect(page.getByTestId('contrast-panel')).toContainText('Cannot publish');

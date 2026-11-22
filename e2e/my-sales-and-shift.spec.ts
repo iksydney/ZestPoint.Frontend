@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { Registered, newContext, registerViaUi, startShiftWhenAsked } from './helpers';
+import { Registered, choose, newContext, registerViaUi, startShiftWhenAsked } from './helpers';
 
 /**
  * Owner's decisions of 2026-11-15:
@@ -133,7 +133,8 @@ test.describe('My Sales and the shift boxes', () => {
     await s.goto('/app/pos/my-sales');
     await expect(s.getByTestId('report-empty')).toBeVisible();                          // the supervisor sold nothing
     await expect(s.getByTestId('shift-box')).toHaveCount(0);
-    await s.getByTestId('filter-staff').selectOption({ label: 'Ada Cashier' });
+    await choose(s, 'filter-staff', 'Ada Cashier');
+    await expect(s.getByTestId('filter-staff')).toHaveValue('Ada Cashier');
     await s.getByTestId('filter-apply').click();
     await expect(s.getByTestId('report-table')).toContainText('Party');
     await expect(s.getByTestId('report-table')).toContainText('Counter');

@@ -13,6 +13,7 @@ import { KitchenApi } from '../../core/services/kitchen.services';
 import { InventoryApi } from '../../core/services/ops.services';
 import { BinApi } from '../../core/services/purchasing.services';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 
 interface LineForm { inventoryItemId: string; quantity: number; amountPaid: number }
 interface ExpenseForm { category: MarketExpenseCategory; amount: number; justification: string }
@@ -25,7 +26,7 @@ interface RunForm { marketName: string; cashGiven: number; changeReturned: numbe
  */
 @Component({
     selector: 'zp-market-runs',
-    imports: [DatePipe, DecimalPipe, FormsModule, DialogComponent],
+    imports: [DatePipe, DecimalPipe, FormsModule, DialogComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="flex flex-col gap-4" data-testid="market-runs">
@@ -81,13 +82,13 @@ interface RunForm { marketName: string; cashGiven: number; changeReturned: numbe
             <div class="sm:col-span-3"><label class="app-label" for="mr-market">Which market</label><input id="mr-market" class="app-input" maxlength="120" data-testid="run-market" [ngModel]="f.marketName" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ marketName: $event })" /></div>
             <div><label class="app-label" for="mr-given">Cash you were given</label><input id="mr-given" type="number" min="0" step="any" class="app-input" data-testid="run-given" [ngModel]="f.cashGiven" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ cashGiven: +$event })" /></div>
             <div><label class="app-label" for="mr-change">Change you hand back</label><input id="mr-change" type="number" min="0" step="any" class="app-input" data-testid="run-change" [ngModel]="f.changeReturned" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ changeReturned: +$event })" /></div>
-            <div><label class="app-label" for="mr-bin">Put it in</label><select id="mr-bin" class="app-input" data-testid="run-bin" [ngModel]="f.binId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ binId: $event || null })"><option [ngValue]="null">No bin</option>@for (b of bins(); track b.id) { <option [ngValue]="b.id">{{ b.code }}</option> }</select></div>
+            <div><label class="app-label" for="mr-bin">Put it in</label><zp-search-select inputId="mr-bin" testId="run-bin" emptyLabel="No bin" noun="bin" placeholder="Search bins" [options]="binOptions()" [value]="f.binId" (valueChange)="patch({ binId: $event || null })" /></div>
           </div>
 
           <fieldset class="rounded-lg border border-ink/15 p-3"><legend class="px-1 text-sm font-semibold">What was bought</legend>
             @for (l of f.lines; track $index) {
               <div class="mb-2 grid grid-cols-[1fr_6rem_7rem_auto] items-end gap-2">
-                <select class="app-input" aria-label="Item" [attr.data-testid]="'run-item-' + $index" [ngModel]="l.inventoryItemId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchLine($index, { inventoryItemId: $event })"><option value="">Choose an item</option>@for (i of items(); track i.id) { <option [value]="i.id">{{ i.name }} ({{ unit(i) }})</option> }</select>
+                <zp-search-select ariaLabel="Item" [testId]="'run-item-' + $index" emptyLabel="Choose an item" noun="item" placeholder="Search items" [options]="itemOptions()" [value]="l.inventoryItemId" (valueChange)="patchLine($index, { inventoryItemId: $event })" />
                 <input type="number" min="0" step="any" class="app-input" aria-label="How much" placeholder="How much" [attr.data-testid]="'run-qty-' + $index" [ngModel]="l.quantity" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchLine($index, { quantity: +$event })" />
                 <input type="number" min="0" step="any" class="app-input" aria-label="Paid for all of it" placeholder="Paid" [attr.data-testid]="'run-paid-' + $index" [ngModel]="l.amountPaid" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patchLine($index, { amountPaid: +$event })" />
                 <button type="button" class="btn-ghost px-2" aria-label="Remove" (click)="removeLine($index)">x</button>
@@ -143,6 +144,8 @@ export class MarketRunsComponent {
   protected readonly runs = signal<readonly MarketRunDto[]>([]);
   protected readonly items = signal<readonly InventoryItemDto[]>([]);
   protected readonly bins = signal<readonly BinDto[]>([]);
+  protected readonly itemOptions = computed<readonly SelectOption[]>(() => this.items().map((i) => ({ value: i.id, label: `${i.name} (${this.unit(i)})` })));
+  protected readonly binOptions = computed<readonly SelectOption[]>(() => this.bins().map((b) => ({ value: b.id, label: b.code })));
   protected readonly loading = signal(false);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);

@@ -145,7 +145,7 @@ interface Edit { counted: string; explanation: string }
     <zp-dialog [open]="newOpen()" title="New stock take" (closed)="newOpen.set(false)">
       <form class="space-y-3" (submit)="$event.preventDefault(); create()">
         <p class="text-sm">Branch: <strong>{{ branches.active()?.name }}</strong></p>
-        <div><label class="app-label" for="n-group">Limit to a stock group</label><select id="n-group" class="app-input" data-testid="take-group" [ngModel]="newGroup()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="newGroup.set($event)"><option value="">Every item</option>@for (g of groups(); track g.id) { <option [value]="g.id">{{ g.name }}</option> }</select></div>
+        <div><label class="app-label" for="n-group">Limit to a stock group</label><zp-search-select inputId="n-group" testId="take-group" emptyLabel="Every item" noun="group" placeholder="Search groups" [options]="groupOptions()" [value]="newGroup()" (valueChange)="newGroup.set($event)" /></div>
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" data-testid="take-blind" [checked]="newBlind()" (change)="newBlind.set(!newBlind())" /> Blind count (counters do not see expected quantities)</label>
         <div><label class="app-label" for="n-notes">Notes</label><input id="n-notes" class="app-input" maxlength="500" [ngModel]="newNotes()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="newNotes.set($event)" /></div>
         <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="newOpen.set(false)">Cancel</button><button type="submit" class="btn-primary" data-testid="take-create" [disabled]="busy()">Create</button></div>
@@ -177,6 +177,7 @@ export class StockTakeComponent implements OnInit {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly groups = signal<readonly StockGroupDto[]>([]);
+  protected readonly groupOptions = computed<readonly SelectOption[]>(() => this.groups().map((g) => ({ value: g.id, label: g.name })));
   protected readonly items = signal<readonly InventoryItemDto[]>([]);
   protected readonly edits = signal<ReadonlyMap<string, Edit>>(new Map());
   protected readonly filter = signal('');

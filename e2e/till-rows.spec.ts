@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { registerViaUi } from './helpers';
+import { choose, registerViaUi } from './helpers';
 
 /**
  * Owner's decisions of 2026-11-14:
@@ -105,7 +105,7 @@ test.describe('Till rows, item discount and the stock card', () => {
     await expect(tab.getByTestId('options-editor')).toBeVisible();
 
     await tab.getByTestId('add-ingredient').click();
-    await tab.getByTestId('ing-item-0').selectOption({ label: 'Rum' });
+    await choose(tab, 'ing-item-0', 'Rum');
     await tab.getByTestId('ing-qty-0').fill('50');
     await tab.getByTestId('save-recipe').click();
     await expect(tab.getByTestId('recipe-msg')).toHaveText('Saved as version 1.');

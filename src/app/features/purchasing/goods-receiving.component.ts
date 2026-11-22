@@ -11,6 +11,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ReceivingApi } from '../../core/services/purchasing.services';
 import { CameraScannerComponent, type ScanFeedback } from '../../shared/ui/camera-scanner.component';
 import { ConfirmService, DialogComponent, ToastService } from '../../shared/ui/feedback';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { ZpIconComponent } from '../../shared/ui/zp-icon.component';
 import { ClaimSlipComponent } from './claim-slip.component';
 import { PhotoThumbComponent } from './photo-thumb.component';
@@ -41,7 +42,7 @@ type Filter = 'all' | 'pending' | 'shortage';
  */
 @Component({
     selector: 'zp-goods-receiving',
-    imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, ClaimSlipComponent, PhotoThumbComponent, CameraScannerComponent],
+    imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, DialogComponent, ZpIconComponent, ClaimSlipComponent, PhotoThumbComponent, CameraScannerComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="no-print flex flex-col gap-4 font-jakarta" data-testid="receiving">
@@ -145,8 +146,9 @@ type Filter = 'all' | 'pending' | 'shortage';
                           @if (r.line.barcode) { <span class="rounded bg-success/10 px-1 font-jakarta text-[10px] font-bold uppercase text-success">Barcode on file</span> }
                           @if (r.line.tracksBatches) { <span class="rounded bg-ink/10 px-1 font-jakarta text-[10px] font-bold uppercase">Batch</span> }
                           @if (r.line.tracksSerials) { <span class="rounded bg-ink/10 px-1 font-jakarta text-[10px] font-bold uppercase">Serial</span> }</span></div></div></td>
-                    <td class="px-3 py-3"><select class="w-full rounded bg-ink/10 px-2 py-1 font-data text-[11px] focus:outline-none focus:ring-1 focus:ring-primary" [class]="binIsSecure(r.e.binId) ? 'text-primary font-semibold' : 'text-ink'" [attr.aria-label]="'Bin for ' + r.line.itemName" [attr.data-testid]="'rbin-' + tid(r.line)" [disabled]="!m.canReceive || m.bins.length === 0" [ngModel]="r.e.binId" (ngModelChange)="patch(r.line.lineId, { binId: $event })">
-                      <option [ngValue]="null">{{ m.bins.length === 0 ? 'No bins set up' : 'Choose a bin' }}</option>@for (b of m.bins; track b.id) { <option [ngValue]="b.id">{{ b.code }}{{ b.isHighSecurity ? ' - secure, needs a second person' : '' }}</option> }</select></td>
+                    <td class="px-3 py-3"><zp-search-select [ariaLabel]="'Bin for ' + r.line.itemName" [testId]="'rbin-' + tid(r.line)" [emptyLabel]="m.bins.length === 0 ? 'No bins set up' : 'Choose a bin'" noun="bin" placeholder="Search bins"
+                      [inputClass]="binIsSecure(r.e.binId) ? 'w-full rounded bg-ink/10 px-2 py-1 font-data text-[11px] focus:outline-none focus:ring-1 focus:ring-primary text-primary font-semibold' : 'w-full rounded bg-ink/10 px-2 py-1 font-data text-[11px] focus:outline-none focus:ring-1 focus:ring-primary text-ink'"
+                      [options]="binOptions()" [value]="r.e.binId" [disabled]="!m.canReceive || m.bins.length === 0" (valueChange)="patch(r.line.lineId, { binId: $event || null })" /></td>
                     <td class="px-2 py-3 text-right font-data text-sm font-bold">{{ r.line.ordered | number: '1.0-4' }}</td>
                     <td class="px-2 py-3 text-right font-data text-sm text-ink/70">{{ r.line.previouslyReceived | number: '1.0-4' }}@if (r.line.awaitingSecondKey > 0) { <span class="block text-[10px] text-primary">+{{ r.line.awaitingSecondKey | number: '1.0-4' }} held</span> }</td>
                     <td class="px-3 py-3"><div class="flex items-center justify-center gap-1 rounded-lg bg-canvas p-1">
@@ -280,7 +282,7 @@ type Filter = 'all' | 'pending' | 'shortage';
     <zp-dialog [open]="discOpen()" title="Record a problem with this delivery" [wide]="true" (closed)="discOpen.set(false)">
       <form class="grid gap-3 sm:grid-cols-2" (submit)="$event.preventDefault(); addDiscrepancy()">
         <div><label class="app-label" for="dc-kind">What happened</label><select id="dc-kind" class="app-input" data-testid="disc-kind" [ngModel]="discKind()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="discKind.set($event)"><option value="Shortage">Short delivery</option><option value="Damage">Damaged goods</option><option value="WrongItem">Wrong item</option><option value="Other">Something else</option></select></div>
-        <div><label class="app-label" for="dc-item">Item (optional)</label><select id="dc-item" class="app-input" data-testid="disc-item" [ngModel]="discItem()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="discItem.set($event)"><option [ngValue]="null">Not about one item</option>@for (l of manifest()?.lines ?? []; track l.lineId) { <option [ngValue]="l.inventoryItemId">{{ l.itemName }}</option> }</select></div>
+        <div><label class="app-label" for="dc-item">Item (optional)</label><zp-search-select inputId="dc-item" testId="disc-item" emptyLabel="Not about one item" noun="item" placeholder="Search items" [options]="discItemOptions()" [value]="discItem()" (valueChange)="discItem.set($event || null)" /></div>
         <div><label class="app-label" for="dc-qty">Quantity (optional)</label><input id="dc-qty" type="number" min="0" step="any" class="app-input font-data" data-testid="disc-qty" [ngModel]="discQty()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="discQty.set($event === '' || $event === null ? null : +$event)" /></div>
         <div class="sm:col-span-2"><label class="app-label" for="dc-text">Describe it</label><textarea id="dc-text" rows="3" maxlength="1000" class="app-input" data-testid="disc-text" [ngModel]="discText()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="discText.set($event)"></textarea></div>
         <div class="sm:col-span-2"><label class="app-label" for="dc-photo">Photos (PNG, JPEG or WebP, up to 5 MB each)</label>
@@ -340,6 +342,8 @@ export class GoodsReceivingComponent implements OnInit, OnDestroy {
   protected readonly discOpen = signal(false);
   protected readonly discKind = signal<DiscrepancyKind>('Shortage');
   protected readonly discItem = signal<string | null>(null);
+  protected readonly binOptions = computed<readonly SelectOption[]>(() => (this.manifest()?.bins ?? []).map((b) => ({ value: b.id, label: `${b.code}${b.isHighSecurity ? ' - secure, needs a second person' : ''}` })));
+  protected readonly discItemOptions = computed<readonly SelectOption[]>(() => (this.manifest()?.lines ?? []).map((l) => ({ value: l.inventoryItemId, label: l.itemName })));
   protected readonly discQty = signal<number | null>(null);
   protected readonly discText = signal('');
   protected readonly discPhotos = signal<readonly string[]>([]);

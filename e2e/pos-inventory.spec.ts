@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { PASSWORD, newContext, registerViaUi, startShiftWhenAsked } from './helpers';
+import { choose, newContext, PASSWORD, registerViaUi, startShiftWhenAsked } from './helpers';
 
 /** Registers a company, publishes the starter brand and loads the labelled demonstration data (the dev environment allows it). */
 async function shopWithDemoData(page: Page) {
@@ -311,7 +311,7 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
     await page.getByTestId('audit-shift').fill('Night');
     await page.getByTestId('audit-start').click();
 
-    await page.getByTestId('measure-item').selectOption({ label: 'Demo Tonic Water' });
+    await choose(page, 'measure-item', 'Demo Tonic Water');
     await page.getByTestId('measure-qty').fill('4800'); // expected 6000 -> -20%
     await page.getByTestId('measure-save').click();
 

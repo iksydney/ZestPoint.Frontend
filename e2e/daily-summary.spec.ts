@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { registerViaUi } from './helpers';
+import { choose, registerViaUi } from './helpers';
 
 /**
  * The daily summary (design of 2026-11-15): switched on and timed in its set-up, with the people who get it; a past day built and kept; read under Sell > Reports
@@ -43,7 +43,7 @@ test.describe('Daily summary', () => {
     await page.getByTestId('dss-form-save').click();
     await expect(page.getByTestId('dss-form-error')).toContainText('e-mail address or a phone number');
     await page.getByTestId('dss-kind-staff').check();
-    await page.getByTestId('dss-staff').selectOption({ index: 1 });
+    await choose(page, 'dss-staff', 'Ada Obi');                                             // the only person so far: the owner
     await page.getByTestId('dss-way-email').uncheck();                                        // the owner's e-mail is not set up on this server, so the bell is the way
     await expect(page.getByTestId('dss-unavailable').first()).toContainText('not set up');   // SMS and WhatsApp say so
     await page.getByTestId('dss-form-save').click();

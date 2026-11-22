@@ -21,6 +21,7 @@ import { PosStore } from '../../core/services/pos-store.service';
 import { SyncAgentService } from '../../core/services/sync-agent.service';
 import { DialogComponent, ToastService } from '../../shared/ui/feedback';
 import { BranchPickerComponent, SyncStatusComponent } from '../../shared/ui/ops-chrome.components';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 import { printReceipt } from '../../core/receipt/receipt-render';
 import { tableWording } from '../../core/table-wording';
@@ -79,7 +80,7 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
  */
 @Component({
     selector: 'zp-pos-billing',
-    imports: [CurrencyPipe, DatePipe, DecimalPipe, FormsModule, DialogComponent, GiftCardIssuedComponent, TableRequestsComponent, StatusBadgeComponent, BranchPickerComponent, SyncStatusComponent, VoidAuthoriserComponent, ReceiptViewComponent, ReceiptShareComponent, CameraScannerComponent],
+    imports: [CurrencyPipe, DatePipe, DecimalPipe, FormsModule, DialogComponent, GiftCardIssuedComponent, TableRequestsComponent, StatusBadgeComponent, BranchPickerComponent, SyncStatusComponent, VoidAuthoriserComponent, ReceiptViewComponent, ReceiptShareComponent, CameraScannerComponent, SearchSelectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -95,11 +96,12 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
     <div class="grid gap-3 max-lg:pb-24 lg:grid-cols-[15rem_minmax(0,1fr)_24rem]">
       <!-- Open bills -->
       <section class="app-card flex flex-col gap-2 max-lg:order-1" aria-label="Open bills">
-        <div class="flex items-center justify-between">
-          <h2 class="font-semibold">Open bills</h2>
-          @if (canCreate()) { <button type="button" class="btn-primary px-3 py-1.5 text-sm" data-testid="new-bill" [disabled]="readOnly()" (click)="openNew()">New</button> }
+        <!-- The heading has its own line and the buttons wrap below it: the left column is narrow (15rem), and three buttons beside the heading were squeezed into each other. -->
+        <h2 class="font-semibold">Open bills</h2>
+        <div class="flex flex-wrap items-center gap-2" data-testid="bill-actions">
+          @if (canCreate()) { <button type="button" class="btn-primary whitespace-nowrap px-3 py-1.5 text-sm" data-testid="new-bill" [disabled]="readOnly()" (click)="openNew()">New</button> }
           @if (canCreate()) { <zp-table-requests [branchId]="branches.activeId()" [online]="online()" [currency]="store.currency()" (billChanged)="tableBillAccepted($event)" /> }
-          @if (giftCardsOn() && canCreate()) { <button type="button" class="btn-outline px-3 py-1.5 text-sm" data-testid="sell-gift-card" [disabled]="readOnly() || !online()" [attr.title]="online() ? null : 'Gift cards need a connection'" (click)="openGiftSale()">Gift card</button> }
+          @if (giftCardsOn() && canCreate()) { <button type="button" class="btn-outline whitespace-nowrap px-3 py-1.5 text-sm" data-testid="sell-gift-card" [disabled]="readOnly() || !online()" [attr.title]="online() ? null : 'Gift cards need a connection'" (click)="openGiftSale()">Gift card</button> }
         </div>
         <ul class="space-y-1.5 max-lg:flex max-lg:gap-2 max-lg:space-y-0 max-lg:overflow-x-auto max-lg:pb-1" data-testid="bill-list">
           @for (b of store.bills(); track b.id) {
@@ -651,10 +653,8 @@ type Dialog = 'unlock' | 'new' | 'serial' | 'unit' | 'customer' | 'modifiers' | 
       <form class="space-y-3" (submit)="$event.preventDefault(); submitTransfer()">
         <div><label class="app-label" for="tr-table">Table</label><input id="tr-table" class="app-input" data-testid="transfer-table" [ngModel]="transferTable()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="transferTable.set($event)" /></div>
         <div><label class="app-label" for="tr-owner">Hand the bill over to</label>
-          <select id="tr-owner" class="app-input" data-testid="transfer-owner" [ngModel]="transferOwner()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="transferOwner.set($event)">
-            <option value="">Nobody: it stays with {{ store.current()?.ownerName ?? 'its owner' }}</option>
-            @for (p of handOverTargets(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
-          </select>
+          <zp-search-select inputId="tr-owner" testId="transfer-owner" [emptyLabel]="'Nobody: it stays with ' + (store.current()?.ownerName ?? 'its owner')" noun="person" placeholder="Search people"
+                            [options]="handOverOptions()" [value]="transferOwner()" (valueChange)="transferOwner.set($event)" />
           <p class="mt-1 text-xs text-ink/70">The bill then belongs to that person: only they, a supervisor or a manager can change it or take payment on it.</p></div>
         @if (splitError()) { <p class="sys-alert sys-alert-danger" role="alert">{{ splitError() }}</p> }
         <div class="flex justify-end gap-2"><button type="button" class="btn-ghost" (click)="dialog.set(null)">Cancel</button><button type="submit" class="btn-primary" data-testid="transfer-save">Move</button></div>
@@ -898,6 +898,7 @@ export class PosBillingComponent implements OnInit {
   protected readonly canUnlock = computed(() => this.online() && this.activeLines().length > 0);
   protected readonly transferOwner = signal('');
   protected readonly handOverTargets = signal<readonly { id: string; name: string }[]>([]);
+  protected readonly handOverOptions = computed<readonly SelectOption[]>(() => this.handOverTargets().map((p) => ({ value: p.id, label: p.name })));
   protected readonly canApproveVoid = computed(() => this.auth.hasPermission(this.perms.POS_VOID_APPROVE));
 
   protected readonly hasUnsent = computed(() => !!this.store.current()?.lines.some((l) => l.status === 'Active' && !l.confirmed));

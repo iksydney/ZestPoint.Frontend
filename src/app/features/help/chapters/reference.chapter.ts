@@ -149,7 +149,7 @@ export const FAQ: Chapter = {
   roles: 'all',
   sections: [
     section('faq-prices', 'Can I change a price at the till?', [
-      p('No. Nobody can. The price is the one on the item\'s stock card. To change it, change the stock card (or **Prices and Menus**, for a branch). A discount is given with the discount button, within the limit, by someone who may.')
+      p('No. Nobody can. The price is the one on the item\'s stock card. To change it, change the stock card (or **Prices and Menus**, for a branch, or type the new price on **Kitchen**, **Food Cost**, for a dish). A discount is given with the discount button, within the limit, by someone who may.')
     ]),
     section('faq-card', 'A customer paid by card. Did ZestPoint charge it?', [
       p('No. ZestPoint records that the customer paid. The money moves on your own card machine or by bank transfer, and the cashier confirms it. Check it against your card machine or bank statement.')

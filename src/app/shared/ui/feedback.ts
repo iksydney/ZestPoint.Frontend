@@ -165,7 +165,7 @@ export class DialogComponent {
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <zp-dialog [open]="!!confirm.request()" [title]="confirm.request()?.title ?? ''" (closed)="confirm.answer(false)">
-      <p class="text-sm text-ink/90">{{ confirm.request()?.message }}</p>
+      <p class="whitespace-pre-line text-sm text-ink/90">{{ confirm.request()?.message }}</p>
       <div class="mt-4 flex justify-end gap-2">
         <button type="button" class="btn-ghost" (click)="confirm.answer(false)">Cancel</button>
         <button type="button" [class]="confirm.request()?.danger ? 'inline-flex items-center rounded-lg bg-danger px-4 py-2 font-semibold text-canvas' : 'btn-primary'" (click)="confirm.answer(true)" data-testid="confirm-ok">

@@ -12,6 +12,7 @@ import { BranchContextService } from '../../core/services/branch-context.service
 import { StockGroupApi } from '../../core/services/nav-ops.services';
 import { InventoryApi } from '../../core/services/ops.services';
 import { BranchPickerComponent } from '../../shared/ui/ops-chrome.components';
+import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-select.component';
 import { StatusBadgeComponent } from '../../shared/ui/ui-kit.components';
 import { EntitledActionDirective } from '../../shared/directives/entitled-action.directive';
 import { ItemFollowUpService } from '../../core/services/item-follow-up.service';
@@ -26,7 +27,7 @@ const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'ea
  */
 @Component({
     selector: 'zp-item-maintenance',
-    imports: [EntitledActionDirective, DecimalPipe, FormsModule, RouterLink, StatusBadgeComponent, BranchPickerComponent, StockCardComponent, ItemImportComponent],
+    imports: [EntitledActionDirective, DecimalPipe, FormsModule, RouterLink, StatusBadgeComponent, BranchPickerComponent, SearchSelectComponent, StockCardComponent, ItemImportComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -39,7 +40,7 @@ const UNIT: Record<StockUnit, string> = { Milliliter: 'ml', Gram: 'g', Each: 'ea
 
     <form class="mb-3 flex flex-wrap items-end gap-3" (submit)="$event.preventDefault(); load()" aria-label="Filter items">
       <div class="min-w-[14rem] flex-1"><label class="app-label" for="im-search">Search</label><input id="im-search" type="search" class="app-input" data-testid="items-search" placeholder="Name, SKU, barcode or other part number" [ngModel]="search()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="search.set($event)" /></div>
-      <div><label class="app-label" for="im-group">Stock group</label><select id="im-group" class="app-input" data-testid="items-group" [ngModel]="groupFilter()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="groupFilter.set($event); load()"><option value="">All groups</option>@for (g of groups(); track g.id) { <option [value]="g.id">{{ g.name }}</option> }</select></div>
+      <div><label class="app-label" for="im-group">Stock group</label><zp-search-select class="w-56" inputId="im-group" testId="items-group" emptyLabel="All groups" noun="group" placeholder="Search groups" [options]="groupOptions()" [value]="groupFilter()" (valueChange)="groupFilter.set($event); load()" /></div>
       <div><label class="app-label" for="im-status">Status</label><select id="im-status" class="app-input" [ngModel]="statusFilter()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="statusFilter.set($event); load()"><option value="active">Active</option><option value="inactive">Inactive</option><option value="all">All</option></select></div>
       <button type="submit" class="btn-outline">Search</button>
     </form>
@@ -84,6 +85,7 @@ export class ItemMaintenanceComponent implements OnInit {
   protected readonly items = signal<readonly InventoryItemDto[]>([]);
   protected readonly total = signal(0);
   protected readonly groups = signal<readonly StockGroupDto[]>([]);
+  protected readonly groupOptions = computed<readonly SelectOption[]>(() => this.groups().map((g) => ({ value: g.id, label: g.name })));
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly search = signal('');
