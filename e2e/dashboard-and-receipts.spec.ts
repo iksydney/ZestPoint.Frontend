@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { registerViaUi } from './helpers';
+import { registerViaUi, openPos } from './helpers';
 
 async function seedDemo(page: Page) {
   await page.goto('/app/settings/operations');
@@ -8,7 +8,7 @@ async function seedDemo(page: Page) {
 }
 
 async function sellBeans(page: Page, label: string, count: number, pay: boolean) {
-  await page.goto('/app/pos');
+  await openPos(page);
   await expect(page.getByTestId('product-grid')).toContainText('Demo Canned Beans');
   await page.getByTestId('new-bill').click();
   await page.getByTestId('nb-label').fill(label);

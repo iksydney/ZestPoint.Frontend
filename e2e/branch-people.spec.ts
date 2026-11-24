@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { newContext, registerViaUi } from './helpers';
+import { newContext, registerViaUi, openPos } from './helpers';
 
 /**
  * A new branch is not visible to people it was not given to (owner's decision, 2026-11-22). Creating a branch switches the people who worked at "every branch" to the branches they had,
@@ -96,14 +96,14 @@ test.describe('A new branch and who works there', () => {
     const tundeSide = await newContext(browser);
     await pinSignIn(tundeSide.page, who.slug, tunde);
     await expect(tundeSide.page).toHaveURL(/\/app\/dashboard$/);
-    await tundeSide.page.goto('/app/pos');
+    await openPos(tundeSide.page);
     await expect(tundeSide.page.getByTestId('branch-picker')).toBeVisible();
     await tundeSide.context.close();
 
     const ngoziSide = await newContext(browser);
     await pinSignIn(ngoziSide.page, who.slug, ngozi);
     await expect(ngoziSide.page).toHaveURL(/\/app\/dashboard$/);
-    await ngoziSide.page.goto('/app/pos');
+    await openPos(ngoziSide.page);
     await expect(ngoziSide.page.getByTestId('branch-name')).toHaveText('Main branch');
     await expect(ngoziSide.page.getByTestId('branch-picker')).toHaveCount(0);
     await ngoziSide.context.close();
@@ -128,7 +128,7 @@ test.describe('A new branch and who works there', () => {
     const side = await newContext(browser);
     await pinSignIn(side.page, who.slug, ada);
     await expect(side.page).toHaveURL(/\/app\/dashboard$/);
-    await side.page.goto('/app/pos');
+    await openPos(side.page);
     await expect(side.page.getByTestId('branch-picker')).toBeVisible();
     await side.context.close();
 

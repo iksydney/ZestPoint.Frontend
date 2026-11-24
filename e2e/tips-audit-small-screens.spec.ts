@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { registerViaUi } from './helpers';
+import { registerViaUi, openPos } from './helpers';
 
 /**
  * Owner's decisions of 2026-11-14: tips are tracked per member of staff and leave only through a recorded payout or donation; every
@@ -24,7 +24,7 @@ async function addItem(page: Page, name: string, price: string) {
 }
 
 async function billWith(page: Page, label: string, item: string) {
-  await page.goto('/app/pos');
+  await openPos(page);
   await page.getByTestId('new-bill').click();
   await page.getByTestId('nb-label').fill(label);
   await page.getByTestId('nb-create').click();

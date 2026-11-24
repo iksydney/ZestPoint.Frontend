@@ -93,7 +93,7 @@ export const KITCHEN_DAY: Chapter = {
       shot('prep-list', 'The prep list: what to prepare today.', 'The Prep List report showing items with their target stock, the amount on hand, the amount to prepare, and what usually sells on this weekday.')
     ]),
     section('kd-sell', 'Selling', [
-      p('When a waiter sends an order, the kitchen\'s tickets arrive on the kitchen display and the people at the station are told. The cook ticks items off and presses **Bump: ready**. The chapter **For kitchen and bar staff** shows how.'),
+      p('When a waiter sends an order, the kitchen\'s tickets arrive on the kitchen display (a station is shown on the Kitchen Display or on Bar Orders, never both) and the people at the station are told. The cook ticks items off and presses **Bump: ready**. The chapter **For kitchen and bar staff** shows how.'),
       p('Stock leaves the moment the station is set to use: when the bill is **sent** (a kitchen usually) or when the station marks it **ready** (a bar usually). For a dish with a recipe, the ingredients leave. For a portion from a batch, the portion leaves the stock that the batch added.')
     ]),
     section('kd-waste', 'Waste reasons', [

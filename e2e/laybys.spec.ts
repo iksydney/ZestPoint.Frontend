@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { PASSWORD, registerViaUi } from './helpers';
+import { PASSWORD, registerViaUi, openPos } from './helpers';
 
 /**
  * Layby: a bill with a customer on it becomes a layby at the till; payments are taken on the Laybys screen; cancelling needs a
@@ -28,7 +28,7 @@ test.describe('Laybys', () => {
     await expect(page.getByTestId('item-Sofa')).toBeVisible();
 
     // At the till: a bill needs a customer before the Layby button appears.
-    await page.goto('/app/pos');
+    await openPos(page);
     await page.getByTestId('new-bill').click();
     await page.getByTestId('nb-label').fill('Sofa for Ada');
     await page.getByTestId('nb-create').click();

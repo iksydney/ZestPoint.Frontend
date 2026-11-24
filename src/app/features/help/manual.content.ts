@@ -22,7 +22,7 @@ export * from './manual.types';
  */
 export const MANUAL_TITLE = 'The ZestPoint manual';
 export const MANUAL_SUBTITLE = 'How everything works and how it connects, for the businesses that use ZestPoint: bars, restaurants, lounges, nightclubs and shops.';
-export const MANUAL_DATE = '21 November 2026';
+export const MANUAL_DATE = '24 November 2026';
 /** Where the PDF made from this same text is served (public/manual). */
 export const MANUAL_PDF_URL = '/manual/ZestPoint-Manual.pdf';
 export const MANUAL_IMAGE_DIR = '/manual/img';

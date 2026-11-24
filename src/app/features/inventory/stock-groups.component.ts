@@ -73,7 +73,7 @@ const blank = (): SaveStockGroupRequest => ({ name: '', code: null, description:
         <div><label class="app-label" for="g-station">Prepared at</label>
           <zp-search-select inputId="g-station" testId="group-station" [emptyLabel]="stationEmpty()" noun="station" placeholder="Search stations" [options]="stationOptions()" [value]="form().stationId"
                             [error]="fe('stationId')" (valueChange)="patch({ stationId: $event || null })" />
-          <p class="mt-1 text-xs text-ink/70">Where the items of this group are prepared when a bill is sent. An item can name its own station on its stock card.</p></div>
+          <p class="mt-1 text-xs text-ink/70">Where the items of this group are prepared when a bill is sent. A group with no station of its own follows its parent group's. An item can name its own station on its stock card.</p></div>
         <div class="grid gap-3 sm:grid-cols-2">
           <div><label class="app-label" for="g-sales-ac">Sales account</label>
             <zp-search-select inputId="g-sales-ac" testId="group-sales-ac" emptyLabel="The company's Sales account" noun="account" placeholder="Search accounts" [options]="salesAccountOptions()" [value]="form().salesAccountId"
@@ -132,7 +132,13 @@ export class StockGroupsComponent implements OnInit {
   protected readonly parentOptions = computed<readonly SelectOption[]>(() => this.parents().map((p) => ({ value: p.id, label: p.name })));
   protected readonly targetOptions = computed<readonly SelectOption[]>(() => this.targets().map((p) => ({ value: p.id, label: p.name })));
   protected readonly stationOptions = computed<readonly SelectOption[]>(() => this.stations.list().map((s) => ({ value: s.id, label: s.name })));
-  protected readonly stationEmpty = computed(() => (this.defaultStation() ? 'The default station (' + this.defaultStation() + ')' : 'Nowhere: confirmed when the bill is sent'));
+  /** The parent group chosen in the form: a group that names no station of its own follows the nearest parent's. */
+  private readonly chosenParent = computed(() => this.groups().find((g) => g.id === this.form().parentId) ?? null);
+  protected readonly stationEmpty = computed(() => {
+    const viaParent = this.chosenParent()?.effectiveStationName;
+    if (viaParent) return 'As the parent group says (' + viaParent + ')';
+    return this.defaultStation() ? 'The default station (' + this.defaultStation() + ')' : 'Nowhere: confirmed when the bill is sent';
+  });
   protected readonly salesAccountOptions = computed<readonly SelectOption[]>(() => this.salesAccounts().map((a) => ({ value: a.id, label: `${a.code} ${a.name}` })));
   protected readonly stockAccountOptions = computed<readonly SelectOption[]>(() => this.stockAccounts().map((a) => ({ value: a.id, label: `${a.code} ${a.name}` })));
 

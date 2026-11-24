@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { choose, registerViaUi } from './helpers';
+import { choose, registerViaUi, openPos } from './helpers';
 
 /**
  * Owner's decisions of 2026-11-15: a company names its preparation stations; each stock group goes to one and an item can name its own;
@@ -42,9 +42,15 @@ test.describe('Preparation stations', () => {
     await page.getByTestId('station-save').click();
     await expect(page.getByTestId('station-name-error')).toContainText('name');
     await page.getByTestId('station-name').fill('Kitchen');
+    // A station that holds nothing is offered the Kitchen Display. This test is about the prompts and the station filter of Bar Orders, so the
+    // kitchen is shown there (station-screens.spec.ts walks the Kitchen Display and what each screen leaves out).
+    await expect(page.getByTestId('station-screen')).toHaveValue('KitchenDisplay');
+    await page.getByTestId('station-screen').selectOption({ label: 'Bar Orders' });
     await page.getByTestId('station-save').click();
     const kitchen = page.getByTestId('station-row-Kitchen');
     await expect(kitchen).toContainText('When sent');
+    await expect(page.getByTestId('station-screen-Kitchen')).toHaveText('Bar Orders');
+    await expect(page.getByTestId('station-screen-Bar')).toHaveText('Bar Orders');
     await page.getByTestId('station-new').click();
     await page.getByTestId('station-name').fill('kitchen');
     await page.getByTestId('station-save').click();
@@ -62,11 +68,14 @@ test.describe('Preparation stations', () => {
     await newItem(page, 'Burger', '3000', 'Food');
     await newItem(page, 'Cola', '500');
     await page.getByTestId('item-edit-Cola').click();
-    await expect(page.getByTestId('item-station')).toHaveValue('As the stock group says');
+    await expect(page.getByTestId('item-station')).toHaveValue('As the stock group says (Bar)');   // no group: the default station
+    await page.getByTestId('sc-close').click();
+    await page.getByTestId('item-edit-Burger').click();
+    await expect(page.getByTestId('item-station')).toHaveValue('As the stock group says (Kitchen)');
     await page.getByTestId('sc-close').click();
 
     // Both on one bill: each goes to its station, and the bar's drink holds payment.
-    await page.goto('/app/pos');
+    await openPos(page);
     await page.getByTestId('new-bill').click();
     await page.getByTestId('nb-label').fill('Both');
     await page.getByTestId('nb-create').click();
@@ -88,6 +97,7 @@ test.describe('Preparation stations', () => {
     await page.getByTestId('nb-create').click();
     await page.getByTestId('product-Burger').click();
     // The owner is a bar man too here, so the new-ticket prompt of the first bill floats over the Send button: press it directly.
+    await expect(page.getByTestId('send-order')).toBeEnabled();                           // a click on a button that is not yet enabled does nothing
     await page.getByTestId('send-order').dispatchEvent('click');
     await expect(page.getByTestId('bar-state-Burger')).toHaveText('waiting at the kitchen');
     await expect(page.getByTestId('pay')).toBeEnabled();
@@ -114,7 +124,7 @@ test.describe('Preparation stations', () => {
     await expect(page.getByTestId('bar-queue-empty')).toBeVisible();
 
     // The drink is made: payment on the bill that held it is open.
-    await page.goto('/app/pos');
+    await openPos(page);
     await page.getByTestId('bill-Both').click();
     await expect(page.getByTestId('pay')).toBeEnabled();
     await expect(page.getByTestId('pay-lock')).toHaveCount(0);

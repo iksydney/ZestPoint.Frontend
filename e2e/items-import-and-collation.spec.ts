@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { PASSWORD, Registered, newContext, registerViaUi } from './helpers';
+import { PASSWORD, Registered, newContext, registerViaUi, openPos } from './helpers';
 
 /**
  * Owner's decisions of 2026-11-15:
@@ -231,7 +231,7 @@ test.describe('Purchase order: finding items and sharing', () => {
 test.describe('Till and bar: typed quantities and collated marks', () => {
   test('a large quantity is typed, Void asks how many of what was sent, and only that many come off', async ({ page }) => {
     const who = await ownerInApp(page, { demo: true });
-    await page.goto('/app/pos');
+    await openPos(page);
     await expect(page.getByTestId('product-grid')).toContainText('Demo Canned Beans');
     await page.getByTestId('new-bill').click();
     await page.getByTestId('nb-label').fill('Party');
@@ -293,7 +293,7 @@ test.describe('Till and bar: typed quantities and collated marks', () => {
     const waiter = await newContext(browser);
     const w = waiter.page;
     await pinSignIn(w, who.slug, waiterCode, '7391');
-    await w.goto('/app/pos');
+    await openPos(w);
     await expect(w.getByTestId('product-grid')).toContainText('Demo Canned Beans');
     await w.getByTestId('new-bill').click();
     await w.getByTestId('nb-kind').selectOption('Table');

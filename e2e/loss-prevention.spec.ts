@@ -37,9 +37,10 @@ test.describe('Loss prevention', () => {
     await expect(page).toHaveURL(/\/app\/staff$/);
     const code = await addPinStaff(page, 'Tunde Till', 'cashier', '4826');
 
-    // The cashier starts a shift with a counted float of 500 and closes it with nothing in the drawer.
+    // The cashier starts a shift (asked when the Point of Sale is opened) with a counted float of 500 and closes it with nothing in the drawer.
     const cashier = await newContext(browser);
     await pinSignIn(cashier.page, who.slug, code, '4826');
+    await cashier.page.goto('/app/pos');
     await startShiftWhenAsked(cashier.page, '500');
     await cashier.page.goto('/app/pos/day-management');
     await cashier.page.getByTestId('close-count').fill('0');

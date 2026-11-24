@@ -173,7 +173,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
                   <div class="grid gap-2 sm:grid-cols-2">
                     <div><label class="app-label" for="sc-points">Points value</label><input id="sc-points" type="number" min="0" step="0.01" class="app-input" data-testid="item-points" [ngModel]="f().pointsValue" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ pointsValue: n($event) ?? 0 })" /><p class="app-hint">Loyalty points a customer earns per unit when their bill is paid.</p></div>
                     <div><label class="app-label" for="sc-tax">Tax</label><select id="sc-tax" class="app-input" data-testid="item-tax" [ngModel]="f().taxExempt ? 'exempt' : 'taxable'" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ taxExempt: $event === 'exempt' })"><option value="taxable">Taxable (company rate)</option><option value="exempt">Tax exempt</option></select></div>
-                    <div><label class="app-label" for="sc-station">Prepared at</label><zp-search-select inputId="sc-station" testId="item-station" emptyLabel="As the stock group says" noun="station" placeholder="Search stations" [options]="stationOptions()" [value]="f().stationId" [error]="fe('stationId')" (valueChange)="patch({ stationId: $event || null })" /></div>
+                    <div><label class="app-label" for="sc-station">Prepared at</label><zp-search-select inputId="sc-station" testId="item-station" [emptyLabel]="stationBlank()" noun="station" placeholder="Search stations" [options]="stationOptions()" [value]="f().stationId" [error]="fe('stationId')" (valueChange)="patch({ stationId: $event || null })" /></div>
                     <div><label class="app-label" for="sc-shelf">Shelf life (days)</label><input id="sc-shelf" type="number" min="1" max="3650" step="1" class="app-input" data-testid="item-shelf-life" [ngModel]="f().shelfLifeDays" [ngModelOptions]="{ standalone: true }" (ngModelChange)="patch({ shelfLifeDays: n($event) })" />
                       <p class="app-hint">How long it keeps once it arrives or is made. Receiving fills the expiry date from this, and the item keeps batches. Leave empty if it has none.</p>
                       @if (fe('shelfLifeDays')) { <p class="app-error" role="alert">{{ fe('shelfLifeDays') }}</p> }</div>
@@ -493,6 +493,11 @@ export class StockCardComponent implements OnDestroy {
   protected readonly groupOptions = computed<readonly SelectOption[]>(() => this.activeGroups().map((g) => ({ value: g.id, label: g.name, description: g.parentName ? `in ${g.parentName}` : undefined })));
   protected readonly supplierOptions = computed<readonly SelectOption[]>(() => this.suppliers().map((s) => ({ value: s.id, label: s.name })));
   protected readonly stationOptions = computed<readonly SelectOption[]>(() => this.stations.list().map((s) => ({ value: s.id, label: s.name })));
+  /** The blank "Prepared at" choice names the station it comes to: the chosen group's (its own or its parent's), else the company's default station. */
+  protected readonly stationBlank = computed(() => {
+    const via = this.groups().find((g) => g.id === this.f().groupId)?.effectiveStationName ?? this.stations.list().find((s) => s.isDefault && s.isActive)?.name;
+    return via ? `As the stock group says (${via})` : 'As the stock group says (nowhere: confirmed when the bill is sent)';
+  });
   protected readonly salesAccountOptions = computed<readonly SelectOption[]>(() => this.salesAccounts().map((a) => ({ value: a.id, label: `${a.code} ${a.name}` })));
   protected readonly purchaseAccountOptions = computed<readonly SelectOption[]>(() => this.stockAccounts().map((a) => ({ value: a.id, label: `${a.code} ${a.name}` })));
   protected readonly binOptions = computed<readonly SelectOption[]>(() => this.bins().map((b) => ({ value: b.id, label: `${b.code} ${b.name}` })));

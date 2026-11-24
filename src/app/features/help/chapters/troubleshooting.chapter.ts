@@ -35,9 +35,18 @@ export const TROUBLESHOOTING: Chapter = {
         ['This bill was opened by Wale. Only they, a supervisor or a manager can change it or take payment on it. They can hand it over to you.', 'A bill belongs to the person who opened it', 'Ask them to hand it over to you'],
         ['This bill was changed by someone else while the payment was being taken. Check the bill and try again.', 'Two people changed the bill at the same moment', 'Open the bill again, check it and pay'],
         ['Card and transfer: the button is off', 'The phone has no signal, or your company has not allowed that way of paying', 'Take cash, or wait for the signal. Managers can tick the ways of paying in **Settings**'],
-        ['Staff must start a shift', 'Your company asks cashiers to start a shift before they take payment', 'Start your shift']
+        ['Start your shift (Start / End of Day) before taking payments.', 'Your company has ticked that no payment is taken without a shift, and you have none running', 'Start your shift (see the next section), then take payment']
       ]),
       p('Pressing **Pay** twice, or again after a lost signal, never takes payment twice. ZestPoint recognises the same attempt and records it once.')
+    ]),
+    section('ts-shift', 'The till asks for a shift, or will not open', [
+      table(['What you see', 'Why', 'What to do'], [
+        ['**Start your shift** where the till should be', 'Everyone who sells or takes orders starts a shift the moment they open the till: cashiers, waiters, supervisors, managers and the owner', 'Count the drawer, type the float, tick **I have counted the drawer and this amount is right.** and press **Start shift**. The till opens'],
+        ['The box says your shift is running at another branch', 'A person can have only one shift at a time', 'Change the branch at the top to the one where it runs, or end that shift first on **Start / End of Day**'],
+        ['You need the right to start a shift before you can sell. Ask a manager to give it to you.', 'Your role does not allow starting a shift', 'Ask a manager to give your role the shift rights'],
+        ['The till opens with no box', 'You have a shift running at this branch, or your role neither sells nor takes orders (kitchen staff, for one), or your plan does not include **Start / End of Day**, or ZestPoint could not read your shift just now', 'Nothing to do. If the plan lacks **Start / End of Day**, nobody can start a shift'],
+        ['A box on any screen: **Remember to end your shift**', 'Your shift has run six hours', 'Press **End my shift now** to count the drawer, or **Still working**: it asks again in an hour']
+      ])
     ]),
     section('ts-bill', 'I cannot change a bill', [
       table(['What it says', 'What it means', 'What to do'], [
@@ -60,10 +69,10 @@ export const TROUBLESHOOTING: Chapter = {
       list(
         '**Was the bill sent?** The line must say Sent, not Not sent yet. On a phone with no signal it says "Saved, waiting for the signal", and nothing has reached the station.',
         '**Is the station switched on?** **Admin**, **Set-up**, **Settings** must have **Send orders to preparation stations** ticked, and **Preparation Stations** must list the station as in use.',
-        '**Does the item have a station?** The item\'s stock group says **Prepared at**. An item with no station and no group station goes to the default station, or nowhere if there is none. An item that goes nowhere is sold at once and makes no ticket.',
+        '**Does the item have a station?** The item\'s stock group says **Prepared at**; a group with none of its own follows its parent group\'s. An item with no station, and no station from its group or the group above it, goes to the default station, or nowhere if there is none. An item that goes nowhere is sold at once and makes no ticket.',
         '**Does the person\'s role work at that station?** On **Staff**, **Roles & permissions**, a role that lists stations only hears about those. A role with none ticked hears about all.',
-        '**Is the screen right?** The kitchen display and the bar screen show a chosen station. Check the choice at the top.',
-        '**Does the plan have the Kitchen Display?** Without it, the kitchen works its tickets on **Bar Orders**.'
+        '**Is the screen right?** Each station is shown on one screen, set on **Preparation Stations** with **Shown on**. A kitchen ticket is on the kitchen display and not on Bar Orders, and a bar ticket the other way round. Check the station\'s **Shown on**, then the station chosen at the top of the screen.',
+        '**Does the plan have the Kitchen Display?** Without it, every station\'s tickets show on **Bar Orders**, whatever **Shown on** says, and **Preparation Stations** says so beside the station: look for them there. The choice is kept for when the plan has the Kitchen Display.'
       )
     ]),
     section('ts-stock', 'Stock looks wrong', [

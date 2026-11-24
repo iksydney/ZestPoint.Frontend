@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { choose, registerViaUi } from './helpers';
+import { choose, registerViaUi, openPos } from './helpers';
 
 /**
  * The kitchen display (design of 2026-11-15): a station's tickets on a wall screen, with a clock that turns them amber then red, items
@@ -24,7 +24,7 @@ async function newItem(page: Page, name: string, price: string, group?: string) 
 }
 
 async function sendBill(page: Page, label: string, burgers: number) {
-  await page.goto('/app/pos');
+  await openPos(page);
   await expect(page.getByTestId('product-grid')).toContainText('Burger');
   await page.getByTestId('new-bill').click();
   await page.getByTestId('nb-label').fill(label);

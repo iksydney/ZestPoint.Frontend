@@ -62,7 +62,7 @@ export const FIRST_DAY: Chapter = {
         '**Discount needing manager approval above (%):** a discount over this needs a supervisor. 0 means anyone who may give discounts can give any.',
         '**Cash, Card, Bank transfer:** the ways of paying you accept. Card and transfer are recorded, not charged.',
         '**Send orders to preparation stations:** tick this if the bar or kitchen prepares what you sell. See step 5.',
-        '**Staff must start a shift before taking payments:** tick it if cashiers should count a float in and out.',
+        '**Staff must start a shift before taking payments:** tick it if ZestPoint should refuse a payment taken with no shift running (a sale already made offline is never refused). Ticked or not, the Point of Sale asks everyone who sells or takes orders to start a shift the moment they open it.',
         '**Till difference that needs a supervisor:** a closed shift that is off by more than this waits for a supervisor to review it.',
         '**"Expiring soon" means within (days):** the warning time for stock that goes off, unless an item has its own.',
         '**Stock adjustments above a value need approval by someone else:** tick it and set the amount.',
@@ -81,11 +81,12 @@ export const FIRST_DAY: Chapter = {
       list(
         'If you said yes to the bar man method, or ticked **Send orders to preparation stations** in Settings, a first station exists already: a **Bar** for a business with a bar, otherwise a **Kitchen**.',
         'Press **Add a station**, name it, and choose how it behaves: whether a bill must wait for it before it can be paid (a bar usually does, a kitchen usually does not), and whether stock leaves when the order is sent or when the station marks it ready.',
+        'Choose **Shown on**: the screen that works the station\'s tickets, **Bar Orders** or the **Kitchen Display**. A bar usually goes on Bar Orders and a kitchen on the Kitchen Display. ZestPoint starts a new station on Bar Orders if it holds payment or takes stock when ready, otherwise on the Kitchen Display, and you can change it. A station\'s tickets show on that one screen only. If your plan has no Kitchen Display, every station\'s tickets show on Bar Orders whatever you choose, and the list says so beside the station; your choice is kept for when the plan has it.',
         'Set the minutes after which a ticket turns amber and then red on the kitchen display.',
         'One station is the **default**. It takes whatever has no station of its own.'
       ),
       p('A station is never deleted, only switched off. A station with open tickets cannot be switched off.'),
-      shot('stations', 'Preparation stations: the Bar and the Kitchen, and how each behaves.', 'The Preparation stations screen listing a Bar and a Kitchen, each with whether the bill waits for it and when stock leaves, and an Add a station button.'),
+      shot('stations', 'Preparation stations: the Bar and the Kitchen, the screen each is shown on, and how each behaves.', 'The Preparation stations screen listing a Bar and a Kitchen, each with the screen it is shown on, whether the bill waits for it and when stock leaves, and an Add a station button.'),
       p('Then add your **printers**. Open **Admin**, **Set-up**, **Printers** and press **Add a printer**. Say how a phone reaches it: on your shop network (its address), by Bluetooth (each phone pairs it by hand), or a handheld\'s own printer. Then say what it prints: receipts and gift card slips, shift reports, labels, or kitchen and bar tickets. A kitchen and bar printer also needs the stations whose tickets it prints. Add each printer once for the whole company, or for one branch.'),
       notYet('The server never talks to a printer. A phone does the printing, so a network printer must be reachable from inside your shop. Printing to a real printer has not been tried yet. See **The phone app**.'),
       shot('printers', 'Printers, set up once and shared by every phone.', 'The Printers screen listing a receipt printer and a kitchen printer, with how each is reached, the paper, and what each prints, and an Add a printer button.')
@@ -101,7 +102,7 @@ export const FIRST_DAY: Chapter = {
       shot('tables', 'Tables: the list for a branch, with a QR code for each.', 'The Tables screen listing tables named Table 1 to Table 8 with their areas and seats, with buttons to add one, add several and print all QR codes.')
     ]),
     section('fd-groups', '7. Stock groups', [
-      p('Open **Stock**, **Stock Groups**. A group is a heading your items sit under, such as Starters, Mains, Spirits, Beer or Cleaning. Press **New group**, give it a name, and choose **Prepared at**: the station that makes what is in the group. A group with no station goes to the default station.'),
+      p('Open **Stock**, **Stock Groups**. A group is a heading your items sit under, such as Starters, Mains, Spirits, Beer or Cleaning. Press **New group**, give it a name, and choose **Prepared at**: the station that makes what is in the group. Leave it blank and the group goes where its **parent group** goes, as the blank choice says in brackets ("As the parent group says (Kitchen)"); with no parent station it goes to the default station.'),
       p('A group can also name the ledger accounts its sales and stock post to. Leave them empty and ZestPoint uses the company\'s standard accounts.'),
       p('You do not have to come here first: a group can be made while you add an item, from the stock card (see **Items** below). ZestPoint refuses a group name that is the same as, or looks the same as, one you already have (Soft Drink next to Soft Drinks), here and in that window.'),
       shot('stock-groups', 'Stock groups, each with the station that prepares it.', 'The Stock Group Maintenance screen listing the groups Food, Drinks and Ingredients, each with its station, and a New group button.')
@@ -112,7 +113,7 @@ export const FIRST_DAY: Chapter = {
         '**Stock group.** A box you can type in: type part of a group\'s name to find it, or choose **No group**. If the group you want does not exist yet, press **Create a new stock group** under the box (or choose the last entry of the list). A window opens over the card: type the name, choose a **Parent group** and **Prepared at** if you want, and press **Create group**. The new group is chosen for the item at once, and you can pick another afterwards. Only people who may manage stock groups are offered this.',
         '**Name, group, unit and prices.** The retail price is what the till charges. Nobody can type a different price at the till. The card also has a special price with its dates, an item discount, tax, loyalty points, the ledger accounts and the rules the till follows.',
         '**Last cost per unit.** What you last paid for one unit. Only people who may see costs see this.',
-        '**Prepared at.** Leave it as the stock group says, or pick a station for this one item.',
+        '**Prepared at.** Leave it as the stock group says (the box names that station in brackets), or pick a station for this one item.',
         '**For things that go off:** **Shelf life (days)** fills the expiry date when stock arrives, and **Warn before expiry (days)** says how early to warn.',
         '**Portions per batch:** for a cake baked once and sold by the slice (8), or baked whole for one customer (1). See **A day in the kitchen**.',
         '**Other tabs:** selling units (a case of 12), package content (a hamper), equivalent part numbers, the recipe and options and the picture. The **Activity** tab shows everything that ever happened to the item. These tabs need the item to exist, so on a new item each says **Save first**. Press one and the card saves the item for you and opens the tab. If the item cannot be saved yet, the card stays on **Details** and shows a red notice right under the tabs that lists what to fix.'
@@ -173,8 +174,8 @@ export const FIRST_DAY: Chapter = {
     ]),
     section('fd-try-it', '14. Try it before the doors open', [
       steps(
-        'Sign in as a cashier. If you ticked **Staff must start a shift before taking payments**, a box asks you to start your shift with a float. Type the cash in the drawer, tick that you counted it and press **Start shift**. ZestPoint gives you a till number.',
-        'Open **Sell**, **Point of Sale**. Press **New**, choose a table, add a dish and a drink, and press **Send**.',
+        'Sign in as a cashier and open **Sell**, **Point of Sale**. A box called **Start your shift** stands where the till would be: type the cash in the drawer, tick that you counted it and press **Start shift**. ZestPoint gives you a till number and the till opens.',
+        'On the till press **New**, choose a table, add a dish and a drink, and press **Send**.',
         'On **Sell**, **Kitchen Display** (or **Bar Orders**), take the ticket and mark it ready. The waiter is told.',
         'Take payment. Check the receipt.',
         'Look at **Stock**, **Reports**, **Stock Quantities Report**: the stock of what you sold has gone down.',

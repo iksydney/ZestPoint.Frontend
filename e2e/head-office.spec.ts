@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { registerViaUi } from './helpers';
+import { registerViaUi, openPos } from './helpers';
 
 /**
  * Head office (design of 2026-11-15): every branch side by side in an overview, a comparison of one measure over time with a ranking and
@@ -23,7 +23,7 @@ async function newItem(page: Page, name: string, price: string) {
 }
 
 async function sell(page: Page, label: string, item: string, count: number) {
-  await page.goto('/app/pos');
+  await openPos(page);
   await expect(page.getByTestId('product-grid')).toContainText(item);
   await page.getByTestId('new-bill').click();
   await page.getByTestId('nb-label').fill(label);

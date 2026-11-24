@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { registerViaUi } from './helpers';
+import { registerViaUi, openPos } from './helpers';
 
 /**
  * The till's left column (Open bills): the heading has its own line, and New, Table requests and Gift card sit below it without touching each other or leaving the card.
@@ -17,7 +17,7 @@ async function box(page: Page, selector: string): Promise<Box> {
 const overlap = (a: Box, b: Box): boolean => a.x < b.x + b.width - 0.5 && b.x < a.x + a.width - 0.5 && a.y < b.y + b.height - 0.5 && b.y < a.y + a.height - 0.5;
 
 async function checkOpenBillsHeader(page: Page): Promise<void> {
-  await page.goto('/app/pos');
+  await openPos(page);
   const section = '[aria-label="Open bills"]';
   await expect(page.getByTestId('new-bill')).toBeVisible();
   await expect(page.getByTestId('table-requests-btn')).toBeVisible();

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { barcodeVideo } from './fake-camera';
 import { addItem, newBill, ownerInApp, startCount, stockUp } from './phone-helpers';
+import { openPos } from './helpers';
 
 /**
  * The camera as a barcode scanner (enterprise programme, piece 13), against a fake camera that shows one EAN-13 barcode. Whichever reader the browser
@@ -37,7 +38,7 @@ test.describe('Camera scanner', () => {
     await watchCamera(page);
     await ownerInApp(page);
     await addItem(page, 'Tea', '700', CODE);
-    await page.goto('/app/pos');
+    await openPos(page);
     await page.getByTestId('new-bill').click();
     await newBill(page, 'Camera');
 

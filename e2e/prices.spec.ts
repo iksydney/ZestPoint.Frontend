@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { choose, registerViaUi } from './helpers';
+import { choose, registerViaUi, openPos } from './helpers';
 
 /**
  * Prices and menus (design of 2026-11-15, head office): a price per branch with its source, bulk changes now or from a date, price lists with
@@ -159,7 +159,7 @@ test.describe('Prices and menus', () => {
     await expect(page.getByTestId('branch-prices')).toBeChecked();
 
     // The main branch's till still charges the company price.
-    await page.goto('/app/pos');
+    await openPos(page);
     await expect(page.getByTestId('product-Lager')).toContainText('1,000.00');
     expect(money(await page.getByTestId('product-Cola').innerText())).toContain('550.00');
   });

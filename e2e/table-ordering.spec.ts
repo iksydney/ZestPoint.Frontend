@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { newContext, registerViaUi } from './helpers';
+import { newContext, registerViaUi, openPos } from './helpers';
 
 /**
  * Table ordering (enterprise programme, piece 11): the company puts items on the customer menu, prints a table's QR sticker, and a customer who scans it (no sign-in) orders with an
@@ -65,7 +65,7 @@ test.describe('Table ordering', () => {
     await expect(guest.page.getByTestId('tp-state')).toContainText('Waiting for staff to confirm');
 
     // The till: a count on the button, the request with its option, the waiter makes it two, and accepts it onto the table's bill.
-    await page.goto('/app/pos');
+    await openPos(page);
     await expect(page.getByTestId('table-requests-count')).toHaveText('1', { timeout: 25_000 });
     await page.getByTestId('table-requests-btn').click();
     await expect(page.getByTestId('tr-1')).toContainText('Table T7');

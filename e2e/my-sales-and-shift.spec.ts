@@ -1,9 +1,9 @@
 import { Page, expect, test } from '@playwright/test';
-import { Registered, choose, newContext, registerViaUi, startShiftWhenAsked } from './helpers';
+import { Registered, choose, newContext, registerViaUi, startShiftWhenAsked, openPos } from './helpers';
 
 /**
- * Owner's decisions of 2026-11-15:
- *  - a cashier who signs in with no shift running must start one (the box cannot be put aside);
+ * Owner's decisions of 2026-11-15 (the first one was changed on 2026-11-24: see shift-gate.spec.ts):
+ *  - a cashier who opens the Point of Sale with no shift running must start one first (the box stands where the till would be);
  *  - My Sales lists a person's own bills, with filters and each bill's receipt to share; nobody sees a colleague's, supervisors and
  *    above can choose whose to look at;
  *  - a shift that has run six hours brings a reminder to end it, and again an hour after "Still working".
@@ -44,7 +44,7 @@ async function pinSignIn(page: Page, slug: string, code: string, pin: string): P
 
 /** A bill with a name, so many tins of beans, paid in cash. */
 async function sellBeans(page: Page, label: string, count: number): Promise<void> {
-  await page.goto('/app/pos');
+  await openPos(page);
   await expect(page.getByTestId('product-grid')).toContainText('Demo Canned Beans');
   await page.getByTestId('new-bill').click();
   await page.getByTestId('nb-label').fill(label);
@@ -58,26 +58,29 @@ async function sellBeans(page: Page, label: string, count: number): Promise<void
 }
 
 test.describe('My Sales and the shift boxes', () => {
-  test('a cashier must start a shift, then sees and shares only their own sales; a supervisor can look at anyone\'s', async ({ page, browser }) => {
+  test('a cashier must start a shift to open the till, then sees and shares only their own sales; a supervisor can look at anyone\'s', async ({ page, browser }) => {
     test.slow();   // four signed-in people
     const who = await shopWithDemoData(page);
     const adaCode = await addPinStaff(page, 'Ada Cashier', 'cashier', '4826');
     const benCode = await addPinStaff(page, 'Ben Cashier', 'cashier', '5937');
     const supCode = await addPinStaff(page, 'Sade Super', 'supervisor', '6148');
 
-    // Ada signs in with no shift: the box is there and nothing behind it can be used until she starts one.
+    // Ada signs in with no shift: nothing is asked of her until she opens the Point of Sale, and then the box stands where the till would be.
     const ada = await newContext(browser);
     const a = ada.page;
     await pinSignIn(a, who.slug, adaCode, '4826');
+    await expect(a.getByTestId('shift-box')).toHaveCount(0);
+    await a.getByTestId('main-nav').getByRole('link', { name: 'Point of Sale' }).click();
     const box = a.getByTestId('shift-box');
     await expect(box).toContainText('Start your shift');
     await expect(box).toContainText('Ada Cashier');
     await expect(box.getByTestId('shift-box-start')).toBeDisabled();                   // the drawer has not been counted yet
+    await expect(a.getByTestId('bill-list')).toHaveCount(0);                            // the till is not there to be used
     await a.keyboard.press('Escape');
     await expect(box).toBeVisible();                                                    // it cannot be put aside
-    await expect(a.getByTestId('main-nav')).toHaveCount(1);
-    expect(await a.evaluate(() => !!document.querySelector('[data-testid="main-nav"]')?.closest('[inert]'))).toBe(true);
+    expect(await a.evaluate(() => !!document.querySelector('[data-testid="main-nav"]')?.closest('[inert]'))).toBe(false);   // the rest of the application is not locked
     await startShiftWhenAsked(a, '5000');
+    await expect(a.getByTestId('bill-list')).toBeVisible();                             // the till took its place, with no reload
 
     // The shift is running: Start / End of Day shows it, and signing in again does not ask.
     await a.goto('/app/pos/day-management');
@@ -85,6 +88,8 @@ test.describe('My Sales and the shift boxes', () => {
     await expect(a.getByTestId('day-till')).toContainText('Till 1');
     await a.reload();
     await expect(a.getByTestId('day-current')).toBeVisible();
+    await a.goto('/app/pos');                                                           // a running shift is not asked for again when the till is opened
+    await expect(a.getByTestId('bill-list')).toBeVisible();
     await expect(a.getByTestId('shift-box')).toHaveCount(0);
 
     await sellBeans(a, 'Party', 2);
@@ -118,7 +123,7 @@ test.describe('My Sales and the shift boxes', () => {
     const ben = await newContext(browser);
     const b = ben.page;
     await pinSignIn(b, who.slug, benCode, '5937');
-    await startShiftWhenAsked(b);
+    await openPos(b);
     await b.goto('/app/pos/my-sales');
     await expect(b.getByTestId('report-empty')).toBeVisible();
     await expect(b.getByTestId('filter-staff')).toHaveCount(0);
@@ -126,7 +131,7 @@ test.describe('My Sales and the shift boxes', () => {
     await expect(b.getByTestId('report-error')).toContainText('your own sales only');
     await ben.context.close();
 
-    // The supervisor is not asked to start a shift, and can choose whose sales to see.
+    // The supervisor is asked nothing on My Sales and can choose whose sales to see; opening the Point of Sale holds a supervisor too.
     const sup = await newContext(browser);
     const s = sup.page;
     await pinSignIn(s, who.slug, supCode, '6148');
@@ -140,23 +145,26 @@ test.describe('My Sales and the shift boxes', () => {
     await expect(s.getByTestId('report-table')).toContainText('Counter');
     await s.locator('[data-testid^="sale-receipt-"]').first().click();
     await expect(s.getByTestId('sale-receipt').getByTestId('receipt-view')).toContainText('Demo Canned Beans');
+    await s.goto('/app/pos');
+    await expect(s.getByTestId('shift-box')).toBeVisible();                             // a supervisor sells too, so the till asks them as well
     await sup.context.close();
     await ada.context.close();
   });
 
-  test('a shift that has run six hours brings a reminder, again an hour after "Still working", and End takes them to close it', async ({ page, browser }) => {
+  test('a shift that has run six hours brings a reminder on any screen, again an hour after "Still working", and End takes them to close it', async ({ page, browser }) => {
     const who = await shopWithDemoData(page);
     const code = await addPinStaff(page, 'Long Shift Lola', 'cashier', '4826');
 
     const till = await newContext(browser);
     const p = till.page;
     await pinSignIn(p, who.slug, code, '4826');
+    await p.goto('/app/pos');
     await startShiftWhenAsked(p, '1000');
     await expect(p.getByTestId('shift-reminder')).toHaveCount(0);                       // a fresh shift is not reminded
 
-    // Six hours and a minute later (the device's clock is moved; the shift's start time is the server's).
+    // Six hours and a minute later (the device's clock is moved; the shift's start time is the server's), on the Dashboard: the reminder is not only for the till.
     await p.clock.install({ time: new Date(Date.now() + 6 * 3_600_000 + 60_000) });
-    await p.reload();
+    await p.goto('/app/dashboard');
     const reminder = p.getByTestId('shift-reminder');
     await expect(reminder).toContainText('Remember to end your shift');
     await expect(reminder.getByTestId('shift-reminder-hours')).toHaveText('6 hours');

@@ -1,6 +1,6 @@
 import { Page, expect, test } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { registerViaUi } from './helpers';
+import { registerViaUi, startShiftWhenAsked } from './helpers';
 
 /**
  * A sweep of every screen for the faults a person sees: errors in the browser console, requests the server refused, a page that scrolls sideways, and controls or headings that sit
@@ -116,6 +116,17 @@ test.describe('Health sweep', () => {
       // Where this page leads.
       return page.evaluate(() => [...document.querySelectorAll('a[href^="/app/"]')].map((a) => (a as HTMLAnchorElement).getAttribute('href')!.split('#')[0]!.split('?')[0]!));
     };
+
+    // The Point of Sale holds the owner (who sells too) at the Start your shift box until a shift is started, which would hide the till itself from the sweep.
+    // So the box is looked at on its own, at both widths, and the shift is started: the till is then swept like every other screen.
+    await visit('/app/pos');
+    await expect(page.getByTestId('shift-box')).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 800 });
+    current = { route: '/app/pos (the shift box)', width: 390 };
+    for (const f of await inspect(page)) note(f.kind, f.detail);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    current = { route: 'setup', width: 1280 };
+    await startShiftWhenAsked(page);
 
     // Desktop pass: follow the menu and every link found, so reports and hubs are reached too.
     const seen = new Set<string>();

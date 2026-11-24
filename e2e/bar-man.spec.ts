@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { Registered, newContext, pick, registerViaUi } from './helpers';
+import { Registered, newContext, pick, registerViaUi, openPos } from './helpers';
 
 /**
  * The bar man method: an attendant sends an order, a bar man gets it live on another device, dispatches it (stock is deducted then),
@@ -42,7 +42,7 @@ async function pinSignIn(page: Page, slug: string, code: string, pin: string): P
 
 /** The attendant opens a table and adds one Demo Gin & Tonic per entry (its option dialog is accepted as it stands). */
 async function tableWith(page: Page, table: string, ...products: string[]): Promise<void> {
-  await page.goto('/app/pos');
+  await openPos(page);
   await expect(page.getByTestId('product-grid')).toContainText('Demo Canned Beans');
   await page.getByTestId('new-bill').click();
   await page.getByTestId('nb-kind').selectOption('Table');

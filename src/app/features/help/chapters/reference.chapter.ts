@@ -11,7 +11,7 @@ export const NOT_YET: Chapter = {
   roles: 'all',
   sections: [
     section('ny-intro', 'Why this list is here', [
-      p('A manual that promised things ZestPoint does not do would cost you money and trust. This chapter lists what is partly done or not done, as of 21 November 2026. The same notes appear in the chapters where they matter.')
+      p('A manual that promised things ZestPoint does not do would cost you money and trust. This chapter lists what is partly done or not done, as of 24 November 2026. The same notes appear in the chapters where they matter.')
     ]),
     section('ny-money', 'Money and the books', [
       list(
@@ -31,6 +31,7 @@ export const NOT_YET: Chapter = {
         '**Selling by weight at the till:** an item can be marked as sold by a scale, but the till does not read a scale for sales yet.',
         '**No web store.** An item can be marked as listed on a web store, but there is no web store.',
         '**Card, transfer, loyalty points and gift cards** need a connection. They cannot be used offline.',
+        '**The till asks for a shift, but ZestPoint does not insist on one.** The Point of Sale asks everyone who sells or takes orders to start a shift, on the screen only. ZestPoint itself still accepts a bill or an order with no shift behind it. The one thing it refuses is a payment with no shift, and only when **Staff must start a shift before taking payments** is ticked in **Settings**; a sale already made offline is never refused for this.',
         '**Hotel room charging and an enterprise interface** are marked "coming soon" in the plans and do nothing yet.'
       )
     ]),
@@ -44,7 +45,7 @@ export const NOT_YET: Chapter = {
         '**Actual Against Expected Use** needs stock takes in the period to say anything about what is unexplained.',
         '**Stations are limited by role, not by person.** A cook who also covers the bar needs a role that lists both stations. The ready-made Kitchen Staff and Bartender roles list no station until an admin sets them, so until then they work at every station.',
         '**A ticket that waits past its red minutes does not remind the station.**',
-        '**A role changed while someone is connected** reaches their live connection when it reconnects, within about 15 minutes. The lists they read are right at once.',
+        '**The Kitchen Display sounds only while it is open.** A new ticket of a station shown there does not ring the bar bell or float a prompt on other screens: those belong to the stations shown on Bar Orders.',        '**A role changed while someone is connected** reaches their live connection when it reconnects, within about 15 minutes. The lists they read are right at once.',
         '**Loss prevention** cannot show a supervisor only the people below them, because ZestPoint has no record of who reports to whom. Branch managers and supervisors get no loss-prevention rights by default.'
       )
     ]),
@@ -123,7 +124,8 @@ export const GLOSSARY: Chapter = {
         ['**Role**', 'A named set of rights given to people, such as Cashier.'],
         ['**Second key**', 'A second person\'s confirmation before goods in a secure bin count as stock.'],
         ['**Server**', 'The computer that runs ZestPoint for everyone. The website and the phone app talk to it, and it decides prices, totals and who may do what.'],
-        ['**Shift**', 'A cashier\'s working period at a till, from a counted float to a counted drawer.'],
+        ['**Shift**', 'One person\'s working period at a till, from a counted float to a counted drawer. Everyone who sells or takes orders starts one when they open the Point of Sale.'],
+        ['**Shown on**', 'The screen that works a station\'s tickets: Bar Orders or the Kitchen Display. A station is on one only.'],
         ['**Staff code**', 'A person\'s code for signing in, such as BHL-007, used with their PIN.'],
         ['**Station**', 'A place that makes what you sell: the bar, the kitchen, a grill.'],
         ['**Stock card**', 'The one screen for everything about an item.'],
@@ -131,7 +133,7 @@ export const GLOSSARY: Chapter = {
         ['**Store issue**', 'A station asking the store for stock, the store handing it over, and the station confirming.'],
         ['**Tab**', 'A bill opened under a name rather than a table.'],
         ['**Ticket**', 'The part of a sent order that one station makes.'],
-        ['**Till number**', 'The number ZestPoint gives a cashier\'s shift, the lowest free one at the branch.'],
+        ['**Till number**', 'The number ZestPoint gives a person\'s shift, the lowest free one at the branch.'],
         ['**Usable percent**', 'How much of an ingredient you can use once it is trimmed. Tomato 85 means 15 percent is lost.'],
         ['**Variance**', 'The difference between what was expected and what came out or was counted.'],
         ['**Venue address**', 'The short name from your ZestPoint address, typed to sign in.'],

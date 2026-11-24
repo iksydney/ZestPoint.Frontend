@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { PASSWORD, registerViaUi } from './helpers';
+import { PASSWORD, registerViaUi, openPos } from './helpers';
 
 /**
  * Owner's decisions of 2026-11-14:
@@ -23,7 +23,7 @@ async function sellOne(page: Page, item: string, price: string) {
   await page.getByTestId('item-save').click();
   await expect(page.getByTestId(`item-${item}`)).toBeVisible();
 
-  await page.goto('/app/pos');
+  await openPos(page);
   await page.getByTestId('new-bill').click();
   await page.getByTestId('nb-label').fill('Walk in');
   await page.getByTestId('nb-create').click();

@@ -295,6 +295,8 @@ export interface BarOrderDto {
   /** The station this ticket is for (null only for tickets from before stations). */
   stationId?: string | null;
   stationName?: string | null;
+  /** The screen the ticket's station is shown on; null only for tickets from before stations. */
+  stationScreen?: StationScreen | null;
   orderId: string;
   orderNumber: number;
   orderKind: OrderKind;
@@ -371,10 +373,19 @@ export interface PrinterDto {
   notes: string | null;
 }
 
+/** The screen a station's tickets are worked on: the Bar Orders screen or the Kitchen Display. Each station is on exactly one of them (backend section 63). */
+export type StationScreen = 'BarOrders' | 'KitchenDisplay';
+
 /** A preparation station (bar, kitchen, grill) and how it behaves. */
 export interface StationDto {
   id: string;
   name: string;
+  /** Where this station's tickets are worked, as the company CHOSE it: Bar Orders or the Kitchen Display. Kept even while the plan cannot honour it. */
+  screen: StationScreen;
+  /** Where its tickets really show: the choice, except that a plan without the Kitchen display module keeps every station on Bar Orders. */
+  screenInEffect: StationScreen;
+  /** The choice is the Kitchen Display but the plan lacks the module, so the tickets show on Bar Orders; the choice is kept for when the plan has it. */
+  screenHeldByPlan: boolean;
   /** The bill cannot be paid until this station has marked its items ready. */
   holdsPayment: boolean;
   /** Stock leaves when the station marks the items ready; otherwise when the bill is sent. */

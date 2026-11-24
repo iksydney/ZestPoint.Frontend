@@ -6,6 +6,8 @@ import { toApiError } from '../../core/services/api.util';
 import { AuthService } from '../../core/services/auth.service';
 import { BarOrdersApi, BarStore, placeOf } from '../../core/services/bar.services';
 import { BranchContextService } from '../../core/services/branch-context.service';
+import { StationsService } from '../../core/services/stations.service';
+import { onBarScreen } from '../../core/station-screens';
 import { TenantTimePipe } from '../../core/pipes/tenant-time.pipe';
 import { SCREEN_PERMISSIONS } from '../../core/models/rbac.model';
 import { ToastService } from '../../shared/ui/feedback';
@@ -18,7 +20,8 @@ const STATUS_LABEL: Record<BarOrderStatus, string> = {
 
 /**
  * The bar's own screen: the live queue (waiting and being prepared) and everything sent to the bar in the last 24 hours with how long
- * each step took. It is the same data as the floating panel, with room to work. Times shown are what the server recorded.
+ * each step took. It is the same data as the floating panel, with room to work. Times shown are what the server recorded. It lists the tickets of
+ * the stations shown on Bar Orders and nothing else: a station shown on the Kitchen Display has its tickets there (Admin, Set-up, Stations).
  */
 @Component({
     selector: 'zp-bar-orders',
@@ -29,7 +32,7 @@ const STATUS_LABEL: Record<BarOrderStatus, string> = {
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 class="text-2xl font-bold">Bar orders</h1>
-          <p class="text-sm text-ink/80">Orders attendants send arrive here. Take one, make it, then tell the attendant it is ready. Stock is deducted when you mark it ready.</p>
+          <p class="text-sm text-ink/80">Orders attendants send arrive here. Take one, make it, then tell the attendant it is ready. Stock is deducted when you mark it ready. Stations set to the Kitchen Display are not listed here.</p>
         </div>
         <div class="flex items-center gap-3">
           @if (bar.enabled()) { <span class="app-badge" [class]="bar.liveState() === 'live' ? 'app-badge-success' : 'app-badge-warning'" data-testid="bar-screen-live">{{ bar.liveState() === 'live' ? 'Live' : 'Reconnecting' }}</span> }
@@ -62,7 +65,16 @@ const STATUS_LABEL: Record<BarOrderStatus, string> = {
               <zp-bar-order-card [order]="o" side="bar" [me]="bar.myId()" [now]="bar.now()" [busy]="busy()" [showStation]="stationNames().length > 1"
                                  (take)="run(bar.take($event))" (release)="run(bar.release($event))" (ready)="run(bar.ready($event), 'Dispatched. The attendant has been told.')"
                                  (cantMake)="run(bar.cantMake($event.id, $event.itemIds, $event.reason, $event.parts), 'The attendant has been told.')" />
-            } @empty { <p class="app-card col-span-full py-8 text-center text-ink/70" data-testid="bar-queue-empty">No orders are waiting. New ones appear here by themselves.</p> }
+            } @empty {
+              @if (noStationHere()) {
+                <section class="app-card col-span-full" data-testid="bar-no-station">
+                  <h2 class="font-semibold">No station is shown on Bar Orders</h2>
+                  <p class="mt-1 text-sm text-ink/80">Each station's tickets are worked on one screen, Bar Orders or the Kitchen Display, and no station is set to this one. To show one here, open Admin, Set-up, Stations, edit the station and set <strong>Shown on</strong> to Bar Orders.</p>
+                  @if (canSetUp()) { <a class="btn-outline mt-3" routerLink="/app/settings/stations" data-testid="bar-open-stations">Open Stations</a> }
+                  @else { <p class="mt-2 text-sm text-ink/80">Someone who sets up stations can change it.</p> }
+                </section>
+              } @else { <p class="app-card col-span-full py-8 text-center text-ink/70" data-testid="bar-queue-empty">No orders are waiting. New ones appear here by themselves.</p> }
+            }
           </div>
         </section>
 
@@ -102,6 +114,7 @@ const STATUS_LABEL: Record<BarOrderStatus, string> = {
 export class BarOrdersComponent implements OnInit {
   protected readonly bar = inject(BarStore);
   private readonly api = inject(BarOrdersApi);
+  private readonly stations = inject(StationsService);
   private readonly auth = inject(AuthService);
   private readonly branches = inject(BranchContextService);
   private readonly toast = inject(ToastService);
@@ -116,6 +129,9 @@ export class BarOrdersComponent implements OnInit {
   protected readonly shownQueue = computed(() => this.bar.queue().filter((o) => !this.station() || o.stationName === this.station()));
   protected readonly shownHistory = computed(() => this.history().filter((o) => !this.station() || o.stationName === this.station()));
   protected readonly canConfigure = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.SETTINGS_COMPANY_MANAGE));
+  protected readonly canSetUp = computed(() => this.auth.hasPermission(SCREEN_PERMISSIONS.POS_STATIONS_MANAGE));
+  /** No station is shown on this screen: say where to change that, instead of a queue that looks as if nothing is ordered. */
+  protected readonly noStationHere = computed(() => this.stations.loaded() && !this.stations.list().some((s) => s.screenInEffect === 'BarOrders'));
 
   constructor() {
     // The history follows the queue: whenever anything changes at the bar (or the branch changes) it is read again.
@@ -128,6 +144,7 @@ export class BarOrdersComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    void this.stations.load(true);
     await this.branches.load();
     await this.bar.start();
     void this.bar.refresh();
@@ -138,7 +155,7 @@ export class BarOrdersComponent implements OnInit {
     if (!branch) return;
     this.loading.set(true);
     try {
-      this.history.set(await firstValueFrom(this.api.list(branch, true)));
+      this.history.set((await firstValueFrom(this.api.list(branch, true, 'bar'))).filter(onBarScreen));
       this.historyError.set(null);
     } catch (err) { this.historyError.set(toApiError(err).message); } finally { this.loading.set(false); }
   }

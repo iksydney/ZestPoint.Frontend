@@ -71,6 +71,7 @@ export const OWNER: Chapter = {
     section('owner-people', 'People, phones and the activity log', [
       list(
         '**Roles.** Change what a role may do on **Staff**, **Roles & permissions**. It applies on the person\'s very next request.',
+        '**Shifts.** The till asks anyone who sells or takes orders to start a shift, so a role that can take orders also needs the three shift rights: **See shifts and the end-of-day summary**, **Start a trading shift with an opening float** and **Count the till and close a shift**. The ready-made Waiter role has them. A role made by your company may not: the person is told they need the right and cannot open the till until you give it.',
         '**Phones.** Open a person on **Staff** and their **Sessions** list every phone and browser they are signed in on, with the phone\'s name. You can sign one out, or press **Sign out everywhere**. Deactivating someone or changing their PIN signs out every phone they have.',
         '**The activity log** (**Staff**, **Activity log**) lists every void, discount, adjustment, price change and sign-in, with who and when. Each time a phone signs in, ZestPoint writes down the phone\'s make and model, its app version, and how far its clock is from the server\'s. It never records a serial number, a phone number, contacts or a location.'
       )
@@ -114,7 +115,7 @@ export const MANAGER: Chapter = {
         'Check the people: is everyone who should work today on **Staff**, with the right role and branch?',
         'Check the stations and tables are right on **Admin**, **Set-up**.',
         'Look at the bell for anything left from last night: a shift waiting for review, stock that is low, stock about to expire.',
-        'Make sure each cashier starts a shift with a counted float (**Sell**, **Start / End of Day**). If you ticked **Staff must start a shift before taking payments**, ZestPoint asks them at sign-in.'
+        'Everyone who sells or takes orders starts a shift with a counted float: ZestPoint asks for it the moment they open **Sell**, **Point of Sale**, not when they sign in. That includes you, if you open the till.'
       )
     ]),
     section('manager-approve', 'Approving: you are the second person', [
@@ -134,7 +135,7 @@ export const MANAGER: Chapter = {
       careful('A wrong PIN counts toward a lock. Five wrong PINs on one person lock them for 15 minutes. ZestPoint\'s sentence for a wrong code never says which part was wrong.')
     ]),
     section('manager-shifts', 'Reviewing a shift', [
-      p('A cashier starts a shift with a float, takes payments, puts cash in and takes cash out, and at the end counts the drawer. ZestPoint works out what the drawer should hold: the float, plus cash sales, less cash refunds, plus cash in, less cash out. If the count differs by more than the limit in Settings, the shift waits for you.'),
+      p('Everyone who sells or takes orders starts a shift with a float when they open the till. A cashier then takes payments, puts cash in and takes cash out, and at the end counts the drawer. ZestPoint works out what the drawer should hold: the float, plus cash sales, less cash refunds, plus cash in, less cash out. If the count differs by more than the limit in Settings, the shift waits for you.'),
       steps(
         'Open **Sell**, **Start / End of Day**.',
         'Find the shift that is **pending review** and open it. It shows the movements, the refunds and the difference.',
@@ -166,7 +167,7 @@ export const MANAGER: Chapter = {
     section('manager-wrong', 'When something looks wrong', [
       list(
         'A bill will not take payment: the screen says why (see **When something looks wrong**). Often it is waiting for the bar, or the bill belongs to another waiter.',
-        'A cashier cannot start a shift: they may already have one open on another device, or their role may not allow it.',
+        'Someone cannot start a shift: they may already have one running on another device or at another branch (a person can have only one), or their role may not allow it, and the till then says "You need the right to start a shift before you can sell".',
         'Stock does not match: do a stock take, then read the **Actual Against Expected Use Report**.',
         'A person cannot see a screen: check their role on **Staff**, **Roles & permissions**.'
       )

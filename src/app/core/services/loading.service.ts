@@ -3,10 +3,10 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 
 /**
- * Calls the application makes by itself in the background (listening for bar orders, renewing the session, syncing the till, noting a
+ * Calls the application makes by itself in the background (listening for bar and kitchen tickets, renewing the session, syncing the till, noting a
  * tour as seen). They never show the loading mark: nobody asked for them and they would make it flicker all day.
  */
-const QUIET = ['/api/v1/auth/refresh', '/api/v1/bar-orders', '/api/v1/orders/bar-requests', '/api/v1/sync', '/api/v1/me/tours', '/api/v1/settings/operations', '/api/v1/public/status/summary', '/hubs/'];
+const QUIET = ['/api/v1/auth/refresh', '/api/v1/bar-orders', '/api/v1/kitchen/board', '/api/v1/orders/bar-requests', '/api/v1/sync', '/api/v1/me/tours', '/api/v1/settings/operations', '/api/v1/public/status/summary', '/hubs/'];
 
 /** How long something must take before the mark shows, so quick calls do not flash it. */
 const SHOW_AFTER_MS = 350;

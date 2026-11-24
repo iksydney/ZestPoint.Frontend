@@ -6,12 +6,16 @@ import { environment } from '../../../environments/environment';
 import { ApiEnvelope } from '../models/api.model';
 import { BarOrderDto, BarOrderNotice, KitchenBoardDto } from '../models/ops.model';
 import { SCREEN_PERMISSIONS } from '../models/rbac.model';
+import { onBarScreen } from '../station-screens';
 import { tableWording } from '../table-wording';
 import { AccessService } from './access.service';
 import { toApiError, unwrap } from './api.util';
 import { AuthService } from './auth.service';
 import { BranchContextService } from './branch-context.service';
 import { OperationSettingsApi } from './ops.services';
+
+/** The `screen` query parameter of the ticket lists: `bar` = the stations shown on Bar Orders, `kitchen` = those shown on the Kitchen Display. */
+export type TicketScreen = 'bar' | 'kitchen';
 
 /**
  * The bar man method. The bar man's calls need `pos.bar_order.fulfil`; the attendant's (`mine`, `acknowledge`) need `pos.order.edit`.
@@ -21,15 +25,21 @@ import { OperationSettingsApi } from './ops.services';
 export class BarOrdersApi {
   private readonly http = inject(HttpClient);
 
-  /** The branch's queue (waiting and being prepared, oldest first), or everything sent in the last 24 hours. */
-  list(branchId: string, history = false): Observable<BarOrderDto[]> {
-    return this.http.get<ApiEnvelope<BarOrderDto[]>>('/api/v1/bar-orders', { params: new HttpParams().set('branchId', branchId).set('history', String(history)) }).pipe(unwrap());
+  /**
+   * The branch's queue (waiting and being prepared, oldest first), or everything sent in the last 24 hours. `screen` keeps only the tickets
+   * of stations shown on that screen (the Bar Orders screen and the floating panel ask for `bar`); without it every ticket comes back.
+   */
+  list(branchId: string, history = false, screen?: TicketScreen): Observable<BarOrderDto[]> {
+    let params = new HttpParams().set('branchId', branchId).set('history', String(history));
+    if (screen) params = params.set('screen', screen);
+    return this.http.get<ApiEnvelope<BarOrderDto[]>>('/api/v1/bar-orders', { params }).pipe(unwrap());
   }
 
-  /** The kitchen display's feed: the tickets still to make and the ones made in the last 30 minutes (for calling back). */
-  board(branchId: string, stationId: string | null): Observable<KitchenBoardDto> {
+  /** The kitchen display's feed: the tickets still to make and the ones made in the last 30 minutes (for calling back). The display asks for `kitchen`. */
+  board(branchId: string, stationId: string | null, screen?: TicketScreen): Observable<KitchenBoardDto> {
     let params = new HttpParams().set('branchId', branchId);
     if (stationId) params = params.set('stationId', stationId);
+    if (screen) params = params.set('screen', screen);
     return this.http.get<ApiEnvelope<KitchenBoardDto>>('/api/v1/kitchen/board', { params }).pipe(unwrap());
   }
 
@@ -314,8 +324,11 @@ export class BarStore {
     const first = branch !== this.loadedBranch;
 
     try {
+      // The queue, the prompts, the bell and the sound are the Bar Orders side: a ticket of a station shown on the Kitchen Display never reaches them
+      // (the server leaves it out; the second filter is for a ticket whose station says otherwise). What this person sent (`mine`) is their own
+      // work, whichever screen the station is on: the food they sent is still theirs to collect.
       const [queue, mine] = await Promise.all([
-        this.isBarMan() ? firstValueFrom(this.api.list(branch)) : Promise.resolve<BarOrderDto[]>([]),
+        this.isBarMan() ? firstValueFrom(this.api.list(branch, false, 'bar')).then((l) => l.filter(onBarScreen)) : Promise.resolve<BarOrderDto[]>([]),
         this.isAttendant() ? firstValueFrom(this.api.mine(branch)) : Promise.resolve<BarOrderDto[]>([])
       ]);
       if (branch !== this.branches.activeId()) return; // the branch changed while this was loading

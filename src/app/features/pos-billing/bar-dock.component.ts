@@ -137,8 +137,11 @@ export class BarDockComponent {
     return `${this.title()}: ${waiting} waiting${calling ? `, ${calling} need you` : ''}`;
   });
 
-  /** The stations this person works at, by name (the server says which: a role that lists none works at every one). */
-  private readonly mine = computed(() => this.stationsService.list().filter((s) => s.worksHere).map((s) => s.name));
+  /**
+   * The stations this person works at that are shown on Bar Orders, by name (the server says which they work at: a role that lists none works at every one).
+   * The panel, its prompts and the bell are the Bar Orders side, so a station shown on the Kitchen Display is not named here.
+   */
+  private readonly mine = computed(() => this.stationsService.list().filter((s) => s.worksHere && s.screenInEffect === 'BarOrders').map((s) => s.name));
 
   /** "Kitchen orders" for a cook, "Bar orders" for the bar, and "Station orders" for someone who works at several, so no one is told "bar" about a kitchen's work. */
   protected readonly title = computed(() => (this.mine().length === 1 ? `${this.mine()[0]} orders` : this.mine().length > 1 ? 'Station orders' : 'Bar orders'));

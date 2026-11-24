@@ -12,8 +12,9 @@ export const KITCHEN_STAFF: Chapter = {
       p('If your role works at one station, such as the Kitchen, you see and hear only that station\'s tickets. A role with no station ticked works at every station.')
     ]),
     section('ks-tickets', 'Working a ticket', [
-      p('When a waiter presses **Send**, each station gets its own ticket with only its items, and the people at that station are told: a sound, a prompt on whatever screen they are on, and a notification on their phone, reading for example "New order for the Kitchen: Table 7".'),
-      p('The kitchen uses **Sell**, **Kitchen Display**, a wall screen or tablet. The bar uses **Sell**, **Bar Orders**. They work the same way. (The Kitchen Display is part of some plans only. A company without it works the kitchen\'s tickets on Bar Orders.)'),
+      p('When a waiter presses **Send**, each station gets its own ticket with only its items, and the people at that station are told: a sound on the screen the station is shown on (below) and a notification on their phone, reading for example "New order for the Kitchen: Table 7".'),
+      p('Each station is shown on **one** screen, **Bar Orders** or the **Kitchen Display**. A manager chooses it on **Admin**, **Set-up**, **Preparation Stations**, with **Shown on**: a bar is usually on Bar Orders and a kitchen on the Kitchen Display. A station\'s tickets are on its screen only, never on both.'),
+      p('The kitchen display (**Sell**, **Kitchen Display**) is a wall screen or tablet. It lists the tickets of the stations shown on it and sounds for each new one while it is open. **Bar Orders** (**Sell**, **Bar Orders**) is a list for the stations shown there; for those stations a sound and a prompt also appear on whatever screen you are on, and the count on the floating button goes up. The two screens work the same way. (The Kitchen Display is part of some plans only. A company without it sees every station\'s tickets on **Bar Orders**, and **Preparation Stations** says so beside each station.)'),
       steps(
         'Choose the station the screen is for (Kitchen, Grill and so on). If your role works at one station, it is already chosen. The screen remembers your choice.',
         'Tickets appear by themselves, oldest first. Press **Start** (or **Take order** at the bar) to take a ticket. Only the person who took it works on it.',
@@ -50,7 +51,7 @@ export const KITCHEN_STAFF: Chapter = {
     ]),
     section('ks-wrong', 'When something looks wrong', [
       list(
-        '**No tickets are showing.** Check the station chosen at the top. Check your role works at that station. A company that has the bar man method switched off sends nothing to stations.',
+        '**No tickets are showing.** Check the station chosen at the top. Check your role works at that station. Check the station is shown on this screen: a station shown on Bar Orders has no tickets on the Kitchen Display, and the other way round. A screen with no station on it says so and where to change it. A company that has the bar man method switched off sends nothing to stations.',
         '**This ticket is for the Bar, which your role does not work at.** You are on a role limited to another station. Ask a manager.',
         '**Someone else took the ticket.** The first person to take a ticket owns it. The screen says who has it.',
         '**A sound for the wrong station.** Ask a manager to tick the right station on your role.'

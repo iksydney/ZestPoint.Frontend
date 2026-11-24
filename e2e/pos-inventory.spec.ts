@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { choose, newContext, PASSWORD, registerViaUi, startShiftWhenAsked } from './helpers';
+import { choose, newContext, PASSWORD, registerViaUi, startShiftWhenAsked, openPos } from './helpers';
 
 /** Registers a company, publishes the starter brand and loads the labelled demonstration data (the dev environment allows it). */
 async function shopWithDemoData(page: Page) {
@@ -13,8 +13,8 @@ async function shopWithDemoData(page: Page) {
   return who;
 }
 
-async function openPos(page: Page) {
-  await page.goto('/app/pos');
+async function openTill(page: Page) {
+  await openPos(page);
   await expect(page.getByTestId('product-grid')).toContainText('Demo Canned Beans');
 }
 
@@ -54,7 +54,7 @@ async function addPinCashier(page: Page, name: string, pin = '7391', role = 'cas
 test.describe('Point of sale and inventory (criteria 18-24)', () => {
   test('a bill is built, sent, paid in cash, receipted, and the stock is depleted from the recipe', async ({ page }) => {
     await shopWithDemoData(page);
-    await openPos(page);
+    await openTill(page);
     await startBill(page, 'Table 5');
 
     await page.getByTestId('product-Demo Gin & Tonic').click();
@@ -82,7 +82,7 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
 
   test('a payment is split into parts with different payment types that must add up to the balance', async ({ page }) => {
     await shopWithDemoData(page);
-    await openPos(page);
+    await openTill(page);
     await startBill(page, 'Even split');
     for (let i = 0; i < 3; i++) await page.getByTestId('product-Demo Canned Beans').click();
     await expect(page.getByTestId('bill-total')).toContainText('2,700.00');
@@ -134,7 +134,7 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
 
   test('a split that fails part way keeps what was recorded and leaves the rest to pay', async ({ page }) => {
     await shopWithDemoData(page);
-    await openPos(page);
+    await openTill(page);
     await startBill(page, 'Part way');
     for (let i = 0; i < 2; i++) await page.getByTestId('product-Demo Canned Beans').click();
     await expect(page.getByTestId('bill-total')).toContainText('1,800.00');
@@ -159,7 +159,7 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
 
   test('selling works offline, shows what is waiting, and syncs exactly once when the connection returns', async ({ page, context }) => {
     await shopWithDemoData(page);
-    await openPos(page);
+    await openTill(page);
 
     await context.setOffline(true);
     await expect(page.locator('[data-testid="sync-status"] [data-state="offline"]')).toBeVisible();
@@ -187,7 +187,7 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
 
   test('a declined card leaves the bill unpaid and an approved one marks the receipt as a demonstration', async ({ page }) => {
     await shopWithDemoData(page);
-    await openPos(page);
+    await openTill(page);
     await startBill(page, 'Card bill');
     await page.getByTestId('product-Demo Canned Beans').click();
 
@@ -219,8 +219,9 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
     await cashier.page.getByTestId('login-pin').fill('7391');
     await cashier.page.getByTestId('login-submit').click();
     await expect(cashier.page).toHaveURL(/\/app\/(dashboard|pos)$/);
-    await startShiftWhenAsked(cashier.page);
+    await expect(cashier.page.getByTestId('shift-box')).toHaveCount(0);                // signing in is free: the shift is asked when the till is opened
     await cashier.page.getByTestId('main-nav').getByRole('link', { name: 'Point of Sale' }).click();
+    await startShiftWhenAsked(cashier.page);
     // The cashier's own bill: a bill is worked on by whoever opened it.
     await expect(cashier.page.getByTestId('product-grid')).toContainText('Demo Canned Beans');
     await startBill(cashier.page, 'Void me');
@@ -264,7 +265,7 @@ test.describe('Point of sale and inventory (criteria 18-24)', () => {
     expect(await stockOf(page, 'Demo Canned Beans 400g')).toContain('48');           // the stock came back
 
     // The owner is asked too, and proves it with email and password; here for a whole bill.
-    await openPos(page);
+    await openTill(page);
     await startBill(page, 'Wrong table');
     await page.getByTestId('product-Demo Canned Beans').click();
     await page.getByTestId('send-order').click();

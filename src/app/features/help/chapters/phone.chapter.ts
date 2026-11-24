@@ -51,6 +51,13 @@ export const PHONE: Chapter = {
       ),
       p('After you press **Send**, the bill says which station got what, for example "Sent to the Kitchen (2 items) and the Bar (1 item)." After a bill is paid in full, going back skips the old open bill and takes you to where you were.')
     ]),
+    section('phone-shift', 'Your shift on the phone', [
+      list(
+        'Both the **Waiter** tab and the **Till** tab are held until you start a shift. The rest of the phone opens without one.',
+        'The reminder to end your shift after six hours is a floating box shown on any phone screen.',
+        'A waiter who has no **Till** tab finds a **Your shift** card on the waiter\'s floor, with an **End my shift** button.'
+      )
+    ]),
     section('phone-till', 'Till: shift, payment and receipt', [
       list(
         '**Shift.** Start with a counted float, record cash in and cash out with a reason, and end the shift by counting the drawer. A shift started with no signal says "Shift (no till number yet)" until ZestPoint gives it one.',

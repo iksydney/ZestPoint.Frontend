@@ -41,7 +41,7 @@ import { SearchSelectComponent, SelectOption } from '../../shared/ui/search-sele
                           [options]="parentOptions()" [value]="parentId()" (valueChange)="parentId.set($event || null)" />
         <zp-search-select label="Prepared at" inputId="ng-station-input" testId="ng-station" [emptyLabel]="stationDefault()" noun="station" placeholder="Search stations"
                           [options]="stationOptions()" [value]="stationId()" (valueChange)="stationId.set($event || null)" />
-        <p class="text-xs text-ink/70">Where the items of this group are prepared when a bill is sent. An item can name its own station on its stock card.</p>
+        <p class="text-xs text-ink/70">Where the items of this group are prepared when a bill is sent. Left blank, the group follows its parent group's station. An item can name its own station on its stock card.</p>
         @if (serverError()) { <p class="sys-alert sys-alert-danger" role="alert" data-testid="ng-error">{{ serverError() }}</p> }
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" data-testid="ng-cancel" (click)="closed.emit()">Cancel</button>
@@ -95,7 +95,10 @@ export class NewStockGroupComponent {
   protected readonly parentOptions = computed<readonly SelectOption[]>(() =>
     this.groups().filter((g) => g.isActive).map((g) => ({ value: g.id, label: g.name, description: g.parentName ? `in ${g.parentName}` : undefined })));
   protected readonly stationOptions = computed<readonly SelectOption[]>(() => this.stations.list().filter((s) => s.isActive).map((s) => ({ value: s.id, label: s.name })));
+  /** A group that names no station follows its parent's: the blank choice says which one when the chosen parent has one, else the company's default. */
   protected readonly stationDefault = computed(() => {
+    const viaParent = this.groups().find((g) => g.id === this.parentId())?.effectiveStationName;
+    if (viaParent) return `As the parent group says (${viaParent})`;
     const standard = this.stations.list().find((s) => s.isDefault && s.isActive)?.name;
     return standard ? `The default station (${standard})` : 'Nowhere: confirmed when the bill is sent';
   });

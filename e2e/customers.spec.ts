@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { registerViaUi } from './helpers';
+import { registerViaUi, openPos } from './helpers';
 
 /**
  * Customers, loyalty points and sales back orders: a customer is added at the till by name and phone, earns each item's points when
@@ -27,7 +27,7 @@ test.describe('Customers', () => {
     await expect(page.getByTestId('item-Kettle')).toBeVisible();
 
     // At the till: nobody with that phone yet, so the customer is added on the spot and put on the bill.
-    await page.goto('/app/pos');
+    await openPos(page);
     await page.getByTestId('new-bill').click();
     await page.getByTestId('nb-label').fill('Walk in');
     await page.getByTestId('nb-create').click();

@@ -1,6 +1,6 @@
 import { Page, expect, test } from '@playwright/test';
 import { TOURS, TourDefinition, stepsSince } from '../src/app/core/tour/tours';
-import { newContext, registerViaUi, startShiftWhenAsked } from './helpers';
+import { newContext, passShiftGate, registerViaUi, startShiftWhenAsked } from './helpers';
 
 /**
  * The guided tours. A new person is shown round the application the first time they sign in, and round a main screen the first time
@@ -81,8 +81,13 @@ test.describe('Guided tours', () => {
     await page.waitForTimeout(1500);
     await expect(host).toHaveCount(0);
 
-    // The first visit to a main screen starts that screen's tour. Leaving it early also counts as seen.
+    // The first visit to a main screen starts that screen's tour. Leaving it early also counts as seen. The owner sells too, so the till first asks for a shift,
+    // and the tour of the till waits until it has been started.
     await page.goto('/app/pos');
+    await expect(page.getByTestId('shift-box')).toBeVisible();
+    await page.waitForTimeout(1500);
+    await expect(host).toHaveCount(0);
+    await startShiftWhenAsked(page);
     await expect(host).toBeVisible({ timeout: 15_000 });
     await expect(host).toHaveAttribute('data-tour-key', 'pos');
     const posSaved = page.waitForResponse((r) => r.url().includes('/api/v1/me/tours/pos') && r.request().method() === 'PUT');
@@ -128,7 +133,7 @@ test.describe('Guided tours', () => {
     await staff.page.getByTestId('login-code').fill(code);
     await staff.page.getByTestId('login-pin').fill('7391');
     await staff.page.getByTestId('login-submit').click();
-    await startShiftWhenAsked(staff.page);                                              // the tour waits until the shift is started
+    await expect(staff.page.getByTestId('shift-box')).toHaveCount(0);                   // signing in is free: no shift is asked for, and the tour is not held up by one
     await expect(staff.page.getByTestId('tour')).toBeVisible({ timeout: 15_000 });
     const cashierSteps = await walk(staff.page, app);
     expect(cashierSteps).toContain('sell');
@@ -162,6 +167,8 @@ test.describe('Guided tours', () => {
           await expect(page.locator('[data-testid="main-nav"] [aria-current="page"]'), tour.key).toHaveAttribute('data-nav', viaReports ? /^reports\./ : /^setup\./);
         }
         await expect(page.locator('main h1').first(), tour.key).toBeVisible();
+        // The owner sells too, so the till first asks for a shift; its tour is offered once the till is up.
+        if (tour.nav === 'pos') await passShiftGate(page);
       } else await page.goto('/app/dashboard');
       await page.getByTestId('help-open').click();
       await page.getByTestId(tour.nav ? 'help-tour-screen' : 'help-tour-app').click();

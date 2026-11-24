@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { choose, newContext, pick, registerViaUi, startShiftWhenAsked } from './helpers';
+import { choose, newContext, pick, registerViaUi, startShiftWhenAsked, openPos } from './helpers';
 
 /** The menu contract: group, order, label and route of every screen (POS 9, Stock 22, Purchasing 16; Bar Orders is offered only to a company that uses the bar man method). */
 /** The menu as the owner of a new company sees it: working screens by area, in order, each area's reports behind one Reports entry. */
@@ -197,7 +197,7 @@ test.describe('Navigation', () => {
     const staff = await newContext(browser);
     await pinSignIn(staff.page, who.slug, code);
     await expect(staff.page).toHaveURL(/\/app\/dashboard$/);
-    await startShiftWhenAsked(staff.page);                                              // a cashier starts their shift before anything else
+    await expect(staff.page.getByTestId('shift-box')).toHaveCount(0);                  // signing in is free: no shift is asked for until the Point of Sale is opened
 
     await expect(staff.page.getByTestId('nav-group-sell')).toBeVisible();
     expect(await labelsOf(staff.page, 'sell')).toEqual(['Point of Sale', 'Start / End of Day', 'My Sales']);
@@ -231,7 +231,9 @@ test.describe('Navigation', () => {
 
     const cashier = await newContext(browser);
     await pinSignIn(cashier.page, who.slug, cashierCode);
-    // The cashier is asked to start the shift as soon as they sign in: a counted float, and the till is assigned, not typed.
+    // The cashier is asked to start the shift when they open the Point of Sale: a counted float, and the till is assigned, not typed.
+    await expect(cashier.page.getByTestId('shift-box')).toHaveCount(0);                // not at sign-in
+    await cashier.page.goto('/app/pos');
     await expect(cashier.page.getByTestId('shift-box-start')).toBeDisabled();
     await startShiftWhenAsked(cashier.page, '100');
     await cashier.page.goto('/app/pos/day-management');
@@ -275,12 +277,18 @@ test.describe('Navigation', () => {
     const cashier = await newContext(browser);
     const p = cashier.page;
     await pinSignIn(p, who.slug, code);
-    await p.goto('/app/pos/day-management');
+    // Both screens are opened once while online, as a person would, so their code is on the device when the connection goes.
+    const menu = p.getByTestId('main-nav');
+    await menu.getByRole('link', { name: 'Start / End of Day' }).click();
     await expect(p.getByTestId('day-start')).toBeVisible();
+    await menu.getByRole('link', { name: 'Point of Sale' }).click();
+    await expect(p.getByTestId('shift-box')).toBeVisible();                            // the shift is asked for when the till is opened
     await p.waitForLoadState('networkidle');
 
     await cashier.context.setOffline(true);
-    await startShiftWhenAsked(p, '50');                                                // the box works without a connection too
+    await startShiftWhenAsked(p, '50');                                                // the box works without a connection too, and the till opens
+    await expect(p.getByTestId('bill-list')).toBeVisible();
+    await menu.getByRole('link', { name: 'Start / End of Day' }).click();
     await expect(p.getByTestId('day-status')).toHaveText('Open');
     await expect(p.getByTestId('day-offline')).toBeVisible();
     await p.getByTestId('move-reason').fill('Offline float top-up');
@@ -400,7 +408,7 @@ test.describe('Navigation', () => {
     await page.getByTestId('seed-demo').click();
     await expect(page.getByTestId('demo-msg')).toContainText(/loaded|already/i);
 
-    await page.goto('/app/pos');
+    await openPos(page);
     await expect(page.getByTestId('product-grid')).toContainText('Demo Canned Beans');
     await page.getByTestId('new-bill').click();
     await page.getByTestId('nb-label').fill('Report bill');

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { choose, registerViaUi } from './helpers';
+import { choose, registerViaUi, openPos } from './helpers';
 
 /**
  * Consignment out: goods are sent from a branch to an agent at agreed prices; what the agent reports sold goes on a bill for them
@@ -84,7 +84,7 @@ test.describe('Consignment out', () => {
     await expect(page.getByTestId('cons-out-1-Demo Canned Beans 400g')).toHaveText('1');
 
     // The agent's bill is at the till, fixed, at the agreed price.
-    await page.goto('/app/pos');
+    await openPos(page);
     await page.getByText('Corner Boutique (consignment #1)').first().click();
     await expect(page.getByTestId('bill-consignment')).toBeVisible();
     await expect(page.getByTestId('bill-total')).toContainText('3,600.00');

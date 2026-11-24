@@ -60,16 +60,16 @@ export const APP_NAV: readonly NavDefinition[] = [
 
   // ---- POS ---------------------------------------------------------------------------------------
   { key: 'pos', label: 'Point of Sale', route: '/app/pos', icon: 'cart', permission: P.POS_VIEW, feature: FEATURES.CORE_POS, group: 'pos', kind: 'screen', needsBranch: true, quickAccess: true,
-    load: () => import('../../features/pos-billing/pos-billing.component').then((m) => m.PosBillingComponent), description: 'Open tabs, take orders and payments.' },
+    load: () => import('../../features/pos-billing/pos-entry.component').then((m) => m.PosEntryComponent), description: 'Open tabs, take orders and payments.' },
   { key: 'pos.day', label: 'Start / End of Day', route: '/app/pos/day-management', icon: 'clock', permission: P.POS_DAY_VIEW, feature: FEATURES.CORE_POS, group: 'pos', kind: 'screen', needsBranch: true, quickAccess: true,
     load: () => import('../../features/pos-billing/day-management.component').then((m) => m.DayManagementComponent), description: 'Start your shift, count the till and close.' },
   { key: 'pos.sales', label: 'My Sales', route: '/app/pos/my-sales', icon: 'clipboard', permission: P.POS_SALES_VIEW_OWN, feature: FEATURES.CORE_POS, group: 'pos', kind: 'screen', needsBranch: true,
     load: () => import('../../features/pos-billing/my-sales.component').then((m) => m.MySalesComponent), description: 'The bills you served or took payment on, and their receipts to share.' },
   // The bar man method. The menu offers it only to a company that uses the method (the shell filters on that); the route and the API are guarded as usual.
   { key: 'pos.bar', label: 'Bar Orders', route: '/app/pos/bar-orders', icon: 'inbox', permission: P.POS_BAR_ORDER_FULFIL, feature: FEATURES.CORE_POS, group: 'pos', kind: 'screen', needsBranch: true,
-    load: () => import('../../features/pos-billing/bar-orders.component').then((m) => m.BarOrdersComponent), description: 'Orders sent by attendants: take, make and dispatch them.' },
+    load: () => import('../../features/pos-billing/bar-orders.component').then((m) => m.BarOrdersComponent), description: 'Tickets of the stations shown on Bar Orders: take, make and dispatch them.' },
   { key: 'pos.kitchen', label: 'Kitchen Display', route: '/app/pos/kitchen', icon: 'clipboard', permission: P.POS_BAR_ORDER_FULFIL, feature: FEATURES.KDS, group: 'pos', kind: 'screen', needsBranch: true,
-    load: () => import('../../features/pos-billing/kitchen-display.component').then((m) => m.KitchenDisplayComponent), description: 'A station\'s tickets on a wall screen: tick items off, bump when ready, call one back.' },
+    load: () => import('../../features/pos-billing/kitchen-display.component').then((m) => m.KitchenDisplayComponent), description: 'Tickets of the stations shown on the Kitchen Display: tick items off, bump when ready, call one back.' },
   report('pos.report.income', 'Summary Income Report', 'pos/reports/summary-income', 'pos', REPORTS.summaryIncome, P.REPORTS_INCOME_VIEW, FEATURES.CORE_POS, '1', 'chart'),
   report('pos.report.daily', 'Daily Sales Report', 'pos/reports/daily-sales', 'pos', REPORTS.dailySales, P.REPORTS_DAILY_SALES_VIEW, FEATURES.CORE_POS, '2', 'calendar'),
   report('pos.report.staff', 'Staff Sales Report', 'pos/reports/staff-sales', 'pos', REPORTS.staffSales, P.REPORTS_STAFF_SALES_VIEW, FEATURES.CORE_POS, '3', 'users'),
@@ -198,7 +198,7 @@ export const APP_NAV: readonly NavDefinition[] = [
   { key: 'dailysummary', label: 'Daily Summary Set-up', route: '/app/settings/daily-summary', icon: 'calendar', permission: P.DAILY_SUMMARY_MANAGE, feature: FEATURES.CORE_POS, kind: 'screen',
     load: () => import('../../features/settings/daily-summary-setup.component').then((m) => m.DailySummarySetupComponent), description: 'Whether the daily summary is sent, when, and to whom.' },
   { key: 'pos.stations', label: 'Preparation Stations', route: '/app/settings/stations', icon: 'grid', permission: P.POS_STATIONS_MANAGE, feature: FEATURES.CORE_POS, kind: 'screen',
-    load: () => import('../../features/settings/stations.component').then((m) => m.StationsComponent), description: 'The bar, the kitchen and other places orders are prepared, and how each behaves.' },
+    load: () => import('../../features/settings/stations.component').then((m) => m.StationsComponent), description: 'The bar, the kitchen and other places orders are prepared, which screen shows each, and how each behaves.' },
   { key: 'pos.tables', label: 'Tables', route: '/app/settings/tables', icon: 'grid', permission: P.POS_TABLES_MANAGE, feature: FEATURES.CORE_POS, kind: 'screen', needsBranch: true,
     load: () => import('../../features/settings/tables.component').then((m) => m.TablesComponent), description: 'The tables at each branch, offered by the till when a table bill is opened.' },
   { key: 'pos.printers', label: 'Printers', route: '/app/settings/printers', icon: 'grid', permission: P.POS_PRINTERS_MANAGE, feature: FEATURES.CORE_POS, kind: 'screen',

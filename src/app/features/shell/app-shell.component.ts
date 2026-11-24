@@ -36,7 +36,7 @@ import { TourHostComponent } from '../../shared/ui/tour-host.component';
     imports: [RouterOutlet, RouterLink, NavSidebarComponent, BrandMarkComponent, ToastHostComponent, ConfirmHostComponent, AccountBannerComponent, StatusBannerComponent, InstallHintComponent, BarDockComponent, CommandPaletteComponent, TourHostComponent, LockScreenComponent, ItemSavedPromptComponent, ShiftPromptComponent, NoticesBellComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
-    <div class="grid min-h-screen grid-cols-[minmax(0,1fr)] bg-canvas text-ink md:grid-cols-[17rem_minmax(0,1fr)] print:block" [attr.inert]="lock.locked() || shiftPrompt.mustStart() ? '' : null">
+    <div class="grid min-h-screen grid-cols-[minmax(0,1fr)] bg-canvas text-ink md:grid-cols-[17rem_minmax(0,1fr)] print:block" [attr.inert]="lock.locked() ? '' : null">
       <div class="hidden md:block print:hidden">
         <zp-nav-sidebar class="block h-screen md:sticky md:top-0" [currentUrl]="url()" [name]="branding()?.shortName ?? 'ZestPoint'" [initials]="branding()?.initialsFallback ?? 'ZP'" [logoUrl]="branding()?.logoUrl ?? null" (search)="openSearch()" />
       </div>
@@ -159,9 +159,12 @@ export class AppShellComponent {
   protected readonly url = toSignal(this.router.events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd), map((e) => e.urlAfterRedirects), startWith(this.router.url)), { initialValue: this.router.url });
   private drawerOpenedByTour = false;
 
+  /** The Point of Sale shows the Start your shift box in place of the till until the shift starts: the till's tour has nothing to point at yet. */
+  private readonly tillHeldBack = computed(() => /^\/app\/pos\/?$/.test(this.url().split('?')[0]!.split('#')[0]!) && this.shiftPrompt.gate() !== 'open');
+
   protected readonly screenTour = computed(() => {
     const t = this.tour.screenTour(this.url());
-    return t && t.nav && this.nav.has(t.nav) ? t : null;
+    return t && t.nav && this.nav.has(t.nav) && !this.tillHeldBack() ? t : null;
   });
   protected readonly canSupport = computed(() => this.nav.has('support'));
 
@@ -194,8 +197,8 @@ export class AppShellComponent {
     // A tour the person has not seen starts once the screen they landed on has had a moment to draw. Never during first-time set-up.
     effect((onCleanup) => {
       const url = this.url();
-      // Not while a cashier is being asked to start their shift: the tour waits until the box is gone.
-      if (url.includes('/onboarding') || this.auth.locked() || this.shiftPrompt.mustStart()) return;
+      // Not while the Point of Sale is showing the Start your shift box in place of the till: the tour waits until the shift has started.
+      if (url.includes('/onboarding') || this.auth.locked() || this.tillHeldBack()) return;
       const timer = setTimeout(() => void this.tour.arrived(url), 600);
       onCleanup(() => clearTimeout(timer));
     });

@@ -18,14 +18,20 @@ export const CASHIER: Chapter = {
       ])
     ]),
     section('cashier-shift', 'Starting your shift', [
-      p('If your company asks for it, a box called **Start your shift** appears when you sign in. You cannot use ZestPoint until you start a shift or sign out.'),
+      p('The moment you open **Sell**, **Point of Sale**, a box called **Start your shift** stands where the till would be. Signing in asks you for nothing, and every other screen opens without a shift. You cannot use the till until you start a shift, and the box always has a way back (a button to the **Dashboard**, or to the first other screen you may use, and the menu) and **Sign out**.'),
       steps(
         'Count the cash in the drawer.',
         'Type it under **Cash in the drawer now (opening float)**.',
-        'Tick **I have counted the drawer and this amount is right.** and press **Start shift**.'
+        'Tick **I have counted the drawer and this amount is right.** and press **Start shift**. The till opens at once.'
       ),
-      p('ZestPoint gives you a **till number** by itself, the lowest one at your branch that nobody else is using. You do not choose it. A shift belongs to one person, one branch and one till.'),
-      p('You can also start a shift on **Sell**, **Start / End of Day**.'),
+      shot('shift-gate', 'The box that stands where the till would be, until a shift is started.', 'The Point of Sale screen before a shift is started: a box called Start your shift with the opening float, a tick to say the drawer was counted, a Start shift button, a button back to the Dashboard and a Sign out button.'),
+      p('The box is the same for everyone who sells or takes orders: cashiers, waiters, supervisors, managers and the owner. ZestPoint gives you a **till number** by itself, the lowest one at your branch that nobody else is using. You do not choose it. A shift belongs to one person, one branch and one till.'),
+      p('You can also start a shift on **Sell**, **Start / End of Day**. Without a connection the shift is started on your device, and ZestPoint gives you the till number when the connection is back.'),
+      list(
+        '**A shift at another branch.** A person can have only one shift at a time. If yours is running at another branch, the box says so: change the branch at the top to that one, or end that shift first on **Start / End of Day**.',
+        '**No right to start a shift.** If your role does not allow it, the box says "You need the right to start a shift before you can sell. Ask a manager to give it to you." and the till stays closed.'
+      ),
+      notYet('The till asks for a shift on the screen only. ZestPoint itself still accepts a bill or an order with no shift behind it. The one thing it refuses is a payment with no shift, and only when **Staff must start a shift before taking payments** is ticked in **Settings** (a sale already made offline is never refused for this). If your company\'s plan does not include **Start / End of Day**, nobody can start a shift, so the till opens without asking.'),
       shot('day-management', 'Cash in and cash out are recorded under the shift, each with a reason.', 'The Start and End of Day screen showing a shift with its float, the cash taken, a cash in and a cash out each with a reason, and the cash expected in the drawer.')
     ]),
     section('cashier-pay', 'Taking payment', [
@@ -76,7 +82,7 @@ export const CASHIER: Chapter = {
         'At the end press **End shift** and count the drawer. Type the count.',
         'ZestPoint works out what it should hold: the float, plus cash sales, less cash refunds, plus cash in, less cash out. If your count matches, you are done. If it is off by more than the company\'s limit, the shift goes to a supervisor to review.'
       ),
-      tip('If you leave a shift open for many hours, ZestPoint reminds you, and again every hour after, until you end it.')
+      tip('After six hours a box on whatever screen you are on asks you to end the shift or say **Still working**, and asks again every hour. **End my shift now** takes you to **Start / End of Day**. Your answer is recorded.')
     ]),
     section('cashier-wrong', 'When something looks wrong', [
       list(
@@ -96,7 +102,12 @@ export const WAITER: Chapter = {
   roles: ['waiter'],
   sections: [
     section('waiter-role', 'What a waiter can do', [
-      p('The ready-made **Waiter / Server** role opens bills, adds and changes items, splits and moves bills, asks for a void, and sees its own sales. It does **not** take payment. A waiter\'s bill is paid after it is handed over to a cashier, or by a supervisor. You can do your work on the website\'s till or on the phone app, which is built for the floor.')
+      p('The ready-made **Waiter / Server** role opens bills, adds and changes items, splits and moves bills, asks for a void, sees its own sales, and starts and ends its own shift. It does **not** take payment. A waiter\'s bill is paid after it is handed over to a cashier, or by a supervisor. You can do your work on the website\'s till or on the phone app, which is built for the floor.')
+    ]),
+    section('waiter-shift', 'Starting and ending your shift', [
+      p('A waiter starts a shift too, although a waiter takes no payment. The moment you open **Sell**, **Point of Sale**, a box called **Start your shift** asks for the opening float and for a tick on **I have counted the drawer and this amount is right.** It is the same box for everyone who sells or takes orders, so type 0 if you hold no cash. Signing in asks for nothing, and every other screen opens without a shift. Your shift is recorded under your name.'),
+      p('When you finish, open **Sell**, **Start / End of Day**, type what is in the drawer and end the shift. After six hours a box on whatever screen you are on asks you to end it or say **Still working**, and asks again every hour; **End my shift now** takes you to **Start / End of Day**.'),
+      p('If the box says you need the right to start a shift, your role does not have it: ask a manager. On the phone, both the **Till** and the **Waiter** tabs are held until a shift is started, the six-hour reminder is a floating box shown on any phone screen, and a waiter who has no **Till** tab finds a **Your shift** card on the floor with an **End my shift** button.')
     ]),
     section('waiter-open', 'Opening a bill', [
       steps(

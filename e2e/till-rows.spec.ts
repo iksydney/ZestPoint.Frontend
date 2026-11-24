@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { choose, registerViaUi } from './helpers';
+import { choose, registerViaUi, openPos } from './helpers';
 
 /**
  * Owner's decisions of 2026-11-14:
@@ -17,7 +17,7 @@ async function ownerInApp(page: Page) {
 }
 
 async function newBill(page: Page, name: string) {
-  await page.goto('/app/pos');
+  await openPos(page);
   await page.getByTestId('new-bill').click();
   await page.getByTestId('nb-label').fill(name);
   await page.getByTestId('nb-create').click();

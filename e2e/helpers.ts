@@ -126,8 +126,9 @@ export async function setHex(page: Page, which: 'primary' | 'secondary' | 'backg
 }
 
 /**
- * A cashier who signs in with no shift running must start one before anything else (owner's rule, 2026-11-15): the box is filled and
- * the shift started, after which the application behind it can be used.
+ * Anyone who sells or takes orders, the owner included, must start a shift the moment they open the Point of Sale (owner's rule, 2026-11-15,
+ * changed 2026-11-24; sign-in is free and no other screen asks): the Start your shift box stands where the till would be. This fills it in and
+ * starts the shift, and the till takes its place. It expects the box to be on screen, so it fails if the box was never asked for.
  */
 export async function startShiftWhenAsked(page: Page, float = '0'): Promise<void> {
   const box = page.getByTestId('shift-box');
@@ -136,4 +137,48 @@ export async function startShiftWhenAsked(page: Page, float = '0'): Promise<void
   await box.getByTestId('shift-box-confirm').check();
   await box.getByTestId('shift-box-start').click();
   await expect(box).toHaveCount(0);
+}
+
+/**
+ * Gets past the Point of Sale's shift gate for someone who is on the Point of Sale screen: when the box is asked for, the shift is started with
+ * `float`; when a shift is already running the till is simply there. It waits for one or the other, so it never judges the screen too early.
+ */
+export async function passShiftGate(page: Page, float = '0'): Promise<void> {
+  const box = page.getByTestId('shift-box');
+  await expect(box.or(page.getByTestId('bill-list'))).toBeVisible();
+  if (await box.isVisible()) await startShiftWhenAsked(page, float);
+  await expect(page.getByTestId('bill-list')).toBeVisible();
+}
+
+/** Opens the Point of Sale as a person does (the address) and gets past its shift gate. */
+export async function openPos(page: Page, float = '0'): Promise<void> {
+  await page.goto('/app/pos');
+  await passShiftGate(page, float);
+}
+
+/** WCAG contrast of the words in an element against the colours really behind them (every layer blended). */
+export async function contrastOf(page: Page, selector: string): Promise<number> {
+  return page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) throw new Error(`Nothing matches ${sel}`);
+    const ctx = document.createElement('canvas').getContext('2d')!;
+    const rgba = (c: string): [number, number, number, number] => {
+      ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = '#000'; ctx.fillStyle = c; ctx.fillRect(0, 0, 1, 1);
+      const d = ctx.getImageData(0, 0, 1, 1).data;
+      return [d[0]!, d[1]!, d[2]!, d[3]! / 255];
+    };
+    const layers: [number, number, number, number][] = [];
+    for (let e: Element | null = el; e; e = e.parentElement) {
+      const c = rgba(getComputedStyle(e).backgroundColor);
+      if (c[3] > 0) layers.push(c);
+      if (c[3] === 1) break;
+    }
+    let bg: [number, number, number] = [255, 255, 255];
+    for (const l of layers.reverse()) bg = [0, 1, 2].map((i) => l[i]! * l[3] + bg[i]! * (1 - l[3])) as [number, number, number];
+    const fg = rgba(getComputedStyle(el).color);
+    const text = [0, 1, 2].map((i) => fg[i]! * fg[3] + bg[i]! * (1 - fg[3]));
+    const lum = (c: number[]): number => { const f = (v: number): number => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(c[0]!) + 0.7152 * f(c[1]!) + 0.0722 * f(c[2]!); };
+    const [hi, lo] = [lum(text), lum(bg)].sort((a, b) => b - a) as [number, number];
+    return (hi + 0.05) / (lo + 0.05);
+  }, selector);
 }

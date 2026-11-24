@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { newContext, registerViaUi, startShiftWhenAsked } from './helpers';
+import { newContext, registerViaUi, openPos } from './helpers';
 
 /**
  * Owner's decision of 2026-11-15: each branch has a list of tables. Managers set it up; the till offers it when a table bill is
@@ -65,7 +65,7 @@ test.describe('Tables', () => {
     await expect(page.getByTestId('table-list').locator('tbody tr')).toHaveCount(4);
 
     // The till offers the list, grouped by area; one tap fills the table.
-    await page.goto('/app/pos');
+    await openPos(page);
     await page.getByTestId('new-bill').click();
     await page.getByTestId('nb-kind').selectOption('Table');
     const picker = page.getByTestId('nb-tables');
@@ -118,11 +118,11 @@ test.describe('Tables', () => {
     await c.getByTestId('login-code').fill(code);
     await c.getByTestId('login-pin').fill('7391');
     await c.getByTestId('login-submit').click();
-    await startShiftWhenAsked(c);
+    await expect(c.getByTestId('user-name')).toBeVisible();
     await expect(c.locator('[data-nav="setup.admin"]')).toHaveCount(0);                    // a cashier has no set-up screens, so no Set-up entry
     await c.goto('/app/settings/tables');
     await expect(c.getByRole('heading', { name: 'No access' })).toBeVisible();
-    await c.goto('/app/pos');
+    await openPos(c);
     await c.getByTestId('new-bill').click();
     await c.getByTestId('nb-kind').selectOption('Table');
     await expect(c.getByTestId('nb-table-Table 1')).toBeVisible();

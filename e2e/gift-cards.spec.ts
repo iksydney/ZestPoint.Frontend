@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { registerViaUi } from './helpers';
+import { registerViaUi, openPos } from './helpers';
 
 /**
  * Gift cards (enterprise programme, piece 10): sold at the till on a bill of their own, issued with a code shown once when the bill is paid, spent as a payment (typed code,
@@ -38,7 +38,7 @@ test.describe('Gift cards', () => {
     await expect(page.getByTestId('item-Soap')).toBeVisible();
 
     // At the till: a card worth 5,000 for Bola, paid in cash. The card is made when the bill is paid, and its code is shown once.
-    await page.goto('/app/pos');
+    await openPos(page);
     await page.getByTestId('sell-gift-card').click();
     await page.getByTestId('gift-amount').fill('5000');
     await page.getByTestId('gift-name').fill('Bola Ade');

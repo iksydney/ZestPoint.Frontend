@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { TOURS } from '../src/app/core/tour/tours';
 import { addItem, fits, newBill, ownerInApp } from './phone-helpers';
+import { openPos } from './helpers';
 
 /**
  * The till on a phone (enterprise programme, piece 13): products first, the bill as a panel that slides up from one bar, big buttons, and the pay box filling
@@ -13,7 +14,7 @@ test.describe('The till on a phone', () => {
     await ownerInApp(page);
     await addItem(page, 'Tea', '700');
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/app/pos');
+    await openPos(page);
 
     // No bill yet: the bar offers to start one, and the bill panel is not on screen.
     await expect(page.getByTestId('bill-bar')).toBeVisible();
@@ -70,7 +71,7 @@ test.describe('The till on a phone', () => {
   test('a wide screen keeps the three panels and has no bar', async ({ page }) => {
     await ownerInApp(page);
     await page.setViewportSize({ width: 1280, height: 720 });
-    await page.goto('/app/pos');
+    await openPos(page);
     await expect(page.getByTestId('current-bill')).toBeVisible();                    // there before any bill is chosen, as it always was
     await expect(page.getByTestId('bill-bar')).toBeHidden();
     await expect(page.getByTestId('bill-sheet-close')).toBeHidden();
@@ -82,7 +83,7 @@ test.describe('The till on a phone', () => {
     await ownerInApp(page);
     await addItem(page, 'Tea', '700', '4006381333931');
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/app/pos');
+    await openPos(page);
     await page.getByTestId('bill-bar-new').click();
     await newBill(page, 'Scan');
 
@@ -107,7 +108,7 @@ test.describe('The till on a phone', () => {
     test.slow();
     await ownerInApp(page);
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/app/pos');
+    await openPos(page);
     await expect(page.getByTestId('bill-bar')).toBeVisible();
     await page.getByTestId('help-open').click();
     await page.getByTestId('help-tour-screen').click();

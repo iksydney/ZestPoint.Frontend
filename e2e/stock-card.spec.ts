@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { choose, PNG, registerViaUi } from './helpers';
+import { choose, PNG, registerViaUi, openPos } from './helpers';
 
 /**
  * The Stock Card: the one card to add or change a stock item, opened from Add / Modify Stock and from "Add SKU" on a purchase order.
@@ -217,7 +217,7 @@ test.describe('Stock card', () => {
     await page.getByTestId('item-save').click();
     await expect(page.getByTestId('item-Gift card')).toBeVisible();
 
-    await page.goto('/app/pos');
+    await openPos(page);
     await expect(page.getByTestId('product-Bread')).toContainText('800.00');           // the tile shows what will be charged
     await page.getByTestId('new-bill').click();
     await page.getByTestId('nb-label').fill('Rules');
@@ -274,7 +274,7 @@ test.describe('Stock card', () => {
     await page.getByTestId('sc-close').click();
 
     // The till asks how it is sold.
-    await page.goto('/app/pos');
+    await openPos(page);
     await page.getByTestId('new-bill').click();
     await page.getByTestId('nb-label').fill('Cases');
     await page.getByTestId('nb-create').click();
@@ -340,7 +340,7 @@ test.describe('Stock card', () => {
     await page.getByTestId('sc-close').click();
 
     // The till: one line, its contents under it, tax on the wine only.
-    await page.goto('/app/pos');
+    await openPos(page);
     await expect(page.getByTestId('product-Gift hamper')).toContainText('4,000.00');
     await page.getByTestId('new-bill').click();
     await page.getByTestId('nb-label').fill('Hamper');

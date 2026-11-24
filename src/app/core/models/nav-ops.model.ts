@@ -154,8 +154,13 @@ export interface StockGroupDto {
   /** The ledger accounts for the group's sales and stock; null = the company's Sales / Stock account. */
   readonly salesAccountId?: string | null;
   readonly purchaseAccountId?: string | null;
-  /** Where the group's items are prepared; null = the company's default station. */
+  /** The station the group names itself; null = it names none (it then follows its parent group's, else the company's default station). */
   readonly stationId?: string | null;
+  /** The station that counts for the group: its own, else the nearest parent group's; null when neither names one (never the company's default). */
+  readonly effectiveStationId?: string | null;
+  readonly effectiveStationName?: string | null;
+  /** The group names no station and the effective one is its parent's. */
+  readonly stationInherited?: boolean;
 }
 
 export interface SaveStockGroupRequest { name: string; code: string | null; description: string | null; parentId: string | null; sortOrder: number; isActive: boolean; salesAccountId?: string | null; purchaseAccountId?: string | null; stationId?: string | null }

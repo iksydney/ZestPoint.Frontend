@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { PASSWORD, registerViaUi } from './helpers';
+import { PASSWORD, registerViaUi, openPos } from './helpers';
 
 /**
  * Spending loyalty points (enterprise programme, piece 9): the company says what a point is worth, a customer earns points, and then pays part of a bill with them: first
@@ -40,7 +40,7 @@ test.describe('Spending loyalty points', () => {
     await expect(page.getByTestId('item-Soap')).toBeVisible();
 
     // Two soaps for Ada, paid in cash: 100 points.
-    await page.goto('/app/pos');
+    await openPos(page);
     await newBill(page, 'First', 2);
     await page.getByTestId('bill-customer-btn').click();
     await page.getByTestId('cust-search').fill('0803');

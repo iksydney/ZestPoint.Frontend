@@ -408,6 +408,13 @@ test.describe('The manual\'s pictures', () => {
     });
 
     // ---- A shift, bills at the till and on the kitchen display -----------------------------------------------------------------------------------
+    // The Point of Sale asks for a shift first: the box that stands where the till would be, filled in but not sent (the shift is started on Start / End of Day below).
+    await shoot(page, 'shift-gate', async () => {
+      await page.goto('/app/pos');
+      await expect(page.getByTestId('shift-box')).toBeVisible();
+      await page.getByTestId('shift-box-float').fill('20000');
+      await page.getByTestId('shift-box-confirm').check();
+    });
     await stage('start a shift', async () => {
       await page.goto('/app/pos/day-management');
       await page.getByTestId('day-float').fill('20000');
